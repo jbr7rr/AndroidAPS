@@ -3,10 +3,11 @@ package info.nightscout.androidaps.plugins.general.maintenance
 import android.content.Context
 import dagger.android.HasAndroidInjector
 import info.nightscout.androidaps.TestBase
+import info.nightscout.configuration.maintenance.MaintenancePlugin
 import info.nightscout.interfaces.Config
 import info.nightscout.interfaces.logging.LoggerUtils
 import info.nightscout.interfaces.maintenance.PrefFileListProvider
-import info.nightscout.plugins.sync.nsclient.data.NSSettingsStatus
+import info.nightscout.interfaces.nsclient.NSSettingsStatus
 import info.nightscout.shared.interfaces.ResourceHelper
 import info.nightscout.shared.sharedPreferences.SP
 import org.junit.Assert

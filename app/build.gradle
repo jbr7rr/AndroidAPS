@@ -201,6 +201,8 @@ dependencies {
     implementation project(':plugins:main')
     implementation project(':plugins:openhumans')
     implementation project(':plugins:sensitivity')
+    implementation project(':plugins:support')
+    implementation project(':plugins:sync')
     implementation project(':implementation')
     implementation project(':database:entities')
     implementation project(':database:impl')

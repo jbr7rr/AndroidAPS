@@ -6,7 +6,6 @@ import dagger.android.AndroidInjectionModule
 import dagger.android.AndroidInjector
 import info.nightscout.androidaps.MainApp
 import info.nightscout.androidaps.danar.di.DanaRModule
-import info.nightscout.androidaps.diaconn.di.DiaconnG8Module
 import info.nightscout.androidaps.insight.di.InsightDatabaseModule
 import info.nightscout.androidaps.insight.di.InsightModule
 import info.nightscout.androidaps.plugin.general.openhumans.di.OpenHumansModule
@@ -23,12 +22,15 @@ import info.nightscout.database.impl.DatabaseModule
 import info.nightscout.implementation.di.ImplementationModule
 import info.nightscout.plugins.aps.di.ApsModule
 import info.nightscout.plugins.di.PluginsModule
+import info.nightscout.plugins.support.di.PluginsSupportModule
+import info.nightscout.plugins.sync.di.SyncModule
 import info.nightscout.pump.combo.di.ComboModule
 import info.nightscout.pump.combov2.di.ComboV2Module
 import info.nightscout.pump.common.di.PumpCommonModule
 import info.nightscout.pump.dana.di.DanaHistoryModule
 import info.nightscout.pump.dana.di.DanaModule
 import info.nightscout.pump.danars.di.DanaRSModule
+import info.nightscout.pump.diaconn.di.DiaconnG8Module
 import info.nightscout.rx.di.RxModule
 import info.nightscout.shared.di.SharedModule
 import info.nightscout.shared.impl.di.SharedImplModule
@@ -46,8 +48,6 @@ import javax.inject.Singleton
         ReceiversModule::class,
         ServicesModule::class,
         WorkflowModule::class,
-        OverviewModule::class,
-        WorkersModule::class,
 
         // Gradle modules
         AutomationModule::class,
@@ -56,7 +56,6 @@ import javax.inject.Singleton
         CoreModule::class,
         DatabaseModule::class,
         ImplementationModule::class,
-        ImplementationModule.Bindings::class,
         OpenHumansModule::class,
         PluginsModule::class,
         RxModule::class,
@@ -64,6 +63,8 @@ import javax.inject.Singleton
         SharedImplModule::class,
         UiModule::class,
         ValidatorsModule::class,
+        PluginsSupportModule::class,
+        SyncModule::class,
 
         // pumps
         ComboModule::class,

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.FragmentManager
+import dagger.android.HasAndroidInjector
+import info.nightscout.interfaces.nsclient.NSAlarm
 
 /**
  * Interface to use activities located in different modules
@@ -20,6 +22,7 @@ interface ActivityNames {
     val preferencesActivity: Class<*>
     val myPreferenceFragment: Class<*>
 
+    val prefGeneral: Int
     /**
      * Show ErrorHelperActivity and start alarm
      * @param ctx Context
@@ -28,9 +31,14 @@ interface ActivityNames {
      * @param soundId sound resource. if == 0 alarm is not started
      */
     fun runAlarm(ctx: Context, status: String, title: String, @RawRes soundId: Int = 0)
-    fun runWizard(fragmentManager: FragmentManager, carbs: Int, name: String)
+    fun runWizardDialog(fragmentManager: FragmentManager, carbs: Int? = null, name: String? = null)
+    fun runLoopDialog(fragmentManager: FragmentManager, showOkCancel: Int)
     fun runProfileSwitchDialog(fragmentManager: FragmentManager, profileName: String? = null)
     fun runTempBasalDialog(fragmentManager: FragmentManager)
+    fun runTreatmentDialog(fragmentManager: FragmentManager)
+    fun runInsulinDialog(fragmentManager: FragmentManager)
+    fun runCalibrationDialog(fragmentManager: FragmentManager)
+    fun runCarbsDialog(fragmentManager: FragmentManager)
     fun runTempTargetDialog(fragmentManager: FragmentManager)
     fun runExtendedBolusDialog(fragmentManager: FragmentManager)
     fun runFillDialog(fragmentManager: FragmentManager)
@@ -58,4 +66,10 @@ interface ActivityNames {
     fun addNotificationValidFor(id: Int, text: String, level: Int, validMinutes: Int)
     fun addNotificationWithSound(id: Int, text: String, level: Int, @RawRes soundId: Int)
     fun addNotificationValidTo(id: Int, date: Long, text: String, level: Int, validTo: Long)
+    fun addNotificationWithAction(injector: HasAndroidInjector, nsAlarm: NSAlarm)
+    fun addNotificationWithAction(id: Int, text: String, level: Int, buttonText: Int, action: Runnable, @RawRes soundId: Int? = null, date: Long = System.currentTimeMillis())
+    fun showToastAndNotification(ctx: Context?, string: String?, @RawRes soundID: Int)
+
+    fun startAlarm(@RawRes sound: Int, reason: String)
+    fun stopAlarm(reason: String)
 }

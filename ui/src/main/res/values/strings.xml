@@ -41,15 +41,10 @@
     <string name="format_bg_isf">%1$s ISF: %2$.1f</string>
     <string name="format_cob_ic">%1$.1fg IC: %2$.1f</string>
     <string name="format_carbs_ic">%1$.0fg IC: %2$.1f</string>
-    <string name="superbolus">Superbolus</string>
     <string name="treatments_wizard_total_label">Total</string>
 
     <!-- FillDialog -->
     <string name="fill_warning">Please make sure the amount matches the specification of your infusion set!</string>
-    <string name="fill_bolus_title">Fill/Prime standard insulin amounts</string>
-    <string name="button1">Button 1</string>
-    <string name="button2">Button 2</string>
-    <string name="button3">Button 3</string>
     <string name="record_pump_site_change">Record pump site change</string>
     <string name="record_insulin_cartridge_change">Record insulin cartridge change</string>
 
@@ -152,16 +147,4 @@
     <!--    BolusProgressDialog-->
     <string name="stop_pressed">STOP PRESSED</string>
 
-    <!--    PrefImport-->
-    <string name="check_preferences_details_btn">Explain import issues…</string>
-    <string name="check_preferences_details_title">Import issues details</string>
-    <string name="check_preferences_import_btn">Import</string>
-    <string name="check_preferences_import_anyway_btn">Import anyway (DANGEROUS!)</string>
-    <string name="import_setting">Import settings</string>
-    <string name="check_preferences_before_import">Please check preferences before importing:</string>
-    <string name="check_preferences_cannot_import">Preferences cannot be imported!</string>
-    <string name="check_preferences_dangerous_import">Preferences should not be imported!</string>
-
-    <!--    Preferences -->
-    <string name="nav_plugin_preferences">Plugin preferences</string>
 </resources>
