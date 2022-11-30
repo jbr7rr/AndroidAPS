@@ -10,7 +10,6 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import com.google.android.material.tabs.TabLayout
 import dagger.android.support.DaggerFragment
-import info.nightscout.interfaces.logging.UserEntryLogger
 import info.nightscout.core.profile.ProfileSealed
 import info.nightscout.core.ui.dialogs.OKDialog
 import info.nightscout.core.utils.fabric.FabricPrivacy
@@ -18,11 +17,12 @@ import info.nightscout.database.entities.UserEntry
 import info.nightscout.database.entities.ValueWithUnit
 import info.nightscout.interfaces.Constants
 import info.nightscout.interfaces.GlucoseUnit
+import info.nightscout.interfaces.logging.UserEntryLogger
 import info.nightscout.interfaces.plugin.ActivePlugin
 import info.nightscout.interfaces.profile.Profile
 import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.interfaces.protection.ProtectionCheck
-import info.nightscout.interfaces.ui.ActivityNames
+import info.nightscout.interfaces.ui.UiInteraction
 import info.nightscout.interfaces.utils.DecimalFormatter
 import info.nightscout.interfaces.utils.HardLimits
 import info.nightscout.plugins.R
@@ -57,7 +57,7 @@ class ProfileFragment : DaggerFragment() {
     @Inject lateinit var dateUtil: DateUtil
     @Inject lateinit var aapsSchedulers: AapsSchedulers
     @Inject lateinit var uel: UserEntryLogger
-    @Inject lateinit var activityNames: ActivityNames
+    @Inject lateinit var uiInteraction: UiInteraction
 
     private var disposable: CompositeDisposable = CompositeDisposable()
     private var inMenu = false
@@ -105,7 +105,7 @@ class ProfileFragment : DaggerFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val parentClass = this.activity?.let { it::class.java }
-        inMenu = parentClass == activityNames.singleFragmentActivity
+        inMenu = parentClass == uiInteraction.singleFragmentActivity
         updateProtectedUi()
         processVisibility(0)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -134,6 +134,8 @@ class ProfileFragment : DaggerFragment() {
         binding.name.removeTextChangedListener(textWatch)
         binding.name.setText(currentProfile.name)
         binding.name.addTextChangedListener(textWatch)
+        binding.profileList.filters = arrayOf()
+        binding.profileList.setText(currentProfile.name)
         binding.dia.setParams(currentProfile.dia, hardLimits.minDia(), hardLimits.maxDia(), 0.1, DecimalFormat("0.0"), false, null, textWatch)
         binding.dia.tag = "LP_DIA"
         TimeListEdit(
@@ -298,7 +300,7 @@ class ProfileFragment : DaggerFragment() {
         binding.units.text = rh.gs(R.string.units_colon) + " " + (if (currentProfile.mgdl) rh.gs(R.string.mgdl) else rh.gs(R.string.mmol))
 
         binding.profileswitch.setOnClickListener {
-            activityNames.runProfileSwitchDialog(childFragmentManager, profilePlugin.currentProfile()?.name)
+            uiInteraction.runProfileSwitchDialog(childFragmentManager, profilePlugin.currentProfile()?.name)
         }
 
         binding.reset.setOnClickListener {

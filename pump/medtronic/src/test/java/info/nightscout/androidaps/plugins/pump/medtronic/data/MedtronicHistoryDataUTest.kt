@@ -9,9 +9,9 @@ import info.nightscout.androidaps.plugins.pump.medtronic.comm.history.pump.PumpH
 import info.nightscout.androidaps.plugins.pump.medtronic.data.dto.TempBasalPair
 import info.nightscout.androidaps.plugins.pump.medtronic.driver.MedtronicPumpStatus
 import info.nightscout.androidaps.plugins.pump.medtronic.util.MedtronicUtil
-import info.nightscout.interfaces.ui.ActivityNames
-import org.junit.Before
-import org.junit.Test
+import info.nightscout.interfaces.ui.UiInteraction
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import java.lang.reflect.Type
 
@@ -19,11 +19,11 @@ import java.lang.reflect.Type
 class MedtronicHistoryDataUTest : TestBase() {
 
     @Mock lateinit var medtronicPumpStatus: MedtronicPumpStatus
-    @Mock lateinit var activityNames: ActivityNames
+    @Mock lateinit var uiInteraction: UiInteraction
 
-    @Before
+    @BeforeEach
     fun setUp() {
-        medtronicUtil = MedtronicUtil(aapsLogger, rxBus, rileyLinkUtil, medtronicPumpStatus, activityNames)
+        medtronicUtil = MedtronicUtil(aapsLogger, rxBus, rileyLinkUtil, medtronicPumpStatus, uiInteraction)
         decoder = MedtronicPumpHistoryDecoder(aapsLogger, medtronicUtil, byteUtil)
     }
 
@@ -32,7 +32,7 @@ class MedtronicHistoryDataUTest : TestBase() {
 
         val unitToTest = MedtronicHistoryData(
             packetInjector, aapsLogger, sp, rh, rxBus, activePlugin,
-            medtronicUtil, decoder, medtronicPumpStatus, pumpSync, pumpSyncStorage, activityNames
+            medtronicUtil, decoder, medtronicPumpStatus, pumpSync, pumpSyncStorage, uiInteraction
         )
 
         val gson = Gson()
@@ -75,7 +75,7 @@ class MedtronicHistoryDataUTest : TestBase() {
             medtronicUtil, decoder,
             medtronicPumpStatus,
             pumpSync,
-            pumpSyncStorage, activityNames
+            pumpSyncStorage, uiInteraction
         )
 
         val gson = Gson()

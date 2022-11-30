@@ -10,19 +10,20 @@ import info.nightscout.core.ui.locale.LocaleHelper
 import info.nightscout.interfaces.plugin.ActivePlugin
 import info.nightscout.interfaces.plugin.PluginBase
 import info.nightscout.interfaces.protection.ProtectionCheck
-import info.nightscout.interfaces.ui.ActivityNames
+import info.nightscout.interfaces.ui.UiInteraction
 import javax.inject.Inject
 
 class SingleFragmentActivity : DaggerAppCompatActivityWithResult() {
 
     @Inject lateinit var activePlugin: ActivePlugin
     @Inject lateinit var protectionCheck: ProtectionCheck
-    @Inject lateinit var activityNames: ActivityNames
+    @Inject lateinit var uiInteraction: UiInteraction
 
     private var plugin: PluginBase? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setTheme(R.style.AppTheme)
         setContentView(R.layout.activity_single_fragment)
         plugin = activePlugin.getPluginsList()[intent.getIntExtra("plugin", -1)]
         title = plugin?.name
@@ -45,7 +46,7 @@ class SingleFragmentActivity : DaggerAppCompatActivityWithResult() {
 
             R.id.nav_plugin_preferences -> {
                 protectionCheck.queryProtection(this, ProtectionCheck.Protection.PREFERENCES, {
-                    val i = Intent(this, activityNames.preferencesActivity)
+                    val i = Intent(this, uiInteraction.preferencesActivity)
                     i.putExtra("id", plugin?.preferencesId)
                     startActivity(i)
                 }, null)

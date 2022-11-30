@@ -11,7 +11,7 @@ import info.nightscout.interfaces.nsclient.NSAlarm
  * Interface to use activities located in different modules
  * usage: startActivity(Intent(context, activityNames.xxxx))
  */
-interface ActivityNames {
+interface UiInteraction {
 
     val mainActivity: Class<*>
     val tddStatsActivity: Class<*>
@@ -30,7 +30,7 @@ interface ActivityNames {
      * @param title title of dialog
      * @param soundId sound resource. if == 0 alarm is not started
      */
-    fun runAlarm(ctx: Context, status: String, title: String, @RawRes soundId: Int = 0)
+    fun runAlarm(status: String, title: String, @RawRes soundId: Int = 0)
     fun runWizardDialog(fragmentManager: FragmentManager, carbs: Int? = null, name: String? = null)
     fun runLoopDialog(fragmentManager: FragmentManager, showOkCancel: Int)
     fun runProfileSwitchDialog(fragmentManager: FragmentManager, profileName: String? = null)
@@ -64,7 +64,7 @@ interface ActivityNames {
 
     fun addNotification(id: Int, text: String, level: Int)
     fun addNotificationValidFor(id: Int, text: String, level: Int, validMinutes: Int)
-    fun addNotificationWithSound(id: Int, text: String, level: Int, @RawRes soundId: Int)
+    fun addNotificationWithSound(id: Int, text: String, level: Int, @RawRes soundId: Int?)
     fun addNotificationValidTo(id: Int, date: Long, text: String, level: Int, validTo: Long)
     fun addNotificationWithAction(injector: HasAndroidInjector, nsAlarm: NSAlarm)
     fun addNotificationWithAction(id: Int, text: String, level: Int, buttonText: Int, action: Runnable, @RawRes soundId: Int? = null, date: Long = System.currentTimeMillis())

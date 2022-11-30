@@ -29,7 +29,6 @@
     <string name="target_long_label">Blood Glucose Target</string>
     <string name="shortgram">g</string>
     <string name="shortpercent">%</string>
-    <string name="advancedsettings_title">Advanced Settings</string>
     <string name="bluetooth">Bluetooth</string>
     <string name="btwatchdog_title">BT Watchdog</string>
     <string name="btwatchdog_summary">Switches off the phone\'s bluetooth for one second if no connection to the pump is possible. This may help on some phones where the bluetooth stack freezes.</string>
@@ -356,8 +355,6 @@
     <string name="keepalive_status_outdated" comment="26 characters max for translation">KeepAlive. Status outdated.</string>
     <string name="keepalive_basal_outdated" comment="26 characters max for translation">KeepAlive. Basal outdated.</string>
     <string name="sms" comment="26 characters max for translation">SMS</string>
-    <string name="unconfirmed_command" comment="26 characters max for translation">Unconfirmed command</string>
-    <string name="requested_by_user" comment="26 characters max for translation">Requested by user</string>
     <string name="insight_refresh_button" comment="26 characters max for translation">Insight Refresh Button</string>
     <string name="formatPercent">%1$.0f%%</string>
     <string name="basal">Basal</string>

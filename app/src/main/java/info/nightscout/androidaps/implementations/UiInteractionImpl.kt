@@ -19,7 +19,7 @@ import info.nightscout.core.services.AlarmSoundServiceHelper
 import info.nightscout.core.ui.toast.ToastUtils
 import info.nightscout.interfaces.notifications.Notification
 import info.nightscout.interfaces.nsclient.NSAlarm
-import info.nightscout.interfaces.ui.ActivityNames
+import info.nightscout.interfaces.ui.UiInteraction
 import info.nightscout.plugins.general.overview.notifications.NotificationWithAction
 import info.nightscout.rx.bus.RxBus
 import info.nightscout.ui.activities.BolusProgressHelperActivity
@@ -41,11 +41,12 @@ import info.nightscout.ui.dialogs.TreatmentDialog
 import info.nightscout.ui.dialogs.WizardDialog
 import javax.inject.Inject
 
-class ActivityNamesImpl @Inject constructor(
+class UiInteractionImpl @Inject constructor(
+    private val context: Context,
     private val rxBus: RxBus,
     private val injector: HasAndroidInjector,
     private val alarmSoundServiceHelper: AlarmSoundServiceHelper
-) : ActivityNames {
+) : UiInteraction {
 
     override val mainActivity: Class<*> = MainActivity::class.java
     override val tddStatsActivity: Class<*> = TDDStatsActivity::class.java
@@ -57,13 +58,13 @@ class ActivityNamesImpl @Inject constructor(
     override val myPreferenceFragment: Class<*> = MyPreferenceFragment::class.java
     override val prefGeneral: Int = R.xml.pref_general
 
-    override fun runAlarm(ctx: Context, status: String, title: String, @RawRes soundId: Int) {
-        val i = Intent(ctx, errorHelperActivity)
+    override fun runAlarm(status: String, title: String, @RawRes soundId: Int) {
+        val i = Intent(context, errorHelperActivity)
         i.putExtra(AlarmSoundService.SOUND_ID, soundId)
         i.putExtra(AlarmSoundService.STATUS, status)
         i.putExtra(AlarmSoundService.TITLE, title)
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        ctx.startActivity(i)
+        context.startActivity(i)
     }
 
     override fun runWizardDialog(fragmentManager: FragmentManager, carbs: Int?, name: String?) {
@@ -128,7 +129,7 @@ class ActivityNamesImpl @Inject constructor(
             .show(fragmentManager, "FillDialog")
     }
 
-    override fun runProfileViewerDialog(fragmentManager: FragmentManager, time: Long, mode: ActivityNames.Mode, customProfile: String?, customProfileName: String?, customProfile2: String?) {
+    override fun runProfileViewerDialog(fragmentManager: FragmentManager, time: Long, mode: UiInteraction.Mode, customProfile: String?, customProfileName: String?, customProfile2: String?) {
         ProfileViewerDialog()
             .also {
                 it.arguments = Bundle().also { bundle ->
@@ -142,7 +143,7 @@ class ActivityNamesImpl @Inject constructor(
             .show(fragmentManager, "ProfileViewer")
     }
 
-    override fun runCareDialog(fragmentManager: FragmentManager, options: ActivityNames.EventType, @StringRes event: Int) {
+    override fun runCareDialog(fragmentManager: FragmentManager, options: UiInteraction.EventType, @StringRes event: Int) {
         CareDialog()
             .also {
                 it.arguments = Bundle().also { bundle ->
@@ -168,7 +169,7 @@ class ActivityNamesImpl @Inject constructor(
         rxBus.send(EventNewNotification(Notification(id, text, level, validMinutes)))
     }
 
-    override fun addNotificationWithSound(id: Int, text: String, level: Int, soundId: Int) {
+    override fun addNotificationWithSound(id: Int, text: String, level: Int, soundId: Int?) {
         rxBus.send(EventNewNotification(Notification(id, text, level).also { it.soundId = soundId }))
     }
 
