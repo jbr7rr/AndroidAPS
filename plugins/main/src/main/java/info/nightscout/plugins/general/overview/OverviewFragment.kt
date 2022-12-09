@@ -31,7 +31,6 @@ import info.nightscout.core.extensions.directionToIcon
 import info.nightscout.core.extensions.valueToUnitsString
 import info.nightscout.core.graph.OverviewData
 import info.nightscout.core.iob.displayText
-import info.nightscout.core.iob.iobCobCalculator.GlucoseStatusProvider
 import info.nightscout.core.profile.ProfileSealed
 import info.nightscout.core.ui.UIRunnable
 import info.nightscout.core.ui.dialogs.OKDialog
@@ -52,6 +51,7 @@ import info.nightscout.interfaces.automation.Automation
 import info.nightscout.interfaces.bgQualityCheck.BgQualityCheck
 import info.nightscout.interfaces.constraints.Constraint
 import info.nightscout.interfaces.constraints.Constraints
+import info.nightscout.interfaces.iob.GlucoseStatusProvider
 import info.nightscout.interfaces.iob.IobCobCalculator
 import info.nightscout.interfaces.logging.UserEntryLogger
 import info.nightscout.interfaces.nsclient.NSSettingsStatus
@@ -209,7 +209,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
             overviewData.rangeToDisplay = if (overviewData.rangeToDisplay > 24) 6 else overviewData.rangeToDisplay
             sp.putInt(info.nightscout.core.utils.R.string.key_rangetodisplay, overviewData.rangeToDisplay)
             rxBus.send(EventPreferenceChange(rh.gs(info.nightscout.core.utils.R.string.key_rangetodisplay)))
-            sp.putBoolean(R.string.key_objectiveusescale, true)
+            sp.putBoolean(info.nightscout.core.utils.R.string.key_objectiveusescale, true)
             false
         }
         prepareGraphsIfNeeded(overviewMenus.setting.size)
@@ -273,7 +273,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                            overviewData.rangeToDisplay = it.hours
                            sp.putInt(info.nightscout.core.utils.R.string.key_rangetodisplay, it.hours)
                            rxBus.send(EventPreferenceChange(rh.gs(info.nightscout.core.utils.R.string.key_rangetodisplay)))
-                           sp.putBoolean(R.string.key_objectiveusescale, true)
+                           sp.putBoolean(info.nightscout.core.utils.R.string.key_objectiveusescale, true)
                        }, fabricPrivacy::logException)
         disposable += rxBus
             .toObservable(EventNewBG::class.java)
@@ -659,7 +659,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
 
                     (loop as PluginBase).isEnabled() && loop.isSuspended                        -> {
                         binding.infoLayout.apsMode.setImageResource(info.nightscout.core.ui.R.drawable.ic_loop_paused)
-                        apsModeSetA11yLabel(R.string.suspendloop_label)
+                        apsModeSetA11yLabel(info.nightscout.core.ui.R.string.suspendloop_label)
                         binding.infoLayout.apsModeText.text = dateUtil.age(loop.minutesToEndOfSuspend() * 60000L, true, rh)
                         binding.infoLayout.apsModeText.visibility = View.VISIBLE
                     }
@@ -908,7 +908,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
             val useBatteryLevel = (pump.model() == PumpType.OMNIPOD_EROS)
                 || (pump.model() != PumpType.ACCU_CHEK_COMBO && pump.model() != PumpType.OMNIPOD_DASH)
             batteryLevel.visibility = useBatteryLevel.toVisibility()
-            statusLights.visibility = (sp.getBoolean(R.string.key_show_statuslights, true) || config.NSCLIENT).toVisibility()
+            statusLightsLayout.visibility = (sp.getBoolean(R.string.key_show_statuslights, true) || config.NSCLIENT).toVisibility()
         }
         statusLightHandler.updateStatusLights(
             binding.statusLightsLayout.cannulaAge,
