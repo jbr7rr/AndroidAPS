@@ -34,6 +34,7 @@ import info.nightscout.interfaces.utils.HardLimits
 import info.nightscout.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import info.nightscout.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import info.nightscout.plugins.aps.openAPSSMBDynamicISF.OpenAPSSMBDynamicISFPlugin
+import info.nightscout.plugins.aps.openAPSJB.OpenAPSJBPlugin
 import info.nightscout.plugins.constraints.ConstraintsImpl
 import info.nightscout.plugins.constraints.objectives.ObjectivesPlugin
 import info.nightscout.plugins.constraints.objectives.objectives.Objective
@@ -89,6 +90,7 @@ class ConstraintsCheckerTest : TestBaseWithProfile() {
     private lateinit var openAPSSMBPlugin: OpenAPSSMBPlugin
     private lateinit var openAPSAMAPlugin: OpenAPSAMAPlugin
     private lateinit var openAPSSMBDynamicISFPlugin: OpenAPSSMBDynamicISFPlugin
+    private lateinit var openAPSJBPlugin: OpenAPSJBPlugin
 
     private val injector = HasAndroidInjector {
         AndroidInjector {
@@ -175,6 +177,25 @@ class ConstraintsCheckerTest : TestBaseWithProfile() {
         insightPlugin = LocalInsightPlugin(injector, aapsLogger, rxBus, rh, sp, commandQueue, profileFunction, context, config, dateUtil, insightDbHelper, pumpSync, insightDatabase)
         openAPSSMBPlugin =
             OpenAPSSMBPlugin(
+                injector,
+                aapsLogger,
+                rxBus,
+                constraintChecker,
+                rh,
+                profileFunction,
+                context,
+                activePlugin,
+                iobCobCalculator,
+                hardLimits,
+                profiler,
+                sp,
+                dateUtil,
+                repository,
+                glucoseStatusProvider,
+                bgQualityCheck
+            )
+        openAPSJBPlugin =
+            OpenAPSJBPlugin(
                 injector,
                 aapsLogger,
                 rxBus,
