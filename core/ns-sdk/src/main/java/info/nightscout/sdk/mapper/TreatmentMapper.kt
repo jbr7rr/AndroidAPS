@@ -17,10 +17,19 @@ import info.nightscout.sdk.remotemodel.RemoteTreatment
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+/**
+ * Convert to [RemoteTreatment] and back to [NSTreatment]
+ * testing purpose only
+ *
+ * @return treatment after double conversion
+ */
+fun NSTreatment.convertToRemoteAndBack(): NSTreatment? =
+    toRemoteTreatment()?.toTreatment()
+
 internal fun RemoteTreatment.toTreatment(): NSTreatment? {
     val treatmentTimestamp = timestamp()
     when {
-        insulin != null && insulin > 0                                     ->
+        insulin != null && insulin > 0 ->
             return NSBolus(
                 date = treatmentTimestamp,
                 device = this.device,
@@ -40,6 +49,7 @@ internal fun RemoteTreatment.toTreatment(): NSTreatment? {
                 pumpSerial = this.pumpSerial,
                 insulin = this.insulin,
                 type = NSBolus.BolusType.fromString(this.type),
+                isBasalInsulin = isBasalInsulin ?: false
             )
 
         carbs != null && carbs > 0                                         ->
@@ -117,7 +127,7 @@ internal fun RemoteTreatment.toTreatment(): NSTreatment? {
                 pumpSerial = extendedEmulated.pumpSerial,
                 enteredinsulin = extendedEmulated.enteredinsulin ?: 0.0,
                 duration = extendedEmulated.durationInMilliseconds ?: TimeUnit.MINUTES.toMillis(extendedEmulated.duration ?: 0L),
-                isEmulatingTempbasal = extendedEmulated.isEmulatingTempBasal
+                isEmulatingTempBasal = extendedEmulated.isEmulatingTempBasal
             )
         }
 
@@ -210,7 +220,7 @@ internal fun RemoteTreatment.toTreatment(): NSTreatment? {
                 pumpType = this.pumpType,
                 pumpSerial = this.pumpSerial,
                 profileJson = this.profileJson?.let { JSONObject(this.profileJson) },
-                profileName = this.profile,
+                profile = this.profile,
                 originalProfileName = this.originalProfileName,
                 originalDuration = this.originalDuration,
                 duration = this.duration,
@@ -329,10 +339,271 @@ internal fun RemoteTreatment.toTreatment(): NSTreatment? {
                 pumpSerial = this.pumpSerial,
                 enteredinsulin = this.enteredinsulin,
                 duration = this.durationInMilliseconds ?: TimeUnit.MINUTES.toMillis(this.duration ?: 0L),
-                isEmulatingTempbasal = this.isEmulatingTempBasal
+                isEmulatingTempBasal = this.isEmulatingTempBasal
             )
         }
     }
 
     return null
 }
+
+internal fun NSTreatment.toRemoteTreatment(): RemoteTreatment? =
+    when (this) {
+        is NSBolus                  -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            insulin = insulin,
+            type = type.name,
+            isBasalInsulin = isBasalInsulin
+        )
+
+        is NSCarbs                  -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            carbs = carbs,
+            duration = duration
+        )
+
+        is NSTemporaryTarget        -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            duration = TimeUnit.MILLISECONDS.toMinutes(duration),
+            durationInMilliseconds = duration,
+            targetBottom = targetBottom,
+            targetTop = targetTop,
+            reason = reason.text
+        )
+        /*
+                // Convert back emulated TBR -> EB
+                eventType == EventType.TEMPORARY_BASAL && extendedEmulated != null ->
+
+                    return RemoteTreatment(
+                        date = treatmentTimestamp,
+                        device = device,
+                        identifier = identifier,
+                        units = NsUnits.fromString(extendedEmulated.units),
+                        srvModified = srvModified,
+                        srvCreated = srvCreated,
+                        utcOffset = utcOffset ?: 0,
+                        subject = subject,
+                        isReadOnly = extendedEmulated.isReadOnly ?: false,
+                        isValid = extendedEmulated.isValid ?: true,
+                        eventType = extendedEmulated.eventType,
+                        notes = extendedEmulated.notes,
+                        pumpId = extendedEmulated.pumpId,
+                        endId = extendedEmulated.endId,
+                        pumpType = extendedEmulated.pumpType,
+                        pumpSerial = extendedEmulated.pumpSerial,
+                        enteredinsulin = extendedEmulated.enteredinsulin ?: 0.0,
+                        duration = extendedEmulated.durationInMilliseconds ?: TimeUnit.MINUTES.toMillis(extendedEmulated.duration ?: 0L),
+                        isEmulatingTempbasal = extendedEmulated.isEmulatingTempBasal
+                    )
+                }
+        */
+        is NSTemporaryBasal         -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            duration = TimeUnit.MILLISECONDS.toMinutes(duration),
+            durationInMilliseconds = duration,
+            absolute = absolute,
+            percent = percent,
+            rate = rate,
+            type = type.name
+        )
+
+        is NSEffectiveProfileSwitch -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            profileJson = profileJson.toString(),
+            originalProfileName = originalProfileName,
+            originalCustomizedName = originalCustomizedName,
+            originalTimeshift = originalTimeshift,
+            originalPercentage = originalPercentage,
+            originalDuration = originalDuration,
+            originalEnd = originalEnd
+        )
+
+        is NSProfileSwitch          -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            profileJson = profileJson.toString(), // must be de-customized
+            profile = profile,
+            originalProfileName = originalProfileName,
+            originalDuration = originalDuration,
+            duration = duration,
+            timeshift = timeShift,
+            percentage = percentage,
+        )
+
+        is NSBolusWizard            -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            bolusCalculatorResult = bolusCalculatorResult,
+            glucose = glucose
+        )
+
+        is NSTherapyEvent           -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            duration = TimeUnit.MILLISECONDS.toMinutes(duration),
+            durationInMilliseconds = duration,
+            glucose = glucose,
+            enteredBy = enteredBy,
+            glucoseType = glucoseType?.text
+        )
+
+        is NSOfflineEvent           -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            duration = TimeUnit.MILLISECONDS.toMinutes(duration),
+            durationInMilliseconds = duration,
+            reason = reason.name
+        )
+
+        is NSExtendedBolus          -> RemoteTreatment(
+            date = date,
+            device = device,
+            identifier = identifier,
+            units = units?.value,
+            srvModified = srvModified,
+            srvCreated = srvCreated,
+            utcOffset = utcOffset,
+            subject = subject,
+            isReadOnly = isReadOnly,
+            isValid = isValid,
+            eventType = eventType,
+            notes = notes,
+            pumpId = pumpId,
+            endId = endId,
+            pumpType = pumpType,
+            pumpSerial = pumpSerial,
+            enteredinsulin = enteredinsulin,
+            duration = TimeUnit.MILLISECONDS.toMinutes(duration),
+            durationInMilliseconds = duration,
+            isEmulatingTempBasal = isEmulatingTempBasal
+        )
+
+        else                        -> null
+    }

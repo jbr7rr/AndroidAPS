@@ -2,13 +2,17 @@ package info.nightscout.sdk.networking
 
 import com.google.gson.JsonElement
 import info.nightscout.sdk.remotemodel.LastModified
-import info.nightscout.sdk.remotemodel.RemoteDeviceStatus
 import info.nightscout.sdk.remotemodel.NSResponse
+import info.nightscout.sdk.remotemodel.RemoteCreateUpdateResponse
+import info.nightscout.sdk.remotemodel.RemoteDeviceStatus
 import info.nightscout.sdk.remotemodel.RemoteEntry
 import info.nightscout.sdk.remotemodel.RemoteStatusResponse
 import info.nightscout.sdk.remotemodel.RemoteTreatment
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -41,11 +45,21 @@ internal interface NightscoutRemoteService {
     suspend fun getSgvsNewerThan(@Query(value = "date\$gt", encoded = true) date: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteEntry>>>
 
     @GET("v3/entries/history/{from}")
-    suspend fun getSgvsModifiedSince(@Path("from") from: Long): Response<NSResponse<List<RemoteEntry>>>
+    suspend fun getSgvsModifiedSince(@Path("from") from: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteEntry>>>
+
+    @GET("v3/treatments")
+    suspend fun getTreatmentsNewerThan(@Query(value = "date\$gt", encoded = true) date: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteTreatment>>>
 
     @GET("v3/treatments/history/{from}")
     suspend fun getTreatmentsModifiedSince(@Path("from") from: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteTreatment>>>
 
     @GET("v3/devicestatus/history/{from}")
     suspend fun getDeviceStatusModifiedSince(@Path("from") from: Long): Response<NSResponse<List<RemoteDeviceStatus>>>
+
+    @POST("v3/treatments")
+    suspend fun createTreatment(@Body remoteTreatment: RemoteTreatment): Response<NSResponse<RemoteCreateUpdateResponse>>
+
+    @PUT("v3/treatments")
+    suspend fun updateTreatment(@Body remoteTreatment: RemoteTreatment): Response<NSResponse<RemoteCreateUpdateResponse>>
+
 }

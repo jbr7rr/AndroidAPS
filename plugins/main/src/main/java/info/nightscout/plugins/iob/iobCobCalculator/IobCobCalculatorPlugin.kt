@@ -38,7 +38,6 @@ import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.interfaces.utils.DecimalFormatter
 import info.nightscout.interfaces.utils.MidnightTime
 import info.nightscout.plugins.R
-import info.nightscout.plugins.iob.iobCobCalculator.data.AutosensDataObject
 import info.nightscout.plugins.iob.iobCobCalculator.data.AutosensDataStoreObject
 import info.nightscout.rx.AapsSchedulers
 import info.nightscout.rx.bus.RxBus
@@ -156,7 +155,7 @@ class IobCobCalculatorPlugin @Inject constructor(
             overviewData = overviewData,
             reason = reason,
             end = System.currentTimeMillis(),
-            bgDataReload = false,
+            bgDataReload = true,
             cause = event
         )
     }
@@ -599,8 +598,6 @@ class IobCobCalculatorPlugin @Inject constructor(
 
     override fun calculateIobFromTempBasalsIncludingConvertedExtended(): IobTotal =
         calculateIobToTimeFromTempBasalsIncludingConvertedExtended(dateUtil.now())
-
-    override fun provideEmptyAutosensDataObject(): AutosensData = AutosensDataObject(injector)
 
     override fun calculateIobToTimeFromTempBasalsIncludingConvertedExtended(toTime: Long): IobTotal {
         val total = IobTotal(toTime)

@@ -64,6 +64,8 @@ import info.nightscout.interfaces.profile.Profile
 import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.interfaces.protection.ProtectionCheck
 import info.nightscout.interfaces.pump.defs.PumpType
+import info.nightscout.interfaces.source.DexcomBoyda
+import info.nightscout.interfaces.source.XDrip
 import info.nightscout.interfaces.ui.UiInteraction
 import info.nightscout.interfaces.utils.JsonHelper
 import info.nightscout.interfaces.utils.TrendCalculator
@@ -74,16 +76,14 @@ import info.nightscout.plugins.general.overview.graphData.GraphData
 import info.nightscout.plugins.general.overview.notifications.NotificationStore
 import info.nightscout.plugins.general.overview.notifications.events.EventUpdateOverviewNotification
 import info.nightscout.plugins.skins.SkinProvider
-import info.nightscout.plugins.source.DexcomPlugin
-import info.nightscout.plugins.source.XdripPlugin
 import info.nightscout.plugins.ui.StatusLightHandler
 import info.nightscout.rx.AapsSchedulers
 import info.nightscout.rx.bus.RxBus
 import info.nightscout.rx.events.EventAcceptOpenLoopChange
+import info.nightscout.rx.events.EventBucketedDataCreated
 import info.nightscout.rx.events.EventEffectiveProfileSwitchChanged
 import info.nightscout.rx.events.EventExtendedBolusChange
 import info.nightscout.rx.events.EventMobileToWear
-import info.nightscout.rx.events.EventNewBG
 import info.nightscout.rx.events.EventNewOpenLoopNotification
 import info.nightscout.rx.events.EventPreferenceChange
 import info.nightscout.rx.events.EventPumpStatusChanged
@@ -99,6 +99,7 @@ import info.nightscout.rx.logging.AAPSLogger
 import info.nightscout.rx.weardata.EventData
 import info.nightscout.shared.extensions.runOnUiThread
 import info.nightscout.shared.extensions.toVisibility
+import info.nightscout.shared.extensions.toVisibilityKeepSpace
 import info.nightscout.shared.interfaces.ResourceHelper
 import info.nightscout.shared.sharedPreferences.SP
 import info.nightscout.shared.utils.DateUtil
@@ -127,9 +128,8 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
     @Inject lateinit var loop: Loop
     @Inject lateinit var activePlugin: ActivePlugin
     @Inject lateinit var iobCobCalculator: IobCobCalculator
-    @Inject lateinit var dexcomPlugin: DexcomPlugin
-    @Inject lateinit var dexcomMediator: DexcomPlugin.DexcomMediator
-    @Inject lateinit var xdripPlugin: XdripPlugin
+    @Inject lateinit var dexcomBoyda: DexcomBoyda
+    @Inject lateinit var xDrip: XDrip
     @Inject lateinit var notificationStore: NotificationStore
     @Inject lateinit var quickWizard: QuickWizard
     @Inject lateinit var config: Config
@@ -276,7 +276,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                            sp.putBoolean(info.nightscout.core.utils.R.string.key_objectiveusescale, true)
                        }, fabricPrivacy::logException)
         disposable += rxBus
-            .toObservable(EventNewBG::class.java)
+            .toObservable(EventBucketedDataCreated::class.java)
             .debounce(1L, TimeUnit.SECONDS)
             .observeOn(aapsSchedulers.io)
             .subscribe({ updateBg() }, fabricPrivacy::logException)
@@ -400,10 +400,10 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                 }
 
                 R.id.cgm_button          -> {
-                    if (xdripPlugin.isEnabled())
+                    if (xDrip.isEnabled())
                         openCgmApp("com.eveningoutpost.dexdrip")
-                    else if (dexcomPlugin.isEnabled()) {
-                        dexcomMediator.findDexcomPackageName()?.let {
+                    else if (dexcomBoyda.isEnabled()) {
+                        dexcomBoyda.findDexcomPackageName()?.let {
                             openCgmApp(it)
                         }
                             ?: ToastUtils.infoToast(activity, rh.gs(R.string.dexcom_app_not_installed))
@@ -411,11 +411,11 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                 }
 
                 R.id.calibration_button  -> {
-                    if (xdripPlugin.isEnabled()) {
+                    if (xDrip.isEnabled()) {
                         uiInteraction.runCalibrationDialog(childFragmentManager)
-                    } else if (dexcomPlugin.isEnabled()) {
+                    } else if (dexcomBoyda.isEnabled()) {
                         try {
-                            dexcomMediator.findDexcomPackageName()?.let {
+                            dexcomBoyda.findDexcomPackageName()?.let {
                                 startActivity(
                                     Intent("com.dexcom.cgm.activities.MeterEntryActivity")
                                         .setPackage(it)
@@ -577,8 +577,8 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                 && sp.getBoolean(R.string.key_show_insulin_button, true)).toVisibility()
 
             // **** Calibration & CGM buttons ****
-            val xDripIsBgSource = xdripPlugin.isEnabled()
-            val dexcomIsSource = dexcomPlugin.isEnabled()
+            val xDripIsBgSource = xDrip.isEnabled()
+            val dexcomIsSource = dexcomBoyda.isEnabled()
             binding.buttonsLayout.calibrationButton.visibility = (xDripIsBgSource && actualBG != null && sp.getBoolean(R.string.key_show_calibration_button, true)).toVisibility()
             if (dexcomIsSource) {
                 binding.buttonsLayout.cgmButton.setCompoundDrawablesWithIntrinsicBounds(null, rh.gd(R.drawable.ic_byoda), null, null)
@@ -778,19 +778,19 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
     @SuppressLint("SetTextI18n")
     fun updateBg() {
         val units = profileFunction.getUnits()
-        val lastBg = overviewData.lastBg
-        val lastBgColor = overviewData.lastBgColor(context)
-        val isActualBg = overviewData.isActualBg
+        val lastBg = overviewData.lastBg(iobCobCalculator.ads)
+        val lastBgColor = overviewData.lastBgColor(context, iobCobCalculator.ads)
+        val isActualBg = overviewData.isActualBg(iobCobCalculator.ads)
         val glucoseStatus = glucoseStatusProvider.glucoseStatusData
-        val trendDescription = trendCalculator.getTrendDescription(lastBg)
-        val trendArrow = trendCalculator.getTrendArrow(lastBg)
-        val lastBgDescription = overviewData.lastBgDescription
+        val trendDescription = trendCalculator.getTrendDescription(iobCobCalculator.ads)
+        val trendArrow = trendCalculator.getTrendArrow(iobCobCalculator.ads)
+        val lastBgDescription = overviewData.lastBgDescription(iobCobCalculator.ads)
         runOnUiThread {
             _binding ?: return@runOnUiThread
-            binding.infoLayout.bg.text = lastBg?.valueToUnitsString(units)
-                ?: rh.gs(info.nightscout.core.ui.R.string.value_unavailable_short)
+            binding.infoLayout.bg.text = lastBg?.valueToUnitsString(units) ?: ""
             binding.infoLayout.bg.setTextColor(lastBgColor)
-            binding.infoLayout.arrow.setImageResource(trendArrow.directionToIcon())
+            trendArrow?.let { binding.infoLayout.arrow.setImageResource(it.directionToIcon()) }
+            binding.infoLayout.arrow.visibility = (trendArrow != null).toVisibilityKeepSpace()
             binding.infoLayout.arrow.setColorFilter(lastBgColor)
             binding.infoLayout.arrow.contentDescription = lastBgDescription + " " + rh.gs(info.nightscout.core.ui.R.string.and) + " " + trendDescription
 
@@ -1092,15 +1092,16 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
 
     private fun updateSensitivity() {
         _binding ?: return
-        if (constraintChecker.isAutosensModeEnabled().value() || !(config.NSCLIENT && overviewData.lastAutosensData(iobCobCalculator) == null)) {
+        val lastAutosensData = overviewData.lastAutosensData(iobCobCalculator)
+        if (constraintChecker.isAutosensModeEnabled().value() || !(config.NSCLIENT && lastAutosensData == null)) {
             binding.infoLayout.sensitivityIcon.setImageResource(info.nightscout.core.main.R.drawable.ic_swap_vert_black_48dp_green)
         } else {
             binding.infoLayout.sensitivityIcon.setImageResource(info.nightscout.core.main.R.drawable.ic_x_swap_vert)
         }
 
         binding.infoLayout.sensitivity.text =
-            overviewData.lastAutosensData(iobCobCalculator)?.let { autosensData ->
-                String.format(Locale.ENGLISH, "%.0f%%", autosensData.autosensResult.ratio * 100)
+           lastAutosensData?.let {
+                String.format(Locale.ENGLISH, "%.0f%%", it.autosensResult.ratio * 100)
             } ?: ""
         // Show variable sensitivity
         val profile = profileFunction.getProfile()
