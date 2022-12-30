@@ -264,8 +264,98 @@ class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: S
         smbAlwaysAllowed = advancedFiltering
         currentTime = now
         this.flatBGsDetected = flatBGsDetected
-    }
 
+        /*
+        ** Tsunami specific variables
+        */
+        // Get peak time if using a PK insulin model
+        val activityPredTime_PK = TimeUnit.MILLISECONDS.toMinutes(activePlugin.activeInsulin.insulinConfiguration.peak) //MP act. pred. time for PK ins. models; target time = insulin peak time
+
+        // Get the ID of the currently used insulin preset
+        val insulinInterface = activePlugin.activeInsulin
+        val insulinID = insulinInterface.id.value
+
+        // Get the ID of the current tsunami mode (currently unused)
+        val tsunamiMode = repository.getTsunamiModeActiveAt(now).blockingGet()
+        val tsunamiActive:Boolean = tsunamiMode is ValueWrapper.Existing
+        var tsunamiModeID = 1
+        if (tsunamiMode is ValueWrapper.Existing) {
+            tsunamiModeID = tsunamiMode.value.tsunamiMode
+        }
+
+        // Calculate reference activity values
+        var currentActivity = 0.0
+        for (i in -4..0) { //MP: -4 to 0 calculates all the insulin active during the last 5 minutes
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(i.toLong()), profile)
+            currentActivity += iob.activity
+        }
+
+        var futureActivity = 0.0
+        var activityPredTime: Long
+        val activityPredTime_PD = 65L //MP activity prediction time for pharmacodynamic model; fixed to 65 min (approx. peak time of 1 U bolus)
+        if (insulinID != 105 && insulinID != 205) { //MP if not using PD insulin models
+            activityPredTime = activityPredTime_PK
+        } else { //MP if using PD insulin models
+            activityPredTime = activityPredTime_PD
+        }
+        for (i in -4..0) { //MP: calculate 5-minute-insulin activity centering around peaktime
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(activityPredTime - i), profile)
+            futureActivity += iob.activity
+        }
+
+        var sensorlag = -10L //MP Assume that the glucose value measurement reflect the BG value from 'sensorlag' minutes ago & calculate the insulin activity then
+        var sensorLagActivity = 0.0
+        for (i in -4..0) {
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(sensorlag - i), profile)
+            sensorLagActivity += iob.activity
+        }
+
+        var activity_historic = -20L //MP Activity at the time in minutes from now. Used to calculate activity in the past to use as target activity.
+        var historicActivity = 0.0
+        for (i in -2..2) {
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(activity_historic - i), profile)
+            historicActivity += iob.activity
+        }
+
+        futureActivity = Round.roundTo(futureActivity, 0.0001)
+        sensorLagActivity = Round.roundTo(sensorLagActivity, 0.0001)
+        historicActivity = Round.roundTo(historicActivity, 0.0001)
+        currentActivity = Round.roundTo(currentActivity, 0.0001)
+
+        // Register profile variables
+        this.profile.put("tsunamiModeID", tsunamiModeID)
+        this.profile.put("peaktime", activityPredTime_PK)
+        this.profile.put("insulinID", insulinID)
+        this.profile.put("tsuSMBCap", SafeParse.stringToDouble(sp.getString(R.string.key_tsunami_smbcap, "1")))
+        this.profile.put("tsuInsReqPCT", SafeParse.stringToDouble(sp.getString(R.string.key_insulinReqPCT, "65")))
+        this.profile.put("percentage", profile.percentage)
+        this.profile.put("dia", profile.dia)
+        this.profile.put("tsunamiActive", tsunamiActive)
+        this.profile.put("enableWaveMode", sp.getBoolean(R.string.key_enable_wave_mode, false))
+        this.profile.put("waveStart", SafeParse.stringToDouble(sp.getString(R.string.key_wave_start, "11")))
+        this.profile.put("waveEnd", SafeParse.stringToDouble(sp.getString(R.string.key_wave_end, "21")))
+        this.profile.put("waveUseSMBCap", sp.getBoolean(R.string.key_use_wave_smbcap, false))
+        this.profile.put("waveSMBCap", SafeParse.stringToDouble(sp.getString(R.string.key_wave_smbcap, "0.5")))
+        this.profile.put("waveInsReqPCT", SafeParse.stringToDouble(sp.getString(R.string.key_wave_insulinReqPCT, "65")))
+        this.profile.put("tsuSMBCapScaling", sp.getBoolean(R.string.key_tsu_SMB_scaling, false))
+        this.profile.put("tsuActivityTarget", SafeParse.stringToDouble(sp.getString(R.string.key_tsu_activity_target, "75")))
+        this.profile.put("waveSMBCapScaling", sp.getBoolean(R.string.key_wave_SMB_scaling, false))
+        this.profile.put("waveActivityTarget", SafeParse.stringToDouble(sp.getString(R.string.key_wave_activity_target, "50")))
+
+        // Register glucose_status variables
+        mGlucoseStatus.put("futureActivity", futureActivity);
+        mGlucoseStatus.put("activityPredTime", activityPredTime);
+        mGlucoseStatus.put("sensorLagActivity", sensorLagActivity)
+        mGlucoseStatus.put("historicActivity", historicActivity)
+        mGlucoseStatus.put("currentActivity", currentActivity)
+        mGlucoseStatus.put("deltaScore", glucoseStatus.deltaScore);
+
+        // Register meal_data variables
+        this.mealData.put("lastBolus", mealData.lastBolus)
+        /*
+        ** Tsunami specific variables END
+        */
+    }
     private fun makeParam(jsonObject: JSONObject?, rhino: Context, scope: Scriptable): Any {
         return if (jsonObject == null) Undefined.instance
         else NativeJSON.parse(rhino, scope, jsonObject.toString()) { _: Context?, _: Scriptable?, _: Scriptable?, objects: Array<Any?> -> objects[1] }
