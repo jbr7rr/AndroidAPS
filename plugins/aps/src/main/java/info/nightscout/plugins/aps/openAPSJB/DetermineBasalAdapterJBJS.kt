@@ -13,6 +13,7 @@ import info.nightscout.interfaces.iob.GlucoseStatus
 import info.nightscout.interfaces.iob.IobCobCalculator
 import info.nightscout.interfaces.iob.IobTotal
 import info.nightscout.interfaces.iob.MealData
+import info.nightscout.interfaces.utils.Round
 import info.nightscout.interfaces.plugin.ActivePlugin
 import info.nightscout.interfaces.profile.Profile
 import info.nightscout.interfaces.profile.ProfileFunction
@@ -38,6 +39,7 @@ import org.mozilla.javascript.Undefined
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: ScriptReader, private val injector: HasAndroidInjector) : DetermineBasalAdapter {
@@ -276,12 +278,12 @@ class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: S
         val insulinID = insulinInterface.id.value
 
         // Get the ID of the current tsunami mode (currently unused)
-        val tsunamiMode = repository.getTsunamiModeActiveAt(now).blockingGet()
-        val tsunamiActive:Boolean = tsunamiMode is ValueWrapper.Existing
-        var tsunamiModeID = 1
-        if (tsunamiMode is ValueWrapper.Existing) {
-            tsunamiModeID = tsunamiMode.value.tsunamiMode
-        }
+        // val tsunamiMode = repository.getTsunamiModeActiveAt(now).blockingGet()
+        // val tsunamiActive:Boolean = tsunamiMode is ValueWrapper.Existing
+        // var tsunamiModeID = 1
+        // if (tsunamiMode is ValueWrapper.Existing) {
+        //     tsunamiModeID = tsunamiMode.value.tsunamiMode
+        // }
 
         // Calculate reference activity values
         var currentActivity = 0.0
@@ -322,23 +324,25 @@ class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: S
         historicActivity = Round.roundTo(historicActivity, 0.0001)
         currentActivity = Round.roundTo(currentActivity, 0.0001)
 
+        val deltaScore = glucoseStatus.shortAvgDelta / 4.0
+
         // Register profile variables
-        this.profile.put("tsunamiModeID", tsunamiModeID)
+        // this.profile.put("tsunamiModeID", tsunamiModeID)
         this.profile.put("peaktime", activityPredTime_PK)
         this.profile.put("insulinID", insulinID)
-        this.profile.put("tsuSMBCap", SafeParse.stringToDouble(sp.getString(R.string.key_tsunami_smbcap, "1")))
-        this.profile.put("tsuInsReqPCT", SafeParse.stringToDouble(sp.getString(R.string.key_insulinReqPCT, "65")))
+        // this.profile.put("tsuSMBCap", SafeParse.stringToDouble(sp.getString(R.string.key_tsunami_smbcap, "1")))
+        // this.profile.put("tsuInsReqPCT", SafeParse.stringToDouble(sp.getString(R.string.key_insulinReqPCT, "65")))
         this.profile.put("percentage", profile.percentage)
         this.profile.put("dia", profile.dia)
-        this.profile.put("tsunamiActive", tsunamiActive)
+        // this.profile.put("tsunamiActive", tsunamiActive)
         this.profile.put("enableWaveMode", sp.getBoolean(R.string.key_enable_wave_mode, false))
         this.profile.put("waveStart", SafeParse.stringToDouble(sp.getString(R.string.key_wave_start, "11")))
         this.profile.put("waveEnd", SafeParse.stringToDouble(sp.getString(R.string.key_wave_end, "21")))
         this.profile.put("waveUseSMBCap", sp.getBoolean(R.string.key_use_wave_smbcap, false))
         this.profile.put("waveSMBCap", SafeParse.stringToDouble(sp.getString(R.string.key_wave_smbcap, "0.5")))
         this.profile.put("waveInsReqPCT", SafeParse.stringToDouble(sp.getString(R.string.key_wave_insulinReqPCT, "65")))
-        this.profile.put("tsuSMBCapScaling", sp.getBoolean(R.string.key_tsu_SMB_scaling, false))
-        this.profile.put("tsuActivityTarget", SafeParse.stringToDouble(sp.getString(R.string.key_tsu_activity_target, "75")))
+        // this.profile.put("tsuSMBCapScaling", sp.getBoolean(R.string.key_tsu_SMB_scaling, false))
+        // this.profile.put("tsuActivityTarget", SafeParse.stringToDouble(sp.getString(R.string.key_tsu_activity_target, "75")))
         this.profile.put("waveSMBCapScaling", sp.getBoolean(R.string.key_wave_SMB_scaling, false))
         this.profile.put("waveActivityTarget", SafeParse.stringToDouble(sp.getString(R.string.key_wave_activity_target, "50")))
 
@@ -348,7 +352,7 @@ class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: S
         mGlucoseStatus.put("sensorLagActivity", sensorLagActivity)
         mGlucoseStatus.put("historicActivity", historicActivity)
         mGlucoseStatus.put("currentActivity", currentActivity)
-        mGlucoseStatus.put("deltaScore", glucoseStatus.deltaScore);
+        mGlucoseStatus.put("deltaScore", deltaScore);
 
         // Register meal_data variables
         this.mealData.put("lastBolus", mealData.lastBolus)

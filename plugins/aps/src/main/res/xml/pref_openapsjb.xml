@@ -28,6 +28,106 @@
             validate:floatminNumber="0"
             validate:testType="floatNumericRange" />
 
+        <androidx.preference.PreferenceScreen
+            android:key="wave_mode_settings"
+            android:title="@string/wave_mode_settings_title">
+
+            <SwitchPreference
+                android:defaultValue="false"
+                android:key="@string/key_enable_wave_mode"
+                android:summary="@string/enable_wave_mode_summary"
+                android:title="@string/enable_wave_mode_title" />
+
+            <info.nightscout.core.validators.ValidatingEditTextPreference
+                android:dependency="@string/key_enable_wave_mode"
+                android:defaultValue="11"
+                android:dialogMessage="@string/wave_start_summary"
+                android:digits="0123456789.,"
+                android:inputType="number"
+                android:key="@string/key_wave_start"
+                android:maxLines="20"
+                android:selectAllOnFocus="true"
+                android:singleLine="true"
+                android:title="@string/wave_start_title"
+                validate:floatmaxNumber="23"
+                validate:floatminNumber="0"
+                validate:testType="floatNumericRange" />
+
+            <info.nightscout.core.validators.ValidatingEditTextPreference
+                android:dependency="@string/key_enable_wave_mode"
+                android:defaultValue="21"
+                android:dialogMessage="@string/wave_end_summary"
+                android:digits="0123456789.,"
+                android:inputType="number"
+                android:key="@string/key_wave_end"
+                android:maxLines="20"
+                android:selectAllOnFocus="true"
+                android:singleLine="true"
+                android:title="@string/wave_end_title"
+                validate:floatmaxNumber="23"
+                validate:floatminNumber="0"
+                validate:testType="floatNumericRange" />
+
+            <SwitchPreference
+                android:dependency="@string/key_enable_wave_mode"
+                android:defaultValue="false"
+                android:key="@string/key_use_wave_smbcap"
+                android:summary="@string/use_wave_smbcap_summary"
+                android:title="@string/use_wave_smbcap_title" />
+
+            <info.nightscout.core.validators.ValidatingEditTextPreference
+                android:dependency="@string/key_use_wave_smbcap"
+                android:defaultValue="0.5"
+                android:dialogMessage="@string/wave_smbcap_message"
+                android:digits="0123456789.,"
+                android:inputType="numberDecimal"
+                android:key="@string/key_wave_smbcap"
+                android:selectAllOnFocus="true"
+                android:singleLine="true"
+                android:title="@string/wave_smbcap_title"
+                validate:floatmaxNumber="2"
+                validate:floatminNumber="0"
+                validate:testType="floatNumericRange" />
+
+            <SwitchPreference
+                android:dependency="@string/key_use_wave_smbcap"
+                android:defaultValue="false"
+                android:key="@string/key_wave_SMB_scaling"
+                android:summary="@string/wave_SMB_scaling_summary"
+                android:title="@string/wave_SMB_scaling_title" />
+
+            <PreferenceCategory
+                android:dependency="@string/key_enable_wave_mode"
+                android:key="@string/key_advanced_wave"
+                android:title="@string/advanced_wave_title">
+                <Preference android:summary="@string/advanced_wave_disclaimer">
+                </Preference>
+
+                <info.nightscout.core.validators.ValidatingEditTextPreference
+                    android:dependency="@string/key_enable_wave_mode"
+                    android:key="@string/key_wave_activity_target"
+                    android:title="@string/wave_activity_target_title"
+                    android:dialogMessage="@string/wave_activity_target_summary"
+                    android:defaultValue="50"
+                    validate:floatmaxNumber="100"
+                    validate:floatminNumber="50"
+                    android:inputType="numberDecimal"
+                    validate:testType="floatNumericRange" />
+
+                <info.nightscout.core.validators.ValidatingEditTextPreference
+                    android:dependency="@string/key_enable_wave_mode"
+                    android:defaultValue="65"
+                    android:dialogMessage="@string/wave_insulinReqPCT_message"
+                    android:inputType="numberDecimal"
+                    android:key="@string/key_wave_insulinReqPCT"
+                    android:title="@string/wave_insulinReqPCT_title"
+                    validate:floatmaxNumber="100"
+                    validate:floatminNumber="30"
+                    validate:testType="floatNumericRange" />
+            </PreferenceCategory>
+
+        </androidx.preference.PreferenceScreen>
+
         <SwitchPreference
             android:defaultValue="false"
             android:key="@string/key_openapsama_use_autosens"

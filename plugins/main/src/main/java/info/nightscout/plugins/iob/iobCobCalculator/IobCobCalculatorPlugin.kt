@@ -336,6 +336,7 @@ class IobCobCalculatorPlugin @Inject constructor(
         }
         val lastBolus = repository.getLastBolusRecordWrapped().blockingGet()
         result.lastBolusTime = if (lastBolus is ValueWrapper.Existing) lastBolus.value.timestamp else 0L
+        result.lastBolus = if (lastBolus is ValueWrapper.Existing) lastBolus.value.amount else 0.0 //MP save last bolus size into MealData 
         return result
     }
 

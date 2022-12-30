@@ -320,18 +320,19 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
     var endTime = 0;
     var activity_target = 0;
         
-    if (profile.tsunamiActive) {
-        tsuMode = 2;
-        deltaReductionPCT = 1;
-        SMBcap = profile.tsuSMBCap; //MP: User-set may SMB size for TAE.
-        if (profile.tsuSMBCapScaling) {
-        SMBcap = SMBcap * Math.min(profile.percentage / 100, 1.3); //SMBcap grows and shrinks with profile percentage;
-        }
-        insulinReqPCT = profile.tsuInsReqPCT / 100; // User-set percentage to modify insulin required
-        startTime = 0; // dummy value
-        endTime = 23; // dummy value
-        activity_target = profile.tsuActivityTarget/100; // MP for small deltas
-    } else if (profile.enableWaveMode) {
+    // if (profile.tsunamiActive) {
+    //     tsuMode = 2;
+    //     deltaReductionPCT = 1;
+    //     SMBcap = profile.tsuSMBCap; //MP: User-set may SMB size for TAE.
+    //     if (profile.tsuSMBCapScaling) {
+    //     SMBcap = SMBcap * Math.min(profile.percentage / 100, 1.3); //SMBcap grows and shrinks with profile percentage;
+    //     }
+    //     insulinReqPCT = profile.tsuInsReqPCT / 100; // User-set percentage to modify insulin required
+    //     startTime = 0; // dummy value
+    //     endTime = 23; // dummy value
+    //     activity_target = profile.tsuActivityTarget/100; // MP for small deltas
+    // } else 
+    if (profile.enableWaveMode) {
         tsuMode = 1;
         deltaReductionPCT = 0.5;
         SMBcap = profile.waveSMBCap; //MP: User-set may SMB size for TAE.
@@ -459,18 +460,19 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         //meal_data.mealCOB == 0 &&
         act_curr > 0 &&
         tsunami_insreq + iob_data.iob >= (bg - target_bg) / profile_sens &&
-        (profile.tsunamiActive || profile.enableWaveMode)) {
+        // (profile.tsunamiActive || profile.enableWaveMode)) {
+            (profile.tsunamiActive || profile.enableWaveMode)) {
         activity_controller = true; //MP Enable TAE
         //MP Reporting messages
-        if (profile.tsunamiActive) {
-                console.log("------------------------------");
-                console.log("TSUNAMI STATUS");
-                console.log("------------------------------");
-        } else {
-                console.log("------------------------------");
-                console.log("WAVE STATUS");
-                console.log("------------------------------");
-        }
+        // if (profile.tsunamiActive) {
+        //         console.log("------------------------------");
+        //         console.log("TSUNAMI STATUS");
+        //         console.log("------------------------------");
+        // } else {
+        console.log("------------------------------");
+        console.log("WAVE STATUS");
+        console.log("------------------------------");
+        // }
         console.log("act. lag: " + glucose_status.sensorLagActivity);
         console.log("act. now: " + act_curr + " (" + glucose_status.currentActivity + ")");
         console.log("act. future: " + glucose_status.futureActivity);
@@ -498,15 +500,15 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         console.log("------------------------------");
     } else {
         //MP Reporting if TAE is bypassed
-        if (profile.tsunamiActive || !profile.enableWaveMode) {
-                console.log("------------------------------");
-                console.log("TSUNAMI STATUS");
-                console.log("------------------------------");
-        } else {
-                console.log("------------------------------");
-                console.log("TSUNAMI / WAVE STATUS");
-                console.log("------------------------------");
-        }
+        // if (profile.tsunamiActive || !profile.enableWaveMode) {
+        //         console.log("------------------------------");
+        //         console.log("TSUNAMI STATUS");
+        //         console.log("------------------------------");
+        // } else {
+        console.log("------------------------------");
+        console.log("TSUNAMI / WAVE STATUS");
+        console.log("------------------------------");
+        // }
         console.log("TAE bypassed - reasons:");
         if (referenceTimer < startTime || referenceTimer > endTime) {
             console.log("Outside active hours.");
