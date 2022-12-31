@@ -332,9 +332,12 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
     if (profile.enableWaveMode) {
         tsuMode = 1;
         deltaReductionPCT = 0.5;
+        if (profile.waveDeltaReductionScaling) {
+            deltaReductionPCT = deltaReductionPCT * Math.min(profile.percentage / 100, 1.5);
+        }
         SMBcap = profile.waveSMBCap; //MP: User-set may SMB size for TAE.
         if (profile.waveSMBCapScaling) {
-        SMBcap = SMBcap * Math.min(profile.percentage / 100, 1.3); //SMBcap grows and shrinks with profile percentage;
+        SMBcap = SMBcap * Math.min(profile.percentage / 100, 1.5); //SMBcap grows and shrinks with profile percentage;
         }
         insulinReqPCT = profile.waveInsReqPCT / 100; // User-set percentage to modify insulin required
         startTime = profile.waveStart;

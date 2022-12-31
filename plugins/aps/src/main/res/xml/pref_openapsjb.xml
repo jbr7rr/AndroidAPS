@@ -96,6 +96,13 @@
                 android:summary="@string/wave_SMB_scaling_summary"
                 android:title="@string/wave_SMB_scaling_title" />
 
+            <SwitchPreference
+                android:dependency="@string/key_enable_wave_mode"
+                android:defaultValue="false"
+                android:key="@string/key_wave_delta_reduction_scaling"
+                android:summary="@string/wave_delta_reduction_scaling_summary"
+                android:title="@string/wave_delta_reduction_scaling_title" />
+
             <PreferenceCategory
                 android:dependency="@string/key_enable_wave_mode"
                 android:key="@string/key_advanced_wave"
