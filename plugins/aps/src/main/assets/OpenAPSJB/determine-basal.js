@@ -342,7 +342,7 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         insulinReqPCT = profile.waveInsReqPCT / 100; // User-set percentage to modify insulin required
         startTime = profile.waveStart;
         endTime = profile.waveEnd;
-        activity_target = profile.waveActivityTarget/100; // MP for small deltas
+        // activity_target = profile.waveActivityTarget/100; // MP for small deltas
     }
 
     // active hours redefinition (allowing end times < start times)
@@ -372,14 +372,15 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
     var act_missing;
 
     //MP Switch between activity control and activity build-up modes
-    if (glucose_status.delta <= 4.0) {
+    // if (glucose_status.delta <= 4.1) {
+        // TODO: Fallback on oref1? make it an option?
         //MP Adjust activity target to activity_target % of current activity if glucose is near constant / delta is low (near-constant activity)
-        act_missing = round((act_curr * activity_target - Math.max(act_future, 0)) / 5, 4); //MP Use activity_target% of current activity as target activity in the future; Divide by 5 to get per-minute activity
-        deltaScore = Math.min(1, Math.max((bg - target_bg) / 100, 0)); //MP redefines deltaScore as it otherwise would be near-zero (low deltas). The higher the bg, the larger deltaScore
-    } else {
+        // act_missing = round((act_curr * activity_target - Math.max(act_future, 0)) / 5, 4); //MP Use activity_target% of current activity as target activity in the future; Divide by 5 to get per-minute activity
+        // deltaScore = Math.min(1, Math.max((bg - target_bg) / 100, 0)); //MP redefines deltaScore as it otherwise would be near-zero (low deltas). The higher the bg, the larger deltaScore
+    // } else {
         //MP Escalate activity at medium to high delta (activity build-up)
         act_missing = round((act_targetDelta - Math.max(act_future, 0)) / 5, 4); //MP Calculate required activity to end a rise in t minutes; Divide by 5 to get per-minute activity
-    }
+    // }
 
     /*
      ** Insulin requirement calculation by TAE START
@@ -446,15 +447,16 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
 
     //MP deltaScore and BG score
     insulinReqPCT = round(insulinReqPCT * deltaScore, 3); //MP Modify insulinReqPCT in dependence of previous delta values
-    var bgScore_upper_threshold = 140; //MP BG above which no penalty will be given
-    var bgScore_lower_threshold = 80; //MP BG below which tae will not deliver SMBs
+    // Todo JB: We could make this relative to the target
+    var bgScore_upper_threshold = 100; //MP BG above which no penalty will be given
+    var bgScore_lower_threshold = 75; //MP BG below which tae will not deliver SMBs
     var bgScore = round(Math.min((bg - bgScore_lower_threshold) / (bgScore_upper_threshold - bgScore_lower_threshold), 1), 3); //MP Penalty at low or near-target bg values. Modifies SMBcap.
     SMBcap = round(SMBcap * bgScore, 2);
 
     //MP Enable TAE SMB sizing if the safety conditions are all met
     if (referenceTimer >= startTime &&
         referenceTimer <= endTime &&
-        glucose_status.delta >= 0 &&
+        glucose_status.delta >= 4.1 &&
         bg >= target_bg &&
         iob_data.iob > 0.1 &&
         //meal_data.mealCOB == 0 &&
@@ -491,11 +493,11 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         if (bg_correction > iob_data.iob && bg_correction > tsunami_insreq) {
             console.log("Mode: IOB too low, correcting for BG.");
         } else {
-            if (glucose_status.delta <= 4.1 && act_curr > 0) {
-                console.log("Mode: Activity control. Target: " + round(activity_target * 100, 0) + "%");
-            } else if (act_curr > 0) {
-                console.log("Mode: Building up activity.");
-            }
+            // if (glucose_status.delta <= 4.1 && act_curr > 0) {
+                // console.log("Mode: Activity control. Target: " + round(activity_target * 100, 0) + "%");
+            // } else if (act_curr > 0) {
+            console.log("Mode: Building up activity.");
+            // }
         }
         console.log("------------------------------");
     } else {
@@ -506,15 +508,16 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         //         console.log("------------------------------");
         // } else {
         console.log("------------------------------");
-        console.log("TSUNAMI / WAVE STATUS");
+        console.log("WAVE STATUS");
         console.log("------------------------------");
         // }
         console.log("TAE bypassed - reasons:");
         if (referenceTimer < startTime || referenceTimer > endTime) {
             console.log("Outside active hours.");
         }
-        if (glucose_status.delta < 0) {
-            console.log("Negative delta reported. (" + glucose_status.delta + ")");
+        if (glucose_status.delta <= 4.1) {
+            // console.log("Negative delta reported. (" + glucose_status.delta + ")");
+            console.log("Delta too low. (" + glucose_status.delta + ")");
         }
         if (bg < target_bg) {
             console.log("Glucose is below target.");

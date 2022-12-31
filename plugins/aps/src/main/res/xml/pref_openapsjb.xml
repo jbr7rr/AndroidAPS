@@ -109,7 +109,7 @@
                 android:title="@string/advanced_wave_title">
                 <Preference android:summary="@string/advanced_wave_disclaimer">
                 </Preference>
-
+                <!--
                 <info.nightscout.core.validators.ValidatingEditTextPreference
                     android:dependency="@string/key_enable_wave_mode"
                     android:key="@string/key_wave_activity_target"
@@ -120,7 +120,7 @@
                     validate:floatminNumber="50"
                     android:inputType="numberDecimal"
                     validate:testType="floatNumericRange" />
-
+                -->
                 <info.nightscout.core.validators.ValidatingEditTextPreference
                     android:dependency="@string/key_enable_wave_mode"
                     android:defaultValue="65"
