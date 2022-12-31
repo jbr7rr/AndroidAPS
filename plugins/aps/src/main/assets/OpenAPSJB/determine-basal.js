@@ -1532,19 +1532,17 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
                     rT.units = microBolus;
                     rT.reason += "Microbolusing " + microBolus + "U. ";
                 }
+                // if no zero temp is required, don't return yet; allow later code to set a high temp
+                if (durationReq > 0) {
+                    rT.rate = smbLowTempReq;
+                    rT.duration = durationReq;
+                    console.log("Checkpoint 12");
+                    return rT;
+                }
             } else {
                 rT.reason += "Waiting " + nextBolusMins + "m " + nextBolusSeconds + "s to microbolus again. ";
             }
             //rT.reason += ". ";
-
-            // if no zero temp is required, don't return yet; allow later code to set a high temp
-            if (durationReq > 0) {
-                rT.rate = smbLowTempReq;
-                rT.duration = durationReq;
-                console.log("Checkpoint 12");
-                return rT;
-            }
-
         }
 
         var maxSafeBasal = tempBasalFunctions.getMaxSafeBasal(profile);
