@@ -68,6 +68,21 @@
                 validate:floatminNumber="0"
                 validate:testType="floatNumericRange" />
 
+            <info.nightscout.core.validators.ValidatingEditTextPreference
+                android:dependency="@string/key_enable_wave_mode"
+                android:defaultValue="30"
+                android:dialogMessage="@string/wave_smb_max_minutes"
+                android:digits="0123456789"
+                android:inputType="number"
+                android:key="@string/key_wave_smb_max_minutes"
+                android:maxLines="20"
+                android:selectAllOnFocus="true"
+                android:singleLine="true"
+                android:title="@string/wave_smb_max_minutes_summary"
+                validate:maxNumber="240"
+                validate:minNumber="15"
+                validate:testType="numericRange" />
+
             <SwitchPreference
                 android:dependency="@string/key_enable_wave_mode"
                 android:defaultValue="false"

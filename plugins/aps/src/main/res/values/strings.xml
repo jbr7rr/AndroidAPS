@@ -187,4 +187,7 @@
     <string name="wave_delta_reduction_scaling_title">Enable delta reduction scaling</string>
     <string name="wave_delta_reduction_scaling_summary">Scales delta reduction with the current profile percentage (max: 150%).</string>
 
+    <string name="key_wave_smb_max_minutes" translatable="false">wavesmbmaxminutes</string>
+    <string name="wave_smb_max_minutes">Wave SMB max minutes</string>
+    <string name="wave_smb_max_minutes_summary">Max minutes of basal to limit SMB to for Wave mode</string>
 </resources>

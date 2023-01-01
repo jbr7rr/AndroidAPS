@@ -335,10 +335,16 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         if (profile.waveDeltaReductionScaling) {
             deltaReductionPCT = deltaReductionPCT * Math.min(profile.percentage / 100, 1.5);
         }
-        SMBcap = profile.waveSMBCap; //MP: User-set may SMB size for TAE.
-        if (profile.waveSMBCapScaling) {
-        SMBcap = SMBcap * Math.min(profile.percentage / 100, 1.5); //SMBcap grows and shrinks with profile percentage;
+        if (profile.waveUseSMBCap)
+        {
+            SMBcap = profile.waveSMBCap; //MP: User-set may SMB size for TAE.
+            if (profile.waveSMBCapScaling) {
+                SMBcap = SMBcap * Math.min(profile.percentage / 100, 1.5); //SMBcap grows and shrinks with profile percentage;
+            }
+        } else {
+            SMBcap = round(profile.current_basal * profile.maxWaveSMBBasalMinutes / 60, 1);
         }
+        
         insulinReqPCT = profile.waveInsReqPCT / 100; // User-set percentage to modify insulin required
         startTime = profile.waveStart;
         endTime = profile.waveEnd;
@@ -463,7 +469,7 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
         act_curr > 0 &&
         tsunami_insreq + iob_data.iob >= (bg - target_bg) / profile_sens &&
         // (profile.tsunamiActive || profile.enableWaveMode)) {
-            (profile.tsunamiActive || profile.enableWaveMode)) {
+        (profile.enableWaveMode)) {
         activity_controller = true; //MP Enable TAE
         //MP Reporting messages
         // if (profile.tsunamiActive) {
@@ -1428,15 +1434,15 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
                 //MP: SMBcap limiter: Use UAM minutes outside tsunami/wave modes
                 if (activity_controller) {
                     maxBolus = SMBcap;
-                    if (!profile.tsunamiActive && profile.enableWaveMode && !profile.waveUseSMBCap) {
-                        if (profile.maxUAMSMBBasalMinutes) {
-                            console.error("profile.maxUAMSMBBasalMinutes:", profile.maxUAMSMBBasalMinutes, "profile.current_basal:", profile.current_basal);
-                            maxBolus = round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1);
-                        } else {
-                            console.error("profile.maxUAMSMBBasalMinutes undefined: defaulting to 30m");
-                            maxBolus = round(profile.current_basal * 30 / 60, 1);
-                        }
-                    }
+                    // if (!profile.tsunamiActive && !profile.enableWaveMode && !profile.waveUseSMBCap) {
+                    //     if (profile.maxUAMSMBBasalMinutes) {
+                    //         console.error("profile.maxUAMSMBBasalMinutes:", profile.maxUAMSMBBasalMinutes, "profile.current_basal:", profile.current_basal);
+                    //         maxBolus = round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1);
+                    //     } else {
+                    //         console.error("profile.maxUAMSMBBasalMinutes undefined: defaulting to 30m");
+                    //         maxBolus = round(profile.current_basal * 30 / 60, 1);
+                    //     }
+                    // }
                 } else if (profile.maxUAMSMBBasalMinutes) {
                     console.error("profile.maxUAMSMBBasalMinutes:", profile.maxUAMSMBBasalMinutes, "profile.current_basal:", profile.current_basal);
                     maxBolus = round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1);
