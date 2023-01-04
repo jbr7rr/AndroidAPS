@@ -453,9 +453,8 @@ var determine_basal = function determine_basal(glucose_status, currenttemp, iob_
 
     //MP deltaScore and BG score
     insulinReqPCT = round(insulinReqPCT * deltaScore, 3); //MP Modify insulinReqPCT in dependence of previous delta values
-    // Todo JB: We could make this relative to the target
-    var bgScore_upper_threshold = 100; //MP BG above which no penalty will be given
-    var bgScore_lower_threshold = 75; //MP BG below which tae will not deliver SMBs
+    var bgScore_upper_threshold = target_bg + 30; //MP BG above which no penalty will be given
+    var bgScore_lower_threshold = target_bg; //MP BG below which tae will not deliver SMBs
     var bgScore = round(Math.min((bg - bgScore_lower_threshold) / (bgScore_upper_threshold - bgScore_lower_threshold), 1), 3); //MP Penalty at low or near-target bg values. Modifies SMBcap.
     SMBcap = round(SMBcap * bgScore, 2);
 
