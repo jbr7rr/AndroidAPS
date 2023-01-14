@@ -1,6 +1,5 @@
 package info.nightscout.plugins.sync.nsclientV3.workers
 
-import android.content.Context
 import androidx.work.ListenableWorker.Result.Success
 import androidx.work.testing.TestListenableWorkerBuilder
 import dagger.android.AndroidInjector
@@ -10,6 +9,9 @@ import info.nightscout.core.utils.fabric.FabricPrivacy
 import info.nightscout.interfaces.plugin.ActivePlugin
 import info.nightscout.interfaces.sync.DataSyncSelector
 import info.nightscout.interfaces.sync.NsClient
+import info.nightscout.rx.bus.RxBus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,15 +19,14 @@ import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 
+@ExperimentalCoroutinesApi
 internal class DataSyncWorkerTest : TestBase() {
-
-    abstract class ContextWithInjector : Context(), HasAndroidInjector
 
     @Mock lateinit var fabricPrivacy: FabricPrivacy
     @Mock lateinit var dataSyncSelector: DataSyncSelector
-    @Mock lateinit var context: ContextWithInjector
     @Mock lateinit var activePlugin: ActivePlugin
     @Mock lateinit var nsClient: NsClient
+    @Mock lateinit var rxBus: RxBus
 
     private lateinit var sut: DataSyncWorker
 
@@ -36,6 +37,7 @@ internal class DataSyncWorkerTest : TestBase() {
                 it.fabricPrivacy = fabricPrivacy
                 it.dataSyncSelector = dataSyncSelector
                 it.activePlugin = activePlugin
+                it.rxBus = rxBus
             }
         }
     }
@@ -48,7 +50,7 @@ internal class DataSyncWorkerTest : TestBase() {
     }
 
     @Test
-    fun doWorkAndLog() {
+    fun doWorkAndLog() = runTest {
         sut = TestListenableWorkerBuilder<DataSyncWorker>(context).build()
         `when`(nsClient.hasWritePermission).thenReturn(false)
         sut.doWorkAndLog()
@@ -58,6 +60,5 @@ internal class DataSyncWorkerTest : TestBase() {
         val result = sut.doWorkAndLog()
         Mockito.verify(dataSyncSelector, Mockito.times(1)).doUpload()
         Assertions.assertTrue(result is Success)
-
     }
 }

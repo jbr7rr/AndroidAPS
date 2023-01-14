@@ -1,6 +1,5 @@
 package info.nightscout.androidaps
 
-import android.content.Context
 import dagger.android.AndroidInjector
 import dagger.android.HasAndroidInjector
 import info.nightscout.core.extensions.pureProfileFromJson
@@ -41,14 +40,13 @@ open class TestBaseWithProfile : TestBase() {
     @Mock lateinit var iobCobCalculator: IobCobCalculator
     @Mock lateinit var fabricPrivacy: FabricPrivacy
     @Mock lateinit var config: Config
-    @Mock lateinit var context: Context
     @Mock lateinit var sp: SP
     @Mock lateinit var repository: AppRepository
     @Mock lateinit var hardLimits: HardLimits
     @Mock lateinit var processedDeviceStatusData: ProcessedDeviceStatusData
     @Mock lateinit var insulin: Insulin
 
-    lateinit var profileFunction: ProfileFunction
+    open lateinit var profileFunction: ProfileFunction
     lateinit var dateUtil: DateUtil
     var insulinConfiguration: InsulinConfiguration = InsulinConfiguration("Insulin", 360 * 60 * 1000, 60 * 60 * 1000)
     val rxBus = RxBus(aapsSchedulers, aapsLogger)

@@ -27,6 +27,7 @@ import info.nightscout.plugins.aps.loop.LoopPlugin
 import info.nightscout.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import info.nightscout.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import info.nightscout.plugins.aps.openAPSSMBDynamicISF.OpenAPSSMBDynamicISFPlugin
+import info.nightscout.plugins.aps.openAPSJB.OpenAPSJBPlugin
 import info.nightscout.plugins.constraints.bgQualityCheck.BgQualityCheckPlugin
 import info.nightscout.plugins.constraints.objectives.ObjectivesPlugin
 import info.nightscout.plugins.constraints.safety.SafetyPlugin
@@ -256,6 +257,12 @@ abstract class PluginsListModule {
     abstract fun bindOpenAPSSMBAutoISFPlugin(plugin: OpenAPSSMBDynamicISFPlugin): PluginBase
 
     @Binds
+    @APS
+    @IntoMap
+    @IntKey(224)
+    abstract fun bindOpenAPSJBPlugin(plugin: OpenAPSJBPlugin): PluginBase
+
+    @Binds
     @AllConfigs
     @IntoMap
     @IntKey(240)
@@ -340,7 +347,7 @@ abstract class PluginsListModule {
     abstract fun bindTidepoolPlugin(plugin: TidepoolPlugin): PluginBase
 
     @Binds
-    @Unfinished
+    @AllConfigs
     @IntoMap
     @IntKey(362)
     abstract fun bindNSClientV3Plugin(plugin: NSClientV3Plugin): PluginBase

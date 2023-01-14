@@ -1,5 +1,6 @@
 package info.nightscout.sdk.networking
 
+import com.google.gson.JsonObject
 import info.nightscout.sdk.remotemodel.LastModified
 import info.nightscout.sdk.remotemodel.NSResponse
 import info.nightscout.sdk.remotemodel.RemoteCreateUpdateResponse
@@ -8,8 +9,10 @@ import info.nightscout.sdk.remotemodel.RemoteEntry
 import info.nightscout.sdk.remotemodel.RemoteFood
 import info.nightscout.sdk.remotemodel.RemoteStatusResponse
 import info.nightscout.sdk.remotemodel.RemoteTreatment
+import org.json.JSONObject
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -50,14 +53,14 @@ internal interface NightscoutRemoteService {
     @PATCH("v3/entries/{identifier}")
     suspend fun updateEntry(@Body remoteEntry: RemoteEntry, @Path("identifier") identifier: String): Response<NSResponse<RemoteCreateUpdateResponse>>
 
+    @DELETE("v3/entries/{identifier}")
+    suspend fun deleteEntry(@Path("identifier") identifier: String): Response<NSResponse<RemoteCreateUpdateResponse>>
+
     @GET("v3/treatments")
     suspend fun getTreatmentsNewerThan(@Query(value = "created_at\$gt", encoded = true) createdAt: String, @Query("limit") limit: Long): Response<NSResponse<List<RemoteTreatment>>>
 
     @GET("v3/treatments/history/{from}")
     suspend fun getTreatmentsModifiedSince(@Path("from") from: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteTreatment>>>
-
-    @GET("v3/devicestatus/history/{from}")
-    suspend fun getDeviceStatusModifiedSince(@Path("from") from: Long): Response<NSResponse<List<RemoteDeviceStatus>>>
 
     @POST("v3/treatments")
     suspend fun createTreatment(@Body remoteTreatment: RemoteTreatment): Response<NSResponse<RemoteCreateUpdateResponse>>
@@ -65,16 +68,35 @@ internal interface NightscoutRemoteService {
     @PATCH("v3/treatments/{identifier}")
     suspend fun updateTreatment(@Body remoteTreatment: RemoteTreatment, @Path("identifier") identifier: String): Response<NSResponse<RemoteCreateUpdateResponse>>
 
+    @DELETE("v3/treatments/{identifier}")
+    suspend fun deleteTreatment(@Path("identifier") identifier: String): Response<NSResponse<RemoteCreateUpdateResponse>>
+
+    @POST("v3/devicestatus")
+    suspend fun createDeviceStatus(@Body remoteDeviceStatus: RemoteDeviceStatus): Response<NSResponse<RemoteCreateUpdateResponse>>
+
+    @GET("v3/devicestatus/history/{from}")
+    suspend fun getDeviceStatusModifiedSince(@Path("from") from: Long): Response<NSResponse<List<RemoteDeviceStatus>>>
+
     @GET("v3/food")
     suspend fun getFoods(@Query("limit") limit: Long): Response<NSResponse<List<RemoteFood>>>
-/*
-    @GET("v3/food/history/{from}")
-    suspend fun getFoodsModifiedSince(@Path("from") from: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteFood>>>
-*/
+
+    /*
+        @GET("v3/food/history/{from}")
+        suspend fun getFoodsModifiedSince(@Path("from") from: Long, @Query("limit") limit: Long): Response<NSResponse<List<RemoteFood>>>
+    */
     @POST("v3/food")
     suspend fun createFood(@Body remoteFood: RemoteFood): Response<NSResponse<RemoteCreateUpdateResponse>>
 
     @PATCH("v3/food")
-    suspend fun updateFood(@Body remoteFood: RemoteFood): Response<NSResponse<RemoteCreateUpdateResponse>>
+    suspend fun updateFood(@Body remoteFood: RemoteFood, @Path("identifier") identifier: String): Response<NSResponse<RemoteCreateUpdateResponse>>
+
+    @DELETE("v3/food")
+    suspend fun deleteFood(@Path("identifier") identifier: String): Response<NSResponse<RemoteCreateUpdateResponse>>
+
+    @GET("v3/profile?sort\$desc=date&limit=1")
+    suspend fun getLastProfile(): Response<NSResponse<List<JSONObject>>>
+
+    @POST("v3/profile")
+    suspend fun createProfile(@Body profile: JsonObject): Response<NSResponse<RemoteCreateUpdateResponse>>
 
 }
