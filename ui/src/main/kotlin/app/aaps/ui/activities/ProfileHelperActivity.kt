@@ -120,7 +120,7 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
             when (binding.profileType.text.toString()) {
                 rh.gs(R.string.motol_default_profile)                     -> switchTab(tabSelected, ProfileType.MOTOL_DEFAULT)
                 rh.gs(R.string.dpv_default_profile)                       -> switchTab(tabSelected, ProfileType.DPV_DEFAULT)
-                rh.gs(R.string.circadian_default_profile) -> switchTab(tabSelected, ProfileType.CIRCADIAN_DEFAULT)
+                rh.gs(R.string.circadian_default_profile)                 -> switchTab(tabSelected, ProfileType.CIRCADIAN_DEFAULT)
                 rh.gs(R.string.current_profile)                           -> switchTab(tabSelected, ProfileType.CURRENT)
                 rh.gs(R.string.available_profile)                         -> switchTab(tabSelected, ProfileType.AVAILABLE_PROFILE)
                 rh.gs(app.aaps.core.ui.R.string.careportal_profileswitch) -> switchTab(tabSelected, ProfileType.PROFILE_SWITCH)
@@ -196,10 +196,12 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
         binding.basalPctFromTdd.setParams(32.0, 32.0, 60.0, 1.0, DecimalFormat("0"), false, null)
         // TODO: Precision based on MGDL or MMOL, and nicen up
         val units = profileFunction.getUnits()
-        binding.isf.setParams(profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, units), profileUtil.fromMgdlToUnits(HardLimits.MIN_ISF, units), profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, units), 0.5,
-                              DecimalFormat("0,0"), false, null)
+        binding.isf.setParams(
+            profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, units), profileUtil.fromMgdlToUnits(HardLimits.MIN_ISF, units), profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, units), 0.1,
+            DecimalFormat("0,0"), false, null
+        )
 
-        binding.ic.setParams(profileUtil.fromMgdlToUnits(hardLimits.maxIC(), units), profileUtil.fromMgdlToUnits(hardLimits.minIC(), units), profileUtil.fromMgdlToUnits(hardLimits.maxIC(), units), 0.5, DecimalFormat("0,0"), false, null)
+        binding.ic.setParams(hardLimits.maxIC(), hardLimits.minIC(), hardLimits.maxIC(), 0.1, DecimalFormat("0.0"), false, null)
         binding.timeshift.setParams(0.0, 0.0, 23.0, 1.0, DecimalFormat("0"), false, null)
 
         binding.tdds.addView(TextView(this).apply { text = rh.gs(app.aaps.core.ui.R.string.tdd) + ": " + rh.gs(R.string.calculation_in_progress) })
