@@ -157,7 +157,7 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
             val ic = icUsed[tabSelected]
             val timeshift = timeshiftUsed[tabSelected]
             val profile = if (typeSelected[tabSelected] == ProfileType.MOTOL_DEFAULT) defaultProfile.profile(age, tdd, weight, profileFunction.getUnits())
-            else if (typeSelected[tabSelected] == ProfileType.CIRCADIAN_DEFAULT) defaultProfileCircadian.profile(age, tdd, pct / 100.0, isf, ic, timeshift, profileFunction.getUnits()) // TODO: Proper name?
+            else if (typeSelected[tabSelected] == ProfileType.CIRCADIAN_DEFAULT) defaultProfileCircadian.profile(age, tdd, pct / 100.0, isf, ic, timeshift, profileFunction.getUnits())
             else defaultProfileDPV.profile(age, tdd, pct / 100.0, profileFunction.getUnits())
             profile?.let {
                 OKDialog.showConfirmation(this, rh.gs(app.aaps.core.ui.R.string.careportal_profileswitch), rh.gs(app.aaps.core.ui.R.string.copytolocalprofile), Runnable {
@@ -196,7 +196,7 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
         binding.basalPctFromTdd.setParams(35.0, 30.0, 60.0, 1.0, DecimalFormat("0"), false, null)
 
         binding.isf.setParams(
-            profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, profileFunction.getUnits()),
+            0.0,
             profileUtil.fromMgdlToUnits(HardLimits.MIN_ISF, profileFunction.getUnits()),
             profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, profileFunction.getUnits()),
             if (profileFunction.getUnits() == GlucoseUnit.MGDL) 1.0 else 0.1,
@@ -253,7 +253,7 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
                     }
                 }
                 if (typeSelected[i] == ProfileType.CIRCADIAN_DEFAULT) {
-                    if (ageUsed[i] < 1 || ageUsed[i] > 99) {
+                    if (ageUsed[i] < 1 || ageUsed[i] > 100) {
                         ToastUtils.warnToast(this, R.string.invalid_age)
                         return@setOnClickListener
                     }
@@ -389,11 +389,12 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
         }
     }
 
-    private fun getMaxAge(profileType: ProfileType) : Double {
+    private fun getMaxAge(profileType: ProfileType): Double {
         var ret = 18.0
         if (profileType == ProfileType.CIRCADIAN_DEFAULT) ret = 100.0
         return ret
     }
+
     override fun onPause() {
         super.onPause()
         disposable.clear()
