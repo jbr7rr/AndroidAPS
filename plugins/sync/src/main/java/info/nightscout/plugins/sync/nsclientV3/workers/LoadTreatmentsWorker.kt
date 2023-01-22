@@ -47,9 +47,9 @@ class LoadTreatmentsWorker(
                 val response: NSAndroidClient.ReadResponse<List<NSTreatment>>?
                 if (isFirstLoad) {
                     val lastLoadedIso = dateUtil.toISOString(lastLoaded)
-                    response = nsAndroidClient.getTreatmentsNewerThan(lastLoadedIso, 500)
+                    response = nsAndroidClient.getTreatmentsNewerThan(lastLoadedIso, NSClientV3Plugin.RECORDS_TO_LOAD)
                 } else {
-                    response = nsAndroidClient.getTreatmentsModifiedSince(lastLoaded, 500)
+                    response = nsAndroidClient.getTreatmentsModifiedSince(lastLoaded, NSClientV3Plugin.RECORDS_TO_LOAD)
                     response.lastServerModified?.let { nsClientV3Plugin.lastLoadedSrvModified.collections.treatments = it }
                     nsClientV3Plugin.storeLastLoadedSrvModified()
                 }
@@ -104,9 +104,11 @@ class LoadTreatmentsWorker(
         } catch (error: Exception) {
             aapsLogger.error("Error: ", error)
             rxBus.send(EventNSClientNewLog("ERROR", error.localizedMessage))
+            nsClientV3Plugin.lastOperationError = error.localizedMessage
             return Result.failure(workDataOf("Error" to error.localizedMessage))
         }
 
+        nsClientV3Plugin.lastOperationError = null
         return Result.success()
     }
 }

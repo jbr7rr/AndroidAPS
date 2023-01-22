@@ -163,19 +163,19 @@ class StoreDataForDbImpl @Inject constructor(
                 .also { result ->
                     glucoseValues.clear()
                     result.updated.forEach {
-                        xDripBroadcast.send(it)
+                        xDripBroadcast.sendIn640gMode(it)
                         nsClientSource.detectSource(it)
                         aapsLogger.debug(LTag.DATABASE, "Updated bg $it")
                         updated.inc(GlucoseValue::class.java.simpleName)
                     }
                     result.inserted.forEach {
-                        xDripBroadcast.send(it)
+                        xDripBroadcast.sendIn640gMode(it)
                         nsClientSource.detectSource(it)
                         aapsLogger.debug(LTag.DATABASE, "Inserted bg $it")
                         inserted.inc(GlucoseValue::class.java.simpleName)
                     }
                     result.updatedNsId.forEach {
-                        xDripBroadcast.send(it)
+                        xDripBroadcast.sendIn640gMode(it)
                         nsClientSource.detectSource(it)
                         aapsLogger.debug(LTag.DATABASE, "Updated nsId bg $it")
                         nsIdUpdated.inc(GlucoseValue::class.java.simpleName)
@@ -325,7 +325,7 @@ class StoreDataForDbImpl @Inject constructor(
         SystemClock.sleep(pause)
 
         if (temporaryTargets.isNotEmpty())
-            repository.runTransactionForResult(SyncNsTemporaryTargetTransaction(temporaryTargets, config.NSCLIENT))
+            repository.runTransactionForResult(SyncNsTemporaryTargetTransaction(temporaryTargets))
                 .doOnError {
                     aapsLogger.error(LTag.DATABASE, "Error while saving temporary target", it)
                 }
