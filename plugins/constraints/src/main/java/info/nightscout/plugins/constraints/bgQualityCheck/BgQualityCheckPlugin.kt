@@ -146,7 +146,7 @@ class BgQualityCheckPlugin @Inject constructor(
 
     companion object {
 
-        const val staleBgCheckPeriodMinutes = 60L
-        const val staleBgMaxDeltaMgdl = 1.0
+        const val staleBgCheckPeriodMinutes = 45L
+        const val staleBgMaxDeltaMgdl = 2.0
     }
 }
