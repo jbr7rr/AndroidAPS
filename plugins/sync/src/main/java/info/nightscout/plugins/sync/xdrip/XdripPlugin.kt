@@ -29,7 +29,6 @@ import info.nightscout.interfaces.profile.Profile
 import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.interfaces.receivers.Intents
 import info.nightscout.interfaces.sync.DataSyncSelector
-import info.nightscout.interfaces.sync.DataSyncSelectorXdrip
 import info.nightscout.interfaces.sync.Sync
 import info.nightscout.interfaces.ui.UiInteraction
 import info.nightscout.interfaces.utils.DecimalFormatter
@@ -79,7 +78,6 @@ class XdripPlugin @Inject constructor(
     private val iobCobCalculator: IobCobCalculator,
     private val rxBus: RxBus,
     private val uiInteraction: UiInteraction,
-    private val dataSyncSelector: DataSyncSelectorXdrip,
     private val dateUtil: DateUtil,
     aapsLogger: AAPSLogger
 ) : XDripBroadcast, Sync, PluginBase(
@@ -342,7 +340,7 @@ class XdripPlugin @Inject constructor(
         }
     }
 
-    private suspend fun sendProfileStore(dataPair: DataSyncSelector.DataPair, progress: String) {
+    private fun sendProfileStore(dataPair: DataSyncSelector.DataPair, progress: String) {
         val data = (dataPair as DataSyncSelector.PairProfileStore).value
         rxBus.send(EventXdripNewLog("SENDING", "Sent 1 PROFILE ($progress)"))
         broadcast(
