@@ -173,7 +173,7 @@
     <string name="key_wave_insulinReqPCT" translatable="false">waveinsulinReqPCT</string>
     <string name="wave_insulinReqPCT_message">Reduces the calculated insulin required to the specified percentage for delivery. Example: If calculated insulin required is 1 U and fraction size is 50%, at most 0.5 U will be delivered if no other constraints (e.g. SMB caps) apply.</string>
     <string name="wave_insulinReqPCT_title">Wave mode insulin delivery percentage [%]</string>
-    <string name="key_wave_SMB_scaling" translatable="false">wave_SMB_scaling</string>
+    <string name="key_wave_SMB_scaling" translatable="false">key_wave_SMB_scaling</string>
     <string name="wave_SMB_scaling_title">Enable SMB cap scaling</string>
     <string name="wave_SMB_scaling_summary">Scales Wave SMB cap with the current profile percentage (max: 150%).</string>
     <string name="key_advanced_wave" translatable="false">Advanced_wave_settings</string>
