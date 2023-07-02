@@ -1,4 +1,4 @@
-package info.nightscout.plugins.aps.openAPSJB
+package info.nightscout.plugins.aps.wavez
 
 import dagger.android.HasAndroidInjector
 import info.nightscout.plugins.aps.APSResultObject
@@ -42,7 +42,7 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: ScriptReader, private val injector: HasAndroidInjector) : DetermineBasalAdapter {
+class DetermineBasalAdapterWaveZ internal constructor(private val scriptReader: ScriptReader, private val injector: HasAndroidInjector) : DetermineBasalAdapter {
 
     @Inject lateinit var aapsLogger: AAPSLogger
     @Inject lateinit var constraintChecker: Constraints
@@ -102,7 +102,7 @@ class DetermineBasalAdapterJBJS internal constructor(private val scriptReader: S
             rhino.evaluateString(scope, "require = function() {return round_basal;};", "JavaScript", 0, null)
 
             //generate functions "determine_basal" and "setTempBasal"
-            rhino.evaluateString(scope, readFile("OpenAPSJB/determine-basal.js"), "JavaScript", 0, null)
+            rhino.evaluateString(scope, readFile("WaveZ/determine-basal.js"), "JavaScript", 0, null)
             rhino.evaluateString(scope, readFile("OpenAPSSMB/basal-set-temp.js"), "setTempBasal.js", 0, null)
             val determineBasalObj = scope["determine_basal", scope]
             val setTempBasalFunctionsObj = scope["tempBasalFunctions", scope]

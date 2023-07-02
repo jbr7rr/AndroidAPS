@@ -1,4 +1,4 @@
-package info.nightscout.plugins.aps.openAPSJB
+package info.nightscout.plugins.aps.wavez
 
 import android.content.Context
 import dagger.android.HasAndroidInjector
@@ -27,7 +27,7 @@ import javax.inject.Singleton
 
 @OpenForTesting
 @Singleton
-class OpenAPSJBPlugin @Inject constructor(
+class WaveZPlugin @Inject constructor(
     injector: HasAndroidInjector,
     aapsLogger: AAPSLogger,
     rxBus: RxBus,
@@ -66,15 +66,15 @@ class OpenAPSJBPlugin @Inject constructor(
 
     init {
         pluginDescription
-            .pluginName(R.string.openaps_jb)
-            .description(R.string.description_jb)
-            .shortName(R.string.jb_shortname)
-            .preferencesId(R.xml.pref_openapsjb)
+            .pluginName(R.string.wavez)
+            .description(R.string.description_wavez)
+            .shortName(R.string.wavez_shortname)
+            .preferencesId(R.xml.pref_wavez)
             .setDefault(false)
             .showInList(config.isEngineeringMode() && config.isDev())
     }
 
     override fun specialEnableCondition(): Boolean = config.isEngineeringMode() && config.isDev()
 
-    override fun provideDetermineBasalAdapter(): DetermineBasalAdapter = DetermineBasalAdapterJBJS(ScriptReader(context), injector)
+    override fun provideDetermineBasalAdapter(): DetermineBasalAdapter = DetermineBasalAdapterWaveZ(ScriptReader(context), injector)
 }

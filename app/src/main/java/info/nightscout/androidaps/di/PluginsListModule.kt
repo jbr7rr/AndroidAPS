@@ -27,7 +27,7 @@ import info.nightscout.plugins.aps.loop.LoopPlugin
 import info.nightscout.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import info.nightscout.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import info.nightscout.plugins.aps.openAPSSMBDynamicISF.OpenAPSSMBDynamicISFPlugin
-import info.nightscout.plugins.aps.openAPSJB.OpenAPSJBPlugin
+import info.nightscout.plugins.aps.wavez.WaveZPlugin
 import info.nightscout.plugins.constraints.bgQualityCheck.BgQualityCheckPlugin
 import info.nightscout.plugins.constraints.objectives.ObjectivesPlugin
 import info.nightscout.plugins.constraints.safety.SafetyPlugin
@@ -260,7 +260,7 @@ abstract class PluginsListModule {
     @APS
     @IntoMap
     @IntKey(224)
-    abstract fun bindOpenAPSJBPlugin(plugin: OpenAPSJBPlugin): PluginBase
+    abstract fun bindWaveZPlugin(plugin: WaveZPlugin): PluginBase
 
     @Binds
     @AllConfigs

@@ -34,7 +34,7 @@ import info.nightscout.interfaces.utils.HardLimits
 import info.nightscout.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import info.nightscout.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import info.nightscout.plugins.aps.openAPSSMBDynamicISF.OpenAPSSMBDynamicISFPlugin
-import info.nightscout.plugins.aps.openAPSJB.OpenAPSJBPlugin
+import info.nightscout.plugins.aps.wavez.WaveZPlugin
 import info.nightscout.plugins.constraints.ConstraintsImpl
 import info.nightscout.plugins.constraints.objectives.ObjectivesPlugin
 import info.nightscout.plugins.constraints.objectives.objectives.Objective
@@ -90,7 +90,7 @@ class ConstraintsCheckerTest : TestBaseWithProfile() {
     private lateinit var openAPSSMBPlugin: OpenAPSSMBPlugin
     private lateinit var openAPSAMAPlugin: OpenAPSAMAPlugin
     private lateinit var openAPSSMBDynamicISFPlugin: OpenAPSSMBDynamicISFPlugin
-    private lateinit var openAPSJBPlugin: OpenAPSJBPlugin
+    private lateinit var WaveZPlugin: WaveZPlugin
 
     private val injector = HasAndroidInjector {
         AndroidInjector {
@@ -194,8 +194,8 @@ class ConstraintsCheckerTest : TestBaseWithProfile() {
                 glucoseStatusProvider,
                 bgQualityCheck
             )
-        openAPSJBPlugin =
-            OpenAPSJBPlugin(
+        WaveZPlugin =
+            WaveZPlugin(
                 injector,
                 aapsLogger,
                 rxBus,
