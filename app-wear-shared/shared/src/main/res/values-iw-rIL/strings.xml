@@ -33,4 +33,6 @@
     <string name="connected">מחובר</string>
     <string name="disconnecting">מתנתק</string>
     <string name="waiting_for_disconnection">ממתין לניתוק</string>
+    <!-- Custom Watchface -->
+    <string name="metadata_label_plugin_version">גרסת פלאגין: %1$s</string>
 </resources>

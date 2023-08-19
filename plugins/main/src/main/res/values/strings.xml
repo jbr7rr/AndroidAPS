@@ -278,6 +278,7 @@
     <string name="short_tabtitles">Shorten tab titles</string>
     <string name="overview_show_notes_field_in_dialogs_title">Show notes field in treatment dialogs</string>
     <string name="deliverpartofboluswizard">Bolus wizard performs calculation but only this part of calculated insulin is delivered. Useful with SMB algorithm.</string>
+    <string name="deliver_part_of_boluswizard_reset_time">Deliver full bolus (100%) if glycemia is older than</string>
     <string name="enable_bolus_advisor">Enable bolus advisor</string>
     <string name="enable_bolus_advisor_summary">Use reminder to start eating later instead of wizard result during high glycemia ("pre-bolus")</string>
     <string name="enablesuperbolus">Enable superbolus in wizard</string>
@@ -360,6 +361,14 @@
     <string name="wear_notifysmb_summary">Show SMB on the watch like a standard bolus.</string>
     <string name="wear_predictions_summary">Show the predictions on the watchface.</string>
     <string name="wear_predictions_title">Predictions</string>
+    <string name="wear_custom_watchface_settings">Custom Watchface Settings</string>
+    <string name="wear_custom_watchface_authorization_title">Custom Watchface Authorization</string>
+    <string name="wear_custom_watchface_authorization_summary">Authorize loaded Custom Watchface to modify AAPS and Watch settings according to the watchface design</string>
+    <string name="wear_custom_watchface">Custom Watchface: %1$s</string>
+    <string name="wear_load_watchface">Load Watchface</string>
+    <string name="wear_send_watchface">Send Watchface</string>
+    <string name="wear_export_watchface">Export template</string>
+    <string name="wear_new_custom_watchface_exported">Custom watchface template exported</string>
     <string name="resend_all_data">Resend All Data</string>
     <string name="open_settings_on_wear">Open Settings on Wear</string>
 

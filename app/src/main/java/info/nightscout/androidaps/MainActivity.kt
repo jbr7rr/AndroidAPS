@@ -21,6 +21,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
@@ -62,6 +63,7 @@ import info.nightscout.interfaces.versionChecker.VersionCheckerUtils
 import info.nightscout.plugins.constraints.signatureVerifier.SignatureVerifierPlugin
 import info.nightscout.rx.AapsSchedulers
 import info.nightscout.rx.events.EventAppExit
+import info.nightscout.rx.events.EventAppInitialized
 import info.nightscout.rx.events.EventPreferenceChange
 import info.nightscout.rx.events.EventRebuildTabs
 import info.nightscout.rx.logging.LTag
@@ -133,10 +135,6 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
             }
         })
 
-        //Check here if loop plugin is disabled. Else check via constraints
-        if (!(loop as PluginBase).isEnabled()) versionCheckerUtils.triggerCheckVersion()
-        setUserStats()
-        setupViews()
         disposable += rxBus
             .toObservable(EventRebuildTabs::class.java)
             .observeOn(aapsSchedulers.main)
@@ -149,9 +147,39 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
             .toObservable(EventPreferenceChange::class.java)
             .observeOn(aapsSchedulers.main)
             .subscribe({ processPreferenceChange(it) }, fabricPrivacy::logException)
+        disposable += rxBus
+            .toObservable(EventAppInitialized::class.java)
+            .observeOn(aapsSchedulers.main)
+            .subscribe({
+                           // 1st run of app
+                           start()
+                       }, fabricPrivacy::logException)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START))
+                    binding.mainDrawerLayout.closeDrawers()
+                else if (menuOpen)
+                    menu?.close()
+                else if (binding.mainPager.currentItem != 0)
+                    binding.mainPager.currentItem = 0
+                else finish()
+            }
+        })
+        // Setup views on 2nd and next activity start
+        // On 1st start app is still initializing, start() is delayed and run from EventAppInitialized
+        if (config.appInitialized) start()
+    }
+
+    private fun start() {
+        binding.splash.visibility = View.GONE
+        //Check here if loop plugin is disabled. Else check via constraints
+        if (!(loop as PluginBase).isEnabled()) versionCheckerUtils.triggerCheckVersion()
+        setUserStats()
+        setupViews()
+
         if (startWizard() && !isRunningRealPumpTest()) {
             protectionCheck.queryProtection(this, ProtectionCheck.Protection.PREFERENCES, {
-                startActivity(Intent(this, SetupWizardActivity::class.java))
+                startActivity(Intent(this, SetupWizardActivity::class.java).setAction("info.nightscout.androidaps.MainActivity"))
             })
         }
         androidPermission.notifyForStoragePermission(this)
@@ -184,6 +212,7 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
 
     override fun onResume() {
         super.onResume()
+        if (config.appInitialized) binding.splash.visibility = View.GONE
         if (!isProtectionCheckActive) {
             isProtectionCheckActive = true
             protectionCheck.queryProtection(this, ProtectionCheck.Protection.APPLICATION, UIRunnable { isProtectionCheckActive = false },
@@ -219,9 +248,11 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
                     menuItem.setIcon(info.nightscout.core.ui.R.drawable.ic_settings)
                 }
                 menuItem.setOnMenuItemClickListener {
-                    val intent = Intent(this, SingleFragmentActivity::class.java)
-                    intent.putExtra("plugin", activePlugin.getPluginsList().indexOf(p))
-                    startActivity(intent)
+                    startActivity(
+                        Intent(this, SingleFragmentActivity::class.java)
+                            .setAction("info.nightscout.androidaps.MainActivity")
+                            .putExtra("plugin", activePlugin.getPluginsList().indexOf(p))
+                    )
                     binding.mainDrawerLayout.closeDrawers()
                     true
                 }
@@ -307,9 +338,6 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
         this.menu = menu
         menuInflater.inflate(R.menu.menu_main, menu)
         pluginPreferencesMenuItem = menu.findItem(R.id.nav_plugin_preferences)
-        setPluginPreferenceMenuName()
-        checkPluginPreferences(binding.mainPager)
-        setDisabledMenuItemColorPluginPreferences()
         return true
     }
 
@@ -318,26 +346,28 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
         when (item.itemId) {
             R.id.nav_preferences        -> {
                 protectionCheck.queryProtection(this, ProtectionCheck.Protection.PREFERENCES, {
-                    val i = Intent(this, PreferencesActivity::class.java)
-                    i.putExtra("id", -1)
-                    startActivity(i)
+                    startActivity(
+                        Intent(this, PreferencesActivity::class.java)
+                            .setAction("info.nightscout.androidaps.MainActivity")
+                            .putExtra("id", -1)
+                    )
                 })
                 return true
             }
 
             R.id.nav_historybrowser     -> {
-                startActivity(Intent(this, HistoryBrowseActivity::class.java))
+                startActivity(Intent(this, HistoryBrowseActivity::class.java).setAction("info.nightscout.androidaps.MainActivity"))
                 return true
             }
 
             R.id.nav_treatments         -> {
-                startActivity(Intent(this, TreatmentsActivity::class.java))
+                startActivity(Intent(this, TreatmentsActivity::class.java).setAction("info.nightscout.androidaps.MainActivity"))
                 return true
             }
 
             R.id.nav_setupwizard        -> {
                 protectionCheck.queryProtection(this, ProtectionCheck.Protection.PREFERENCES, {
-                    startActivity(Intent(this, SetupWizardActivity::class.java))
+                    startActivity(Intent(this, SetupWizardActivity::class.java).setAction("info.nightscout.androidaps.MainActivity"))
                 })
                 return true
             }
@@ -384,9 +414,11 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
             R.id.nav_plugin_preferences -> {
                 val plugin = (binding.mainPager.adapter as TabPageAdapter).getPluginAt(binding.mainPager.currentItem)
                 protectionCheck.queryProtection(this, ProtectionCheck.Protection.PREFERENCES, {
-                    val i = Intent(this, PreferencesActivity::class.java)
-                    i.putExtra("id", plugin.preferencesId)
-                    startActivity(i)
+                    startActivity(
+                        Intent(this, PreferencesActivity::class.java)
+                            .setAction("info.nightscout.androidaps.MainActivity")
+                            .putExtra("id", plugin.preferencesId)
+                    )
                 })
                 return true
             }
@@ -397,33 +429,16 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
                         }
             */
             R.id.nav_defaultprofile     -> {
-                startActivity(Intent(this, ProfileHelperActivity::class.java))
+                startActivity(Intent(this, ProfileHelperActivity::class.java).setAction("info.nightscout.androidaps.MainActivity"))
                 return true
             }
 
             R.id.nav_stats              -> {
-                startActivity(Intent(this, StatsActivity::class.java))
+                startActivity(Intent(this, StatsActivity::class.java).setAction("info.nightscout.androidaps.MainActivity"))
                 return true
             }
         }
         return actionBarDrawerToggle.onOptionsItemSelected(item)
-    }
-
-    override fun onBackPressed() {
-        if (binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-            binding.mainDrawerLayout.closeDrawers()
-            return
-        }
-        if (menuOpen) {
-            this.menu?.close()
-            return
-        }
-        if (binding.mainPager.currentItem != 0) {
-            binding.mainPager.currentItem = 0
-            return
-        }
-        @Suppress("DEPRECATION")
-        super.onBackPressed()
     }
 
     // Correct place for calling setUserStats() would be probably MainApp
@@ -469,7 +484,7 @@ class MainActivity : DaggerAppCompatActivityWithResult() {
      * Check for existing PasswordReset file and
      * reset password to SN of active pump if file exists
      */
-    fun passwordResetCheck(context: Context) {
+    private fun passwordResetCheck(context: Context) {
         val passwordReset = File(fileListProvider.ensureExtraDirExists(), "PasswordReset")
         if (passwordReset.exists()) {
             val sn = activePlugin.activePump.serialNumber()
