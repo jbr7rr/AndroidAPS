@@ -13,6 +13,7 @@ import info.nightscout.interfaces.iob.IobCobCalculator
 import info.nightscout.interfaces.plugin.ActivePlugin
 import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.interfaces.profiling.Profiler
+import info.nightscout.interfaces.stats.TddCalculator
 import info.nightscout.interfaces.utils.HardLimits
 import info.nightscout.plugins.aps.R
 import info.nightscout.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
@@ -44,7 +45,8 @@ class WaveZPlugin @Inject constructor(
     repository: AppRepository,
     glucoseStatusProvider: GlucoseStatusProvider,
     private val config: Config,
-    private val bgQualityCheck: BgQualityCheck
+    private val bgQualityCheck: BgQualityCheck,
+    private val tddCalculator: TddCalculator
 ) : OpenAPSSMBPlugin(
     injector,
     aapsLogger,
@@ -61,7 +63,8 @@ class WaveZPlugin @Inject constructor(
     dateUtil,
     repository,
     glucoseStatusProvider,
-    bgQualityCheck
+    bgQualityCheck,
+    tddCalculator
 ) {
 
     init {

@@ -177,7 +177,12 @@ class DetermineBasalAdapterWaveZ internal constructor(private val scriptReader: 
         microBolusAllowed: Boolean,
         uamAllowed: Boolean,
         advancedFiltering: Boolean,
-        flatBGsDetected: Boolean
+        flatBGsDetected: Boolean,
+        tdd1D: Double?,
+        tdd7D: Double?,
+        tddLast24H: Double?,
+        tddLast4H: Double?,
+        tddLast8to4H: Double?
     ) {
         val pump = activePlugin.activePump
         val pumpBolusStep = pump.pumpDescription.bolusStep
