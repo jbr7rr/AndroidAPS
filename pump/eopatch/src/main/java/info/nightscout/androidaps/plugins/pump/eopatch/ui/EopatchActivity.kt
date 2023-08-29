@@ -38,6 +38,10 @@ class EopatchActivity : EoBaseActivity<ActivityEopatchBinding>() {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
 
+        title = getString(R.string.string_activate_patch)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
+
         binding.apply {
             viewModel = ViewModelProvider(this@EopatchActivity, viewModelFactory)[EopatchViewModel::class.java]
             viewModel?.apply {
@@ -108,6 +112,7 @@ class EopatchActivity : EoBaseActivity<ActivityEopatchBinding>() {
             override fun handleOnBackPressed() {
                 binding.viewModel?.apply {
                     when (patchStep.value) {
+                        PatchStep.WAKE_UP,
                         PatchStep.SAFE_DEACTIVATION -> this@EopatchActivity.finish()
                         else                        -> Unit
                     }
