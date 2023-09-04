@@ -2,7 +2,7 @@ package info.nightscout.plugins.aps.wavez
 
 import android.content.Context
 import dagger.android.HasAndroidInjector
-import info.nightscout.androidaps.annotations.OpenForTesting
+import info.nightscout.annotations.OpenForTesting
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.interfaces.Config
 import info.nightscout.interfaces.aps.DetermineBasalAdapter
