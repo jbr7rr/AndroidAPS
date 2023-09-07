@@ -83,6 +83,7 @@ import info.nightscout.rx.events.EventBucketedDataCreated
 import info.nightscout.rx.events.EventEffectiveProfileSwitchChanged
 import info.nightscout.rx.events.EventExtendedBolusChange
 import info.nightscout.rx.events.EventMobileToWear
+import info.nightscout.rx.events.EventNewBG
 import info.nightscout.rx.events.EventNewOpenLoopNotification
 import info.nightscout.rx.events.EventPreferenceChange
 import info.nightscout.rx.events.EventPumpStatusChanged
@@ -146,6 +147,9 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
     @Inject lateinit var bgQualityCheck: BgQualityCheck
     @Inject lateinit var uiInteraction: UiInteraction
 
+    //Anpassung
+    //@Inject lateinit var openAPSSMBDynamicISFPlugin: OpenAPSSMBDynamicISFPlugin
+
     private val disposable = CompositeDisposable()
 
     private var smallWidth = false
@@ -180,6 +184,45 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Mod exercise mode toggle icon
+        if ( sp.getBoolean(info.nightscout.core.utils.R.string.key_high_temptarget_raises_sensitivity, false)) {
+            binding.exerciseModeCheckboxIcon.setImageResource(R.drawable.exercise)
+            binding.exerciseModeCheckboxIcon.setBackgroundResource(info.nightscout.core.ui.R.color.ribbonWarning)
+        } else {
+            binding.exerciseModeCheckboxIcon.setImageResource(R.drawable.exerciseinactive)
+            binding.exerciseModeCheckboxIcon.setBackgroundResource(info.nightscout.core.ui.R.color.ribbonDefault)
+        }
+        binding.exerciseModeCheckboxIcon.setOnClickListener {
+            if (sp.getBoolean(info.nightscout.core.utils.R.string.key_high_temptarget_raises_sensitivity, false) == true) {
+                binding.exerciseModeCheckboxIcon.setImageResource(R.drawable.exerciseinactive)
+                binding.exerciseModeCheckboxIcon.setBackgroundResource(info.nightscout.core.ui.R.color.ribbonDefault)
+                sp.putBoolean(info.nightscout.core.utils.R.string.key_high_temptarget_raises_sensitivity, false)
+            } else {
+                binding.exerciseModeCheckboxIcon.setImageResource(R.drawable.exercise)
+                binding.exerciseModeCheckboxIcon.setBackgroundResource(info.nightscout.core.ui.R.color.ribbonWarning)
+                sp.putBoolean(info.nightscout.core.utils.R.string.key_high_temptarget_raises_sensitivity, true)
+            }
+        }
+        // Mod end
+        // Anpassung: autosens toggle icon für dynISF, disable autosens für openAPSSMB
+        /*if (openAPSSMBDynamicISFPlugin.isEnabled()) {
+            binding.infoLayout.sensitivityIcon.setOnClickListener {
+                if (sp.getBoolean(R.string.key_openapsama_use_autosens, false) == true && constraintChecker.isAutosensModeEnabled().value()) {
+                    sp.putBoolean(R.string.key_openapsama_use_autosens, false)
+                    binding.infoLayout.sensitivityIcon.setImageResource(R.drawable.ic_x_swap_vert)
+                } else {
+                    sp.putBoolean(R.string.key_openapsama_use_autosens, true)
+                    binding.infoLayout.sensitivityIcon.setImageResource(R.drawable.ic_swap_vert_black_48dp_green)
+                }
+            }
+        } else {
+            if (sp.getBoolean(R.string.key_openapsama_use_autosens, false) == true && constraintChecker.isAutosensModeEnabled().value()) {
+                sp.putBoolean(R.string.key_openapsama_use_autosens, false)
+                binding.infoLayout.sensitivityIcon.setImageResource(R.drawable.ic_x_swap_vert)
+            }
+        } */
+        // Ende Anpassung
 
         // pre-process landscape mode
         val screenWidth = dm.widthPixels

@@ -1,8 +1,11 @@
 package info.nightscout.androidaps
 
 import android.bluetooth.BluetoothDevice
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.Build
@@ -154,6 +157,17 @@ class MainApp : DaggerApplication() {
             localAlertUtils.preSnoozeAlarms()
             doMigrations()
             uel.log(UserEntry.Action.START_AAPS, UserEntry.Sources.Aaps)
+
+
+            // Anpassung
+            // Speichern des aktuellen Startzeitpunkts
+            sp.putLong(info.nightscout.plugins.aps.R.string.key_app_start, dateUtil.now())
+            // Sensoren aktivieren
+            val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+            val phoneMovementDetector = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            sensorManager.registerListener(info.nightscout.plugins.aps.openAPSSMB.StepService, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(info.nightscout.plugins.aps.openAPSSMB.PhoneMovementDetector, phoneMovementDetector, SensorManager.SENSOR_DELAY_NORMAL)
 
             //  schedule widget update
             refreshWidget = Runnable {
