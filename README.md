@@ -9,6 +9,8 @@ If you have any questions contact me on discord @jbr7rr on the AndroidAPS discor
 Tsunami can be found here:
 https://github.com/piecycle/tsunami
 
+This version also incorporates autoISF from here: (visual mods and bg mod have been removed)
+https://github.com/swissalpine/AndroidAPS/tree/dev-mod8+isf+steps
 
 # AAPS
 * Check the wiki: https://wiki.aaps.app
