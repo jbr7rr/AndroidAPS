@@ -18,7 +18,6 @@ import info.nightscout.database.impl.AppRepository
 import info.nightscout.interfaces.GlucoseUnit
 import info.nightscout.interfaces.Constants
 import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.Profile
 import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.interfaces.profile.PureProfile
 import info.nightscout.interfaces.stats.TddCalculator
@@ -28,6 +27,7 @@ import info.nightscout.rx.AapsSchedulers
 import info.nightscout.rx.bus.RxBus
 import info.nightscout.rx.events.EventLocalProfileChanged
 import info.nightscout.shared.extensions.toVisibility
+import info.nightscout.shared.interfaces.ProfileUtil
 import info.nightscout.shared.interfaces.ResourceHelper
 import info.nightscout.shared.utils.DateUtil
 import info.nightscout.shared.utils.T
@@ -58,6 +58,7 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
     @Inject lateinit var fabricPrivacy: FabricPrivacy
     @Inject lateinit var rh: ResourceHelper
     @Inject lateinit var rxBus: RxBus
+    @Inject lateinit var profileUtil: ProfileUtil
 
     enum class ProfileType {
         MOTOL_DEFAULT,
@@ -196,8 +197,8 @@ class ProfileHelperActivity : TranslatedDaggerAppCompatActivity() {
 
         binding.isf.setParams(
             0.0,
-            Profile.fromMgdlToUnits(HardLimits.MIN_ISF, profileFunction.getUnits()),
-            Profile.fromMgdlToUnits(HardLimits.MAX_ISF, profileFunction.getUnits()),
+            profileUtil.fromMgdlToUnits(HardLimits.MIN_ISF, profileFunction.getUnits()),
+            profileUtil.fromMgdlToUnits(HardLimits.MAX_ISF, profileFunction.getUnits()),
             if (profileFunction.getUnits() == GlucoseUnit.MGDL) 1.0 else 0.1,
             if (profileFunction.getUnits() == GlucoseUnit.MGDL) DecimalFormat("0") else DecimalFormat("0.0"),
             false,

@@ -2,6 +2,7 @@ package info.nightscout.interfaces.iob
 
 import info.nightscout.interfaces.utils.DecimalFormatter
 import info.nightscout.interfaces.utils.Round
+import javax.inject.Inject
 
 data class GlucoseStatus(
     val glucose: Double,
@@ -29,20 +30,22 @@ data class GlucoseStatus(
     val pp_debug: String = "; debug:"
 ) {
 
-    fun log(): String = "Glucose: " + DecimalFormatter.to0Decimal(glucose) + " mg/dl " +
-        "Noise: " + DecimalFormatter.to0Decimal(noise) + " " +
-        "Delta: " + DecimalFormatter.to0Decimal(delta) + " mg/dl " +
-        "Short avg. delta: " + " " + DecimalFormatter.to2Decimal(shortAvgDelta) + " mg/dl " +
-        "Long avg. delta: " + DecimalFormatter.to2Decimal(longAvgDelta) + " mg/dl " +
-        "Range length: " + DecimalFormatter.to0Decimal(dura_ISF_minutes) + " min " +
-        "Range average: " + DecimalFormatter.to2Decimal(dura_ISF_average) + " mg/dl; " +
-        "5 min fit delta: " + DecimalFormatter.to2Decimal(slope05) + " mg/dl; " +
-        "15 min fit delta: " + DecimalFormatter.to2Decimal(slope15) + " mg/dl; " +
-        "40 min fit delta: " + DecimalFormatter.to2Decimal(slope40) + " mg/dl; " +
-        "parabola length: " + DecimalFormatter.to2Decimal(dura_p) + " min; " +
-        "parabola last delta: " + DecimalFormatter.to2Decimal(delta_pl) + " mg/dl; " +
-        "parabola next delta: " + DecimalFormatter.to2Decimal(delta_pn) + " mg/dl; " +
-        "bg_acceleration: " + DecimalFormatter.to2Decimal(bg_acceleration) + " mg/dl/(25m^2); " +
+    @Inject lateinit var decimalFormatter: DecimalFormatter
+
+    fun log(): String = "Glucose: " + decimalFormatter.to0Decimal(glucose) + " mg/dl " +
+        "Noise: " + decimalFormatter.to0Decimal(noise) + " " +
+        "Delta: " + decimalFormatter.to0Decimal(delta) + " mg/dl " +
+        "Short avg. delta: " + " " + decimalFormatter.to2Decimal(shortAvgDelta) + " mg/dl " +
+        "Long avg. delta: " + decimalFormatter.to2Decimal(longAvgDelta) + " mg/dl " +
+        "Range length: " + decimalFormatter.to0Decimal(dura_ISF_minutes) + " min " +
+        "Range average: " + decimalFormatter.to2Decimal(dura_ISF_average) + " mg/dl; " +
+        "5 min fit delta: " + decimalFormatter.to2Decimal(slope05) + " mg/dl; " +
+        "15 min fit delta: " + decimalFormatter.to2Decimal(slope15) + " mg/dl; " +
+        "40 min fit delta: " + decimalFormatter.to2Decimal(slope40) + " mg/dl; " +
+        "parabola length: " + decimalFormatter.to2Decimal(dura_p) + " min; " +
+        "parabola last delta: " + decimalFormatter.to2Decimal(delta_pl) + " mg/dl; " +
+        "parabola next delta: " + decimalFormatter.to2Decimal(delta_pn) + " mg/dl; " +
+        "bg_acceleration: " + decimalFormatter.to2Decimal(bg_acceleration) + " mg/dl/(25m^2); " +
         "fit correlation: " + r_squ + pp_debug
 }
 

@@ -4,7 +4,7 @@ import info.nightscout.core.extensions.pureProfileFromJson
 import info.nightscout.interfaces.GlucoseUnit
 import info.nightscout.interfaces.profile.Profile
 import info.nightscout.interfaces.profile.PureProfile
-import info.nightscout.interfaces.utils.Round
+import info.nightscout.shared.interfaces.ProfileUtil
 import info.nightscout.shared.utils.DateUtil
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,6 +18,8 @@ import kotlin.math.abs
 @Suppress("LocalVariableName")
 @Singleton
 class DefaultProfileCircadian @Inject constructor(val dateUtil: DateUtil) {
+
+    @Inject lateinit var profileUtil: ProfileUtil
 
     // Factors (Gary Scheiner, Think like a pancreas, Da Capo Lifelong Books ISBN 978-0738215143)
     private var oneToTen = arrayOf(1.12, 1.12, 1.11, 1.11, 1.11, 1.09, 1.09, 1.12, 1.11, 0.98, 0.90, 0.84, 0.81, 0.81, 0.86, 0.86, 0.88, 0.90, 0.93, 0.97, 1.05, 1.07, 1.09, 1.07)
@@ -50,8 +52,8 @@ class DefaultProfileCircadian @Inject constructor(val dateUtil: DateUtil) {
         profile.put("carbs_hr", 20) // not used
         profile.put("delay", 5.0) // not used
         profile.put("timezone", TimeZone.getDefault().id)
-        profile.put("target_high", JSONArray().put(JSONObject().put("time", "00:00").put("value", Profile.fromMgdlToUnits(108.0, units))))
-        profile.put("target_low", JSONArray().put(JSONObject().put("time", "00:00").put("value", Profile.fromMgdlToUnits(108.0, units))))
+        profile.put("target_high", JSONArray().put(JSONObject().put("time", "00:00").put("value", profileUtil.fromMgdlToUnits(108.0, units))))
+        profile.put("target_low", JSONArray().put(JSONObject().put("time", "00:00").put("value", profileUtil.fromMgdlToUnits(108.0, units))))
         profile.put("units", units.asText)
         return pureProfileFromJson(profile, dateUtil)
     }
