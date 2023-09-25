@@ -1,16 +1,14 @@
 package info.nightscout.ui.defaultProfile
 
-import info.nightscout.core.extensions.pureProfileFromJson
-import info.nightscout.interfaces.GlucoseUnit
-import info.nightscout.interfaces.profile.Profile
-import info.nightscout.interfaces.profile.PureProfile
-import info.nightscout.shared.interfaces.ProfileUtil
-import info.nightscout.shared.utils.DateUtil
+import app.aaps.core.interfaces.db.GlucoseUnit
+import app.aaps.core.interfaces.profile.ProfileUtil
+import app.aaps.core.interfaces.profile.PureProfile
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.main.extensions.pureProfileFromJson
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 import java.util.TimeZone
-import java.util.TreeMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs

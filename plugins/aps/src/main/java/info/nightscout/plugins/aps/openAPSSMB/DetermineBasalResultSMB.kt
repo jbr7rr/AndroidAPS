@@ -4,6 +4,7 @@ import app.aaps.core.interfaces.aps.VariableSensitivityResult
 import app.aaps.core.interfaces.logging.LTag
 import dagger.android.HasAndroidInjector
 import info.nightscout.plugins.aps.APSResultObject
+import info.nightscout.plugins.aps.R
 import org.json.JSONException
 import org.json.JSONObject
 

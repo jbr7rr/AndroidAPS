@@ -5,6 +5,7 @@ import app.aaps.core.interfaces.insulin.Insulin
 import app.aaps.core.interfaces.iob.Iob
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.notifications.Notification
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.plugin.PluginType
@@ -17,6 +18,7 @@ import app.aaps.core.interfaces.utils.T
 import app.aaps.database.entities.Bolus
 import app.aaps.database.entities.embedments.InsulinConfiguration
 import dagger.android.HasAndroidInjector
+import javax.inject.Inject
 import kotlin.math.exp
 import kotlin.math.pow
 
