@@ -1,27 +1,27 @@
 package info.nightscout.automation.actions
 
+import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.constraints.Constraint
+import app.aaps.core.interfaces.db.GlucoseUnit
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.plugin.PluginDescription
+import app.aaps.core.interfaces.plugin.PluginType
+import app.aaps.core.interfaces.profile.Profile
+import app.aaps.core.interfaces.profile.ProfileSource
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.queue.CommandQueue
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.smsCommunicator.SmsCommunicator
+import app.aaps.core.main.constraints.ConstraintObject
+import app.aaps.database.entities.OfflineEvent
 import app.aaps.shared.tests.TestBaseWithProfile
 import dagger.android.AndroidInjector
 import dagger.android.HasAndroidInjector
 import info.nightscout.automation.triggers.Trigger
-import info.nightscout.core.constraints.ConstraintObject
-import info.nightscout.database.entities.OfflineEvent
 import info.nightscout.database.impl.AppRepository
-import info.nightscout.interfaces.ConfigBuilder
-import info.nightscout.interfaces.GlucoseUnit
-import info.nightscout.interfaces.aps.Loop
-import info.nightscout.interfaces.constraints.Constraint
-import info.nightscout.interfaces.logging.UserEntryLogger
-import info.nightscout.interfaces.plugin.PluginBase
-import info.nightscout.interfaces.plugin.PluginDescription
-import info.nightscout.interfaces.plugin.PluginType
-import info.nightscout.interfaces.profile.Profile
-import info.nightscout.interfaces.profile.ProfileSource
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.queue.CommandQueue
-import info.nightscout.interfaces.smsCommunicator.SmsCommunicator
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.shared.interfaces.ResourceHelper
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
@@ -178,7 +178,7 @@ ActionsTestBase : TestBaseWithProfile() {
         `when`(activePlugin.activeProfileSource).thenReturn(profilePlugin)
         `when`(profilePlugin.profile).thenReturn(getValidProfileStore())
 
-        `when`(context.getString(info.nightscout.core.ui.R.string.ok)).thenReturn("OK")
-        `when`(context.getString(info.nightscout.core.ui.R.string.error)).thenReturn("Error")
+        `when`(context.getString(app.aaps.core.ui.R.string.ok)).thenReturn("OK")
+        `when`(context.getString(app.aaps.core.ui.R.string.error)).thenReturn("Error")
     }
 }

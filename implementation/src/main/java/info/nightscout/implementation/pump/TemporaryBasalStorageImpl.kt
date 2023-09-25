@@ -1,11 +1,11 @@
 package info.nightscout.implementation.pump
 
-import info.nightscout.annotations.OpenForTesting
-import info.nightscout.interfaces.pump.PumpSync
-import info.nightscout.interfaces.pump.TemporaryBasalStorage
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.shared.utils.T
+import app.aaps.annotations.OpenForTesting
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.pump.TemporaryBasalStorage
+import app.aaps.core.interfaces.utils.T
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs

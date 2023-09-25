@@ -1,12 +1,12 @@
 package info.nightscout.plugins.constraints.objectives.objectives
 
+import app.aaps.core.main.constraints.ConstraintObject
+import app.aaps.core.interfaces.constraints.PluginConstraints
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.ProfileFunction
 import dagger.android.HasAndroidInjector
-import info.nightscout.core.constraints.ConstraintObject
-import info.nightscout.interfaces.constraints.PluginConstraints
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.ProfileFunction
 import info.nightscout.plugins.constraints.R
-import info.nightscout.rx.logging.AAPSLogger
 import javax.inject.Inject
 
 @Suppress("SpellCheckingInspection")

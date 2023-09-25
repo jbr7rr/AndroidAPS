@@ -1,12 +1,12 @@
 package info.nightscout.plugins.constraints
 
-import info.nightscout.core.constraints.ConstraintObject
-import info.nightscout.interfaces.constraints.Constraint
-import info.nightscout.interfaces.constraints.ConstraintsChecker
-import info.nightscout.interfaces.constraints.PluginConstraints
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.Profile
-import info.nightscout.rx.logging.AAPSLogger
+import app.aaps.core.main.constraints.ConstraintObject
+import app.aaps.core.interfaces.constraints.Constraint
+import app.aaps.core.interfaces.constraints.ConstraintsChecker
+import app.aaps.core.interfaces.constraints.PluginConstraints
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.Profile
 import javax.inject.Inject
 import javax.inject.Singleton
 

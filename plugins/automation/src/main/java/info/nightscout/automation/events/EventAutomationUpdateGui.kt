@@ -1,5 +1,5 @@
 package info.nightscout.automation.events
 
-import info.nightscout.rx.events.Event
+import app.aaps.core.interfaces.rx.events.Event
 
 class EventAutomationUpdateGui : Event()

@@ -2,11 +2,11 @@ package info.nightscout.implementation.receivers
 
 import android.content.Context
 import android.content.Intent
-import info.nightscout.annotations.OpenForTesting
-import info.nightscout.interfaces.receivers.ReceiverStatusStore
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventChargingState
-import info.nightscout.rx.events.EventNetworkChange
+import app.aaps.annotations.OpenForTesting
+import app.aaps.core.interfaces.receivers.ReceiverStatusStore
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventChargingState
+import app.aaps.core.interfaces.rx.events.EventNetworkChange
 import javax.inject.Inject
 import javax.inject.Singleton
 

@@ -1,10 +1,10 @@
 package info.nightscout.plugins.constraints.di
 
+import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
+import app.aaps.core.interfaces.constraints.ConstraintsChecker
+import app.aaps.core.interfaces.versionChecker.VersionCheckerUtils
 import dagger.Binds
 import dagger.Module
-import info.nightscout.interfaces.bgQualityCheck.BgQualityCheck
-import info.nightscout.interfaces.constraints.ConstraintsChecker
-import info.nightscout.interfaces.versionChecker.VersionCheckerUtils
 import info.nightscout.plugins.constraints.ConstraintsCheckerImpl
 import info.nightscout.plugins.constraints.bgQualityCheck.BgQualityCheckPlugin
 import info.nightscout.plugins.constraints.versionChecker.VersionCheckerUtilsImpl

@@ -6,12 +6,12 @@ import android.widget.CheckBox
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.fragment.app.FragmentActivity
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.T
 import dagger.android.HasAndroidInjector
 import info.nightscout.plugins.constraints.R
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
-import info.nightscout.shared.utils.DateUtil
-import info.nightscout.shared.utils.T
 import javax.inject.Inject
 import kotlin.math.floor
 
@@ -75,7 +75,8 @@ abstract class Objective(injector: HasAndroidInjector, spName: String, @StringRe
     open fun specialActionEnabled(): Boolean = true
 
     @Suppress("unused")
-    open fun specialAction(activity: FragmentActivity, input: String) {}
+    open fun specialAction(activity: FragmentActivity, input: String) {
+    }
 
     abstract inner class Task(var objective: Objective, @StringRes val task: Int) {
 
@@ -120,9 +121,9 @@ abstract class Objective(injector: HasAndroidInjector, spName: String, @StringRe
             val hours = floor(duration.toDouble() / T.hours(1).msecs()).toInt()
             val minutes = floor(duration.toDouble() / T.mins(1).msecs()).toInt()
             return when {
-                days > 0  -> rh.gq(info.nightscout.core.ui.R.plurals.days, days, days)
-                hours > 0 -> rh.gq(info.nightscout.core.ui.R.plurals.hours, hours, hours)
-                else      -> rh.gq(info.nightscout.core.ui.R.plurals.minutes, minutes, minutes)
+                days > 0  -> rh.gq(app.aaps.core.ui.R.plurals.days, days, days)
+                hours > 0 -> rh.gq(app.aaps.core.ui.R.plurals.hours, hours, hours)
+                else      -> rh.gq(app.aaps.core.ui.R.plurals.minutes, minutes, minutes)
             }
         }
     }
@@ -185,5 +186,5 @@ abstract class Objective(injector: HasAndroidInjector, spName: String, @StringRe
         }
     }
 
-   inner class Learned internal constructor(@StringRes var learned: Int)
+    inner class Learned internal constructor(@StringRes var learned: Int)
 }

@@ -1,8 +1,8 @@
 package info.nightscout.automation.triggers
 
+import app.aaps.core.interfaces.utils.T
 import com.google.common.base.Optional
 import info.nightscout.automation.R
-import info.nightscout.shared.utils.T
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -51,7 +51,7 @@ class TriggerTimeTest : TriggerTestBase() {
 
     @Test
     fun friendlyNameTest() {
-        Assertions.assertEquals(info.nightscout.core.ui.R.string.time, TriggerTime(injector).friendlyName())
+        Assertions.assertEquals(app.aaps.core.ui.R.string.time, TriggerTime(injector).friendlyName())
     }
 
     @Test
@@ -62,6 +62,6 @@ class TriggerTimeTest : TriggerTestBase() {
 
     @Test
     fun iconTest() {
-        Assertions.assertEquals(Optional.of(info.nightscout.core.main.R.drawable.ic_access_alarm_24dp), TriggerTime(injector).icon())
+        Assertions.assertEquals(Optional.of(app.aaps.core.main.R.drawable.ic_access_alarm_24dp), TriggerTime(injector).icon())
     }
 }

@@ -9,15 +9,15 @@ import androidx.core.app.ActivityCompat
 import app.aaps.configuration.R
 import app.aaps.configuration.maintenance.CustomWatchfaceFileContract
 import app.aaps.configuration.maintenance.PrefsFileContract
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.maintenance.ImportExportPrefs
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventThemeSwitch
 import dagger.android.support.DaggerAppCompatActivity
-import info.nightscout.core.ui.dialogs.OKDialog
-import info.nightscout.core.ui.locale.LocaleHelper
-import info.nightscout.interfaces.maintenance.ImportExportPrefs
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventThemeSwitch
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.shared.interfaces.ResourceHelper
+import app.aaps.core.ui.dialogs.OKDialog
+import app.aaps.core.ui.locale.LocaleHelper
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import javax.inject.Inject
 

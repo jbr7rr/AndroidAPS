@@ -2,20 +2,20 @@ package info.nightscout.plugins.constraints.storage
 
 import android.os.Environment
 import android.os.StatFs
+import app.aaps.annotations.OpenForTesting
+import app.aaps.core.interfaces.configuration.Constants
+import app.aaps.core.interfaces.constraints.Constraint
+import app.aaps.core.interfaces.constraints.PluginConstraints
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.Notification
+import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.plugin.PluginDescription
+import app.aaps.core.interfaces.plugin.PluginType
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.ui.UiInteraction
 import dagger.android.HasAndroidInjector
-import info.nightscout.annotations.OpenForTesting
-import info.nightscout.interfaces.Constants
-import info.nightscout.interfaces.constraints.Constraint
-import info.nightscout.interfaces.constraints.PluginConstraints
-import info.nightscout.interfaces.notifications.Notification
-import info.nightscout.interfaces.plugin.PluginBase
-import info.nightscout.interfaces.plugin.PluginDescription
-import info.nightscout.interfaces.plugin.PluginType
-import info.nightscout.interfaces.ui.UiInteraction
 import info.nightscout.plugins.constraints.R
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.shared.interfaces.ResourceHelper
 import javax.inject.Inject
 import javax.inject.Singleton
 

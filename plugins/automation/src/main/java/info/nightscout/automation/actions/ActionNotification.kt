@@ -2,20 +2,20 @@ package info.nightscout.automation.actions
 
 import android.widget.LinearLayout
 import androidx.annotation.DrawableRes
+import app.aaps.core.interfaces.notifications.NotificationUserMessage
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventRefreshOverview
+import app.aaps.core.main.events.EventNewNotification
+import app.aaps.core.utils.JsonHelper
 import dagger.android.HasAndroidInjector
 import info.nightscout.automation.R
 import info.nightscout.automation.elements.InputString
 import info.nightscout.automation.elements.LabelWithElement
 import info.nightscout.automation.elements.LayoutBuilder
-import info.nightscout.core.events.EventNewNotification
-import info.nightscout.core.utils.JsonHelper
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.database.impl.transactions.InsertTherapyEventAnnouncementTransaction
-import info.nightscout.interfaces.notifications.NotificationUserMessage
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.queue.Callback
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventRefreshOverview
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.plusAssign
 import org.json.JSONObject
@@ -30,7 +30,7 @@ class ActionNotification(injector: HasAndroidInjector) : Action(injector) {
 
     var text = InputString()
 
-    override fun friendlyName(): Int = info.nightscout.core.ui.R.string.notification
+    override fun friendlyName(): Int = app.aaps.core.ui.R.string.notification
     override fun shortDescription(): String = rh.gs(R.string.notification_message, text.value)
     @DrawableRes override fun icon(): Int = R.drawable.ic_notifications
 
@@ -39,7 +39,7 @@ class ActionNotification(injector: HasAndroidInjector) : Action(injector) {
         rxBus.send(EventNewNotification(notification))
         disposable += repository.runTransaction(InsertTherapyEventAnnouncementTransaction(text.value)).subscribe()
         rxBus.send(EventRefreshOverview("ActionNotification"))
-        callback.result(PumpEnactResult(injector).success(true).comment(info.nightscout.core.ui.R.string.ok)).run()
+        callback.result(PumpEnactResult(injector).success(true).comment(app.aaps.core.ui.R.string.ok)).run()
     }
 
     override fun toJSON(): String {

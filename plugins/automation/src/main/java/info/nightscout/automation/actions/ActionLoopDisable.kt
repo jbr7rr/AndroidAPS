@@ -1,20 +1,20 @@
 package info.nightscout.automation.actions
 
 import androidx.annotation.DrawableRes
+import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.plugin.PluginType
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.core.interfaces.queue.CommandQueue
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventRefreshOverview
+import app.aaps.database.entities.UserEntry
+import app.aaps.database.entities.UserEntry.Sources
 import dagger.android.HasAndroidInjector
 import info.nightscout.automation.R
-import info.nightscout.database.entities.UserEntry
-import info.nightscout.database.entities.UserEntry.Sources
-import info.nightscout.interfaces.ConfigBuilder
-import info.nightscout.interfaces.aps.Loop
-import info.nightscout.interfaces.logging.UserEntryLogger
-import info.nightscout.interfaces.plugin.PluginBase
-import info.nightscout.interfaces.plugin.PluginType
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.queue.Callback
-import info.nightscout.interfaces.queue.CommandQueue
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventRefreshOverview
 import javax.inject.Inject
 
 class ActionLoopDisable(injector: HasAndroidInjector) : Action(injector) {
@@ -25,8 +25,8 @@ class ActionLoopDisable(injector: HasAndroidInjector) : Action(injector) {
     @Inject lateinit var rxBus: RxBus
     @Inject lateinit var uel: UserEntryLogger
 
-    override fun friendlyName(): Int = info.nightscout.core.ui.R.string.disableloop
-    override fun shortDescription(): String = rh.gs(info.nightscout.core.ui.R.string.disableloop)
+    override fun friendlyName(): Int = app.aaps.core.ui.R.string.disableloop
+    override fun shortDescription(): String = rh.gs(app.aaps.core.ui.R.string.disableloop)
     @DrawableRes override fun icon(): Int = R.drawable.ic_stop_24dp
 
     override fun doAction(callback: Callback) {

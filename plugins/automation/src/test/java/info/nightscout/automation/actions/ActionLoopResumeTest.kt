@@ -1,10 +1,10 @@
 package info.nightscout.automation.actions
 
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.database.entities.TemporaryTarget
 import info.nightscout.automation.R
-import info.nightscout.database.entities.TemporaryTarget
 import info.nightscout.database.impl.transactions.CancelCurrentOfflineEventIfAnyTransaction
 import info.nightscout.database.impl.transactions.Transaction
-import info.nightscout.interfaces.queue.Callback
 import io.reactivex.rxjava3.core.Single
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -18,14 +18,14 @@ class ActionLoopResumeTest : ActionsTestBase() {
     @BeforeEach
     fun setup() {
 
-        `when`(rh.gs(info.nightscout.core.ui.R.string.resumeloop)).thenReturn("Resume loop")
+        `when`(rh.gs(app.aaps.core.ui.R.string.resumeloop)).thenReturn("Resume loop")
         `when`(context.getString(R.string.notsuspended)).thenReturn("Not suspended")
 
         sut = ActionLoopResume(injector)
     }
 
     @Test fun friendlyNameTest() {
-        Assertions.assertEquals(info.nightscout.core.ui.R.string.resumeloop, sut.friendlyName())
+        Assertions.assertEquals(app.aaps.core.ui.R.string.resumeloop, sut.friendlyName())
     }
 
     @Test fun shortDescriptionTest() {

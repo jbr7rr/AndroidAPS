@@ -27,41 +27,41 @@ import app.aaps.configuration.maintenance.data.PrefsFormat
 import app.aaps.configuration.maintenance.data.PrefsStatusImpl
 import app.aaps.configuration.maintenance.dialogs.PrefImportSummaryDialog
 import app.aaps.configuration.maintenance.formats.EncryptedPrefsFormat
+import app.aaps.core.interfaces.androidPermissions.AndroidPermission
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.db.PersistenceLayer
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.maintenance.ImportExportPrefs
+import app.aaps.core.interfaces.maintenance.PrefFileListProvider
+import app.aaps.core.interfaces.maintenance.PrefMetadata
+import app.aaps.core.interfaces.maintenance.PrefsFile
+import app.aaps.core.interfaces.maintenance.PrefsMetadataKey
+import app.aaps.core.interfaces.protection.PasswordCheck
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventAppExit
+import app.aaps.core.interfaces.rx.events.EventDiaconnG8PumpLogReset
+import app.aaps.core.interfaces.rx.weardata.CwfData
+import app.aaps.core.interfaces.rx.weardata.CwfMetadataKey
+import app.aaps.core.interfaces.rx.weardata.ZipWatchfaceFormat
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.storage.Storage
+import app.aaps.core.interfaces.ui.UiInteraction
+import app.aaps.core.interfaces.userEntry.UserEntryPresentationHelper
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.MidnightTime
+import app.aaps.core.interfaces.utils.T
+import app.aaps.core.main.utils.worker.LoggingWorker
+import app.aaps.core.ui.dialogs.OKDialog
+import app.aaps.core.ui.dialogs.TwoMessagesAlertDialog
+import app.aaps.core.ui.dialogs.WarningDialog
+import app.aaps.core.ui.toast.ToastUtils
+import app.aaps.database.entities.UserEntry
+import app.aaps.database.entities.UserEntry.Action
+import app.aaps.database.entities.UserEntry.Sources
 import dagger.android.HasAndroidInjector
-import info.nightscout.core.ui.dialogs.OKDialog
-import info.nightscout.core.ui.dialogs.TwoMessagesAlertDialog
-import info.nightscout.core.ui.dialogs.WarningDialog
-import info.nightscout.core.ui.toast.ToastUtils
-import info.nightscout.core.utils.worker.LoggingWorker
-import info.nightscout.database.entities.UserEntry
-import info.nightscout.database.entities.UserEntry.Action
-import info.nightscout.database.entities.UserEntry.Sources
-import info.nightscout.interfaces.AndroidPermission
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.db.PersistenceLayer
-import info.nightscout.interfaces.logging.UserEntryLogger
-import info.nightscout.interfaces.maintenance.ImportExportPrefs
-import info.nightscout.interfaces.maintenance.PrefFileListProvider
-import info.nightscout.interfaces.maintenance.PrefMetadata
-import info.nightscout.interfaces.maintenance.PrefsFile
-import info.nightscout.interfaces.maintenance.PrefsMetadataKey
-import info.nightscout.interfaces.protection.PasswordCheck
-import info.nightscout.interfaces.storage.Storage
-import info.nightscout.interfaces.ui.UiInteraction
-import info.nightscout.interfaces.userEntry.UserEntryPresentationHelper
-import info.nightscout.interfaces.utils.MidnightTime
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventAppExit
-import info.nightscout.rx.events.EventDiaconnG8PumpLogReset
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.rx.weardata.CwfData
-import info.nightscout.rx.weardata.CwfMetadataKey
-import info.nightscout.rx.weardata.ZipWatchfaceFormat
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
-import info.nightscout.shared.utils.DateUtil
-import info.nightscout.shared.utils.T
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.FileNotFoundException
@@ -142,7 +142,7 @@ class ImportExportPrefsImpl @Inject constructor(
 
         // name provided (hopefully) by user
         val patientName = sp.getString(info.nightscout.core.utils.R.string.key_patient_name, "")
-        val defaultPatientName = rh.gs(info.nightscout.core.ui.R.string.patient_name_default)
+        val defaultPatientName = rh.gs(app.aaps.core.ui.R.string.patient_name_default)
 
         // name we detect from OS
         val systemName = n1 ?: n2 ?: n3 ?: n4 ?: n5 ?: n6 ?: defaultPatientName
@@ -150,7 +150,7 @@ class ImportExportPrefsImpl @Inject constructor(
     }
 
     private fun askForMasterPass(activity: FragmentActivity, @StringRes canceledMsg: Int, then: ((password: String) -> Unit)) {
-        passwordCheck.queryPassword(activity, info.nightscout.core.ui.R.string.master_password, info.nightscout.core.utils.R.string.key_master_password, { password ->
+        passwordCheck.queryPassword(activity, app.aaps.core.ui.R.string.master_password, info.nightscout.core.utils.R.string.key_master_password, { password ->
             then(password)
         }, {
                                         ToastUtils.warnToast(activity, rh.gs(canceledMsg))
@@ -207,7 +207,7 @@ class ImportExportPrefsImpl @Inject constructor(
         TwoMessagesAlertDialog.showAlert(
             activity, rh.gs(R.string.import_setting),
             rh.gs(R.string.import_from) + " " + fileToImport.name + " ?",
-            rh.gs(info.nightscout.core.ui.R.string.password_preferences_decrypt_prompt), {
+            rh.gs(app.aaps.core.ui.R.string.password_preferences_decrypt_prompt), {
                 askForMasterPass(activity, R.string.preferences_import_canceled, then)
             }, null, R.drawable.ic_header_import
         )

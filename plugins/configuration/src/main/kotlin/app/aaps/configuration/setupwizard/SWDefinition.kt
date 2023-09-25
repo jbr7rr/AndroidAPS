@@ -20,34 +20,34 @@ import app.aaps.configuration.setupwizard.elements.SWInfoText
 import app.aaps.configuration.setupwizard.elements.SWPlugin
 import app.aaps.configuration.setupwizard.elements.SWPreference
 import app.aaps.configuration.setupwizard.elements.SWRadioButton
+import app.aaps.core.interfaces.androidPermissions.AndroidPermission
+import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.configuration.Constants
+import app.aaps.core.interfaces.constraints.Objectives
+import app.aaps.core.interfaces.maintenance.ImportExportPrefs
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.plugin.PluginType
+import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.pump.Medtrum
+import app.aaps.core.interfaces.pump.OmnipodDash
+import app.aaps.core.interfaces.pump.OmnipodEros
+import app.aaps.core.interfaces.queue.CommandQueue
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
+import app.aaps.core.interfaces.rx.events.EventSWRLStatus
+import app.aaps.core.interfaces.rx.events.EventSWSyncStatus
+import app.aaps.core.interfaces.rx.events.EventSWUpdate
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.ui.UiInteraction
+import app.aaps.core.interfaces.utils.HardLimits
+import app.aaps.core.main.profile.ProfileSealed
+import app.aaps.core.main.utils.CryptoUtil
+import app.aaps.core.utils.isRunningTest
 import dagger.android.HasAndroidInjector
-import info.nightscout.core.profile.ProfileSealed
-import info.nightscout.core.utils.CryptoUtil
-import info.nightscout.core.utils.isRunningTest
-import info.nightscout.interfaces.AndroidPermission
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.ConfigBuilder
-import info.nightscout.interfaces.Constants
-import info.nightscout.interfaces.aps.Loop
-import info.nightscout.interfaces.constraints.Objectives
-import info.nightscout.interfaces.maintenance.ImportExportPrefs
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.plugin.PluginBase
-import info.nightscout.interfaces.plugin.PluginType
-import info.nightscout.interfaces.profile.ProfileFunction
-import info.nightscout.interfaces.pump.Medtrum
-import info.nightscout.interfaces.pump.OmnipodDash
-import info.nightscout.interfaces.pump.OmnipodEros
-import info.nightscout.interfaces.queue.CommandQueue
-import info.nightscout.interfaces.ui.UiInteraction
-import info.nightscout.interfaces.utils.HardLimits
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventPumpStatusChanged
-import info.nightscout.rx.events.EventSWRLStatus
-import info.nightscout.rx.events.EventSWSyncStatus
-import info.nightscout.rx.events.EventSWUpdate
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -216,38 +216,38 @@ class SWDefinition @Inject constructor(
             .add(SWPreference(injector, this).option(R.xml.pref_datachoices))
 
     private val screenMasterPassword
-        get() = SWScreen(injector, info.nightscout.core.ui.R.string.master_password)
+        get() = SWScreen(injector, app.aaps.core.ui.R.string.master_password)
             .skippable(false)
-            .add(SWInfoText(injector).label(info.nightscout.core.ui.R.string.master_password))
+            .add(SWInfoText(injector).label(app.aaps.core.ui.R.string.master_password))
             .add(SWEditEncryptedPassword(injector, cryptoUtil).preferenceId(info.nightscout.core.utils.R.string.key_master_password))
             .add(SWBreak(injector))
             .add(SWInfoText(injector).label(R.string.master_password_summary))
             .validator { !cryptoUtil.checkPassword("", sp.getString(info.nightscout.core.utils.R.string.key_master_password, "")) }
 
     private val screenAge
-        get() = SWScreen(injector, info.nightscout.core.ui.R.string.patient_type)
+        get() = SWScreen(injector, app.aaps.core.ui.R.string.patient_type)
             .skippable(false)
             .add(SWBreak(injector))
             .add(
                 SWRadioButton(injector)
-                    .option(info.nightscout.core.ui.R.array.ageArray, info.nightscout.core.utils.R.array.ageValues)
+                    .option(app.aaps.core.ui.R.array.ageArray, info.nightscout.core.utils.R.array.ageValues)
                     .preferenceId(info.nightscout.core.utils.R.string.key_age)
-                    .label(info.nightscout.core.ui.R.string.patient_type)
-                    .comment(info.nightscout.core.ui.R.string.patient_age_summary)
+                    .label(app.aaps.core.ui.R.string.patient_type)
+                    .comment(app.aaps.core.ui.R.string.patient_age_summary)
             )
             .add(SWBreak(injector))
             .add(
                 SWEditNumber(injector, 3.0, 0.1, 25.0)
                     .preferenceId(info.nightscout.core.utils.R.string.key_treatmentssafety_maxbolus)
                     .updateDelay(5)
-                    .label(info.nightscout.core.ui.R.string.max_bolus_title)
+                    .label(app.aaps.core.ui.R.string.max_bolus_title)
                     .comment(R.string.common_values)
             )
             .add(
                 SWEditIntNumber(injector, 48, 1, 100)
                     .preferenceId(info.nightscout.core.utils.R.string.key_treatmentssafety_maxcarbs)
                     .updateDelay(5)
-                    .label(info.nightscout.core.ui.R.string.max_carbs_title)
+                    .label(app.aaps.core.ui.R.string.max_carbs_title)
                     .comment(R.string.common_values)
             )
             .validator {
@@ -257,7 +257,7 @@ class SWDefinition @Inject constructor(
             }
 
     private val screenInsulin
-        get() = SWScreen(injector, info.nightscout.core.ui.R.string.configbuilder_insulin)
+        get() = SWScreen(injector, app.aaps.core.ui.R.string.configbuilder_insulin)
             .skippable(false)
             .add(SWPlugin(injector, this).option(PluginType.INSULIN, R.string.configbuilder_insulin_description))
             .add(SWBreak(injector))
@@ -290,9 +290,9 @@ class SWDefinition @Inject constructor(
             .visibility { (activePlugin.activeProfileSource as PluginBase).isEnabled() }
 
     private val screenProfileSwitch
-        get() = SWScreen(injector, info.nightscout.core.ui.R.string.careportal_profileswitch)
+        get() = SWScreen(injector, app.aaps.core.ui.R.string.careportal_profileswitch)
             .skippable(false)
-            .add(SWInfoText(injector).label(info.nightscout.core.ui.R.string.profileswitch_ismissing))
+            .add(SWInfoText(injector).label(app.aaps.core.ui.R.string.profileswitch_ismissing))
             .add(SWButton(injector)
                      .text(R.string.doprofileswitch)
                      .action { uiInteraction.runProfileSwitchDialog(activity.supportFragmentManager) })
@@ -316,7 +316,7 @@ class SWDefinition @Inject constructor(
                     .visibility { activePlugin.activePump is OmnipodEros })
             .add(SWButton(injector)
                      .text(R.string.readstatus)
-                     .action { commandQueue.readStatus(rh.gs(info.nightscout.core.ui.R.string.clicked_connect_to_pump), null) }
+                     .action { commandQueue.readStatus(rh.gs(app.aaps.core.ui.R.string.clicked_connect_to_pump), null) }
                      .visibility {
                          // Hide for Omnipod and Medtrum, because as we don't require a Pod/Patch to be paired in the setup wizard,
                          // Getting the status might not be possible
@@ -353,7 +353,7 @@ class SWDefinition @Inject constructor(
             .skippable(false)
             .add(
                 SWRadioButton(injector)
-                    .option(info.nightscout.core.ui.R.array.aps_modeArray, info.nightscout.core.ui.R.array.aps_modeValues)
+                    .option(app.aaps.core.ui.R.array.aps_modeArray, app.aaps.core.ui.R.array.aps_modeValues)
                     .preferenceId(info.nightscout.core.utils.R.string.key_aps_mode).label(R.string.apsmode_title)
                     .comment(R.string.setupwizard_preferred_aps_mode)
             )
@@ -365,7 +365,7 @@ class SWDefinition @Inject constructor(
             .add(SWInfoText(injector).label(R.string.setupwizard_loop_description))
             .add(SWBreak(injector))
             .add(SWButton(injector)
-                     .text(info.nightscout.core.ui.R.string.enableloop)
+                     .text(app.aaps.core.ui.R.string.enableloop)
                      .action {
                          configBuilder.performPluginSwitch(loop as PluginBase, true, PluginType.LOOP)
                          rxBus.send(EventSWUpdate(true))
@@ -383,7 +383,7 @@ class SWDefinition @Inject constructor(
             .add(SWPlugin(injector, this).option(PluginType.SENSITIVITY, R.string.configbuilder_sensitivity_description))
 
     private val getScreenObjectives
-        get() = SWScreen(injector, info.nightscout.core.ui.R.string.objectives)
+        get() = SWScreen(injector, app.aaps.core.ui.R.string.objectives)
             .skippable(false)
             .add(SWInfoText(injector).label(R.string.startobjective))
             .add(SWBreak(injector))

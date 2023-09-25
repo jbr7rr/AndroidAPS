@@ -1,29 +1,29 @@
 package info.nightscout.implementation
 
-import info.nightscout.core.events.EventNewNotification
-import info.nightscout.database.ValueWrapper
-import info.nightscout.database.entities.TherapyEvent
-import info.nightscout.database.entities.UserEntry.Action
-import info.nightscout.database.entities.UserEntry.Sources
-import info.nightscout.database.entities.ValueWithUnit
+import app.aaps.core.interfaces.alerts.LocalAlertUtils
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.configuration.Constants
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.notifications.Notification
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventDismissNotification
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.smsCommunicator.SmsCommunicator
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.T
+import app.aaps.core.main.events.EventNewNotification
+import app.aaps.database.ValueWrapper
+import app.aaps.database.entities.TherapyEvent
+import app.aaps.database.entities.UserEntry.Action
+import app.aaps.database.entities.UserEntry.Sources
+import app.aaps.database.entities.ValueWithUnit
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.database.impl.transactions.InsertTherapyEventAnnouncementTransaction
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.Constants
-import info.nightscout.interfaces.LocalAlertUtils
-import info.nightscout.interfaces.logging.UserEntryLogger
-import info.nightscout.interfaces.notifications.Notification
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.ProfileFunction
-import info.nightscout.interfaces.smsCommunicator.SmsCommunicator
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventDismissNotification
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
-import info.nightscout.shared.utils.DateUtil
-import info.nightscout.shared.utils.T
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.plusAssign
 import javax.inject.Inject
@@ -65,13 +65,16 @@ class LocalAlertUtilsImpl @Inject constructor(
             if (sp.getBoolean(info.nightscout.core.utils.R.string.key_enable_pump_unreachable_alert, true)) {
                 aapsLogger.debug(LTag.CORE, "Generating pump unreachable alarm. lastConnection: " + dateUtil.dateAndTimeString(lastConnection) + " isStatusOutdated: " + isStatusOutdated)
                 sp.putLong("nextPumpDisconnectedAlarm", System.currentTimeMillis() + pumpUnreachableThreshold())
-                rxBus.send(EventNewNotification(Notification(Notification.PUMP_UNREACHABLE, rh.gs(info.nightscout.core.ui.R.string.pump_unreachable), Notification.URGENT).also { it.soundId = info.nightscout.core.ui.R.raw.alarm }))
-                uel.log(Action.CAREPORTAL, Sources.Aaps, rh.gs(info.nightscout.core.ui.R.string.pump_unreachable), ValueWithUnit.TherapyEventType(TherapyEvent.Type.ANNOUNCEMENT))
+                rxBus.send(EventNewNotification(Notification(Notification.PUMP_UNREACHABLE, rh.gs(app.aaps.core.ui.R.string.pump_unreachable), Notification.URGENT).also {
+                    it.soundId =
+                        app.aaps.core.ui.R.raw.alarm
+                }))
+                uel.log(Action.CAREPORTAL, Sources.Aaps, rh.gs(app.aaps.core.ui.R.string.pump_unreachable), ValueWithUnit.TherapyEventType(TherapyEvent.Type.ANNOUNCEMENT))
                 if (sp.getBoolean(info.nightscout.core.utils.R.string.key_ns_create_announcements_from_errors, true))
-                    disposable += repository.runTransaction(InsertTherapyEventAnnouncementTransaction(rh.gs(info.nightscout.core.ui.R.string.pump_unreachable))).subscribe()
+                    disposable += repository.runTransaction(InsertTherapyEventAnnouncementTransaction(rh.gs(app.aaps.core.ui.R.string.pump_unreachable))).subscribe()
             }
             if (sp.getBoolean(info.nightscout.core.utils.R.string.key_smscommunicator_report_pump_unreachable, true))
-                smsCommunicator.sendNotificationToAllNumbers(rh.gs(info.nightscout.core.ui.R.string.pump_unreachable))
+                smsCommunicator.sendNotificationToAllNumbers(rh.gs(app.aaps.core.ui.R.string.pump_unreachable))
         }
         if (!isStatusOutdated && !alarmTimeoutExpired) rxBus.send(EventDismissNotification(Notification.PUMP_UNREACHABLE))
     }
@@ -124,11 +127,11 @@ class LocalAlertUtilsImpl @Inject constructor(
             && bgReading.timestamp + missedReadingsThreshold() < System.currentTimeMillis()
             && sp.getLong("nextMissedReadingsAlarm", 0L) < System.currentTimeMillis()
         ) {
-            val n = Notification(Notification.BG_READINGS_MISSED, rh.gs(info.nightscout.core.ui.R.string.missed_bg_readings), Notification.URGENT)
-            n.soundId = info.nightscout.core.ui.R.raw.alarm
+            val n = Notification(Notification.BG_READINGS_MISSED, rh.gs(app.aaps.core.ui.R.string.missed_bg_readings), Notification.URGENT)
+            n.soundId = app.aaps.core.ui.R.raw.alarm
             sp.putLong("nextMissedReadingsAlarm", System.currentTimeMillis() + missedReadingsThreshold())
             rxBus.send(EventNewNotification(n))
-            uel.log(Action.CAREPORTAL, Sources.Aaps, rh.gs(info.nightscout.core.ui.R.string.missed_bg_readings), ValueWithUnit.TherapyEventType(TherapyEvent.Type.ANNOUNCEMENT))
+            uel.log(Action.CAREPORTAL, Sources.Aaps, rh.gs(app.aaps.core.ui.R.string.missed_bg_readings), ValueWithUnit.TherapyEventType(TherapyEvent.Type.ANNOUNCEMENT))
             if (sp.getBoolean(info.nightscout.core.utils.R.string.key_ns_create_announcements_from_errors, true)) {
                 disposable += repository.runTransaction(InsertTherapyEventAnnouncementTransaction(n.text)).subscribe()
             }

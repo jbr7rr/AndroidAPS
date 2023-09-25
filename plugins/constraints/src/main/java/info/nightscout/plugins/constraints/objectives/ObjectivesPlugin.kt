@@ -1,21 +1,24 @@
 package info.nightscout.plugins.constraints.objectives
 
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.constraints.Constraint
+import app.aaps.core.interfaces.constraints.Objectives
+import app.aaps.core.interfaces.constraints.Objectives.Companion.AUTOSENS_OBJECTIVE
+import app.aaps.core.interfaces.constraints.Objectives.Companion.AUTO_OBJECTIVE
+import app.aaps.core.interfaces.constraints.Objectives.Companion.DYN_ISF_OBJECTIVE
+import app.aaps.core.interfaces.constraints.Objectives.Companion.FIRST_OBJECTIVE
+import app.aaps.core.interfaces.constraints.Objectives.Companion.MAXBASAL_OBJECTIVE
+import app.aaps.core.interfaces.constraints.Objectives.Companion.MAXIOB_ZERO_CL_OBJECTIVE
+import app.aaps.core.interfaces.constraints.Objectives.Companion.SMB_OBJECTIVE
+import app.aaps.core.interfaces.constraints.PluginConstraints
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.plugin.PluginDescription
+import app.aaps.core.interfaces.plugin.PluginType
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.sharedPreferences.SP
 import dagger.android.HasAndroidInjector
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.constraints.Constraint
-import info.nightscout.interfaces.constraints.Objectives
-import info.nightscout.interfaces.constraints.Objectives.Companion.AUTOSENS_OBJECTIVE
-import info.nightscout.interfaces.constraints.Objectives.Companion.AUTO_OBJECTIVE
-import info.nightscout.interfaces.constraints.Objectives.Companion.DYN_ISF_OBJECTIVE
-import info.nightscout.interfaces.constraints.Objectives.Companion.FIRST_OBJECTIVE
-import info.nightscout.interfaces.constraints.Objectives.Companion.MAXBASAL_OBJECTIVE
-import info.nightscout.interfaces.constraints.Objectives.Companion.MAXIOB_ZERO_CL_OBJECTIVE
-import info.nightscout.interfaces.constraints.Objectives.Companion.SMB_OBJECTIVE
-import info.nightscout.interfaces.constraints.PluginConstraints
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.plugin.PluginBase
-import info.nightscout.interfaces.plugin.PluginDescription
-import info.nightscout.interfaces.plugin.PluginType
 import info.nightscout.plugins.constraints.R
 import info.nightscout.plugins.constraints.objectives.objectives.Objective
 import info.nightscout.plugins.constraints.objectives.objectives.Objective0
@@ -29,9 +32,6 @@ import info.nightscout.plugins.constraints.objectives.objectives.Objective5
 import info.nightscout.plugins.constraints.objectives.objectives.Objective6
 import info.nightscout.plugins.constraints.objectives.objectives.Objective7
 import info.nightscout.plugins.constraints.objectives.objectives.Objective9
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,8 +49,8 @@ class ObjectivesPlugin @Inject constructor(
         .fragmentClass(ObjectivesFragment::class.qualifiedName)
         .alwaysEnabled(config.APS)
         .showInList(config.APS)
-        .pluginIcon(info.nightscout.core.ui.R.drawable.ic_graduation)
-        .pluginName(info.nightscout.core.ui.R.string.objectives)
+        .pluginIcon(app.aaps.core.ui.R.drawable.ic_graduation)
+        .pluginName(app.aaps.core.ui.R.string.objectives)
         .shortName(R.string.objectives_shortname)
         .description(R.string.description_objectives),
     aapsLogger, rh, injector

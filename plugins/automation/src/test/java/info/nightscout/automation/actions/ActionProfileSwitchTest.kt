@@ -1,8 +1,8 @@
 package info.nightscout.automation.actions
 
+import app.aaps.core.interfaces.queue.Callback
 import info.nightscout.automation.R
 import info.nightscout.automation.elements.InputProfileName
-import info.nightscout.interfaces.queue.Callback
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -22,9 +22,9 @@ class ActionProfileSwitchTest : ActionsTestBase() {
         `when`(rh.gs(R.string.profilename)).thenReturn("Change profile to")
         `when`(rh.gs(R.string.changengetoprofilename)).thenReturn("Change profile to %s")
         `when`(context.getString(R.string.alreadyset)).thenReturn("Already set")
-        `when`(context.getString(info.nightscout.core.ui.R.string.notexists)).thenReturn("not exists")
-        `when`(context.getString(info.nightscout.core.validators.R.string.error_field_must_not_be_empty)).thenReturn("The field must not be empty")
-        `when`(context.getString(info.nightscout.core.ui.R.string.noprofile)).thenReturn("No profile loaded from NS yet")
+        `when`(context.getString(app.aaps.core.ui.R.string.notexists)).thenReturn("not exists")
+        `when`(context.getString(app.aaps.core.validators.R.string.error_field_must_not_be_empty)).thenReturn("The field must not be empty")
+        `when`(context.getString(app.aaps.core.ui.R.string.noprofile)).thenReturn("No profile loaded from NS yet")
 
         sut = ActionProfileSwitch(injector)
     }
@@ -106,6 +106,6 @@ class ActionProfileSwitchTest : ActionsTestBase() {
     }
 
     @Test fun iconTest() {
-        Assertions.assertEquals(info.nightscout.core.ui.R.drawable.ic_actions_profileswitch, sut.icon())
+        Assertions.assertEquals(app.aaps.core.ui.R.drawable.ic_actions_profileswitch, sut.icon())
     }
 }

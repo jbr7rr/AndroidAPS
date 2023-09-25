@@ -2,27 +2,27 @@ package app.aaps.configuration.maintenance
 
 import android.content.Context
 import android.os.Environment
+import app.aaps.annotations.OpenForTesting
 import app.aaps.configuration.R
 import app.aaps.configuration.maintenance.data.PrefMetadataMap
 import app.aaps.configuration.maintenance.data.PrefsStatusImpl
 import app.aaps.configuration.maintenance.formats.EncryptedPrefsFormat
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.maintenance.PrefFileListProvider
+import app.aaps.core.interfaces.maintenance.PrefMetadata
+import app.aaps.core.interfaces.maintenance.PrefsFile
+import app.aaps.core.interfaces.maintenance.PrefsImportDir
+import app.aaps.core.interfaces.maintenance.PrefsMetadataKey
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.weardata.CwfData
+import app.aaps.core.interfaces.rx.weardata.EventData
+import app.aaps.core.interfaces.rx.weardata.ZipWatchfaceFormat
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.storage.Storage
+import app.aaps.core.interfaces.versionChecker.VersionCheckerUtils
 import dagger.Lazy
 import dagger.Reusable
-import info.nightscout.annotations.OpenForTesting
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.maintenance.PrefFileListProvider
-import info.nightscout.interfaces.maintenance.PrefMetadata
-import info.nightscout.interfaces.maintenance.PrefsFile
-import info.nightscout.interfaces.maintenance.PrefsImportDir
-import info.nightscout.interfaces.maintenance.PrefsMetadataKey
-import info.nightscout.interfaces.storage.Storage
-import info.nightscout.interfaces.versionChecker.VersionCheckerUtils
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.weardata.CwfData
-import info.nightscout.rx.weardata.EventData
-import info.nightscout.rx.weardata.ZipWatchfaceFormat
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
 import org.joda.time.DateTime
 import org.joda.time.Days
 import org.joda.time.Hours
@@ -235,9 +235,9 @@ class PrefFileListProviderImpl @Inject constructor(
         return if (hours == 0) {
             rh.gs(R.string.exported_less_than_hour_ago)
         } else if ((hours < 24) && (hours > 0)) {
-            rh.gs(R.string.exported_ago, rh.gq(info.nightscout.core.ui.R.plurals.hours, hours, hours))
+            rh.gs(R.string.exported_ago, rh.gq(app.aaps.core.ui.R.plurals.hours, hours, hours))
         } else if ((days < IMPORT_AGE_NOT_YET_OLD_DAYS) && (days > 0)) {
-            rh.gs(R.string.exported_ago, rh.gq(info.nightscout.core.ui.R.plurals.days, days, days))
+            rh.gs(R.string.exported_ago, rh.gq(app.aaps.core.ui.R.plurals.days, days, days))
         } else {
             rh.gs(R.string.exported_at, utcTime.substring(0, 10))
         }

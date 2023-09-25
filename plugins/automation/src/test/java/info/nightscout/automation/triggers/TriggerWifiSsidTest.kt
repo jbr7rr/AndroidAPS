@@ -1,9 +1,9 @@
 package info.nightscout.automation.triggers
 
+import app.aaps.core.interfaces.rx.events.EventNetworkChange
 import com.google.common.base.Optional
 import info.nightscout.automation.R
 import info.nightscout.automation.elements.Comparator
-import info.nightscout.rx.events.EventNetworkChange
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
@@ -58,7 +58,7 @@ class TriggerWifiSsidTest : TriggerTestBase() {
     }
 
     @Test fun friendlyNameTest() {
-        Assertions.assertEquals(info.nightscout.core.ui.R.string.ns_wifi_ssids, TriggerWifiSsid(injector).friendlyName())
+        Assertions.assertEquals(app.aaps.core.ui.R.string.ns_wifi_ssids, TriggerWifiSsid(injector).friendlyName())
     }
 
     @Test fun friendlyDescriptionTest() {

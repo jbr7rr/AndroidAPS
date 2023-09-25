@@ -1,17 +1,17 @@
 package info.nightscout.plugins.general.autotune
 
+import app.aaps.core.interfaces.db.GlucoseUnit
+import app.aaps.core.interfaces.profile.PureProfile
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.T
+import app.aaps.core.main.profile.ProfileSealed
+import app.aaps.core.utils.JsonHelper
+import app.aaps.database.entities.data.Block
+import app.aaps.database.entities.data.TargetBlock
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
-import info.nightscout.core.profile.ProfileSealed
-import info.nightscout.core.utils.JsonHelper
-import info.nightscout.database.entities.data.Block
-import info.nightscout.database.entities.data.TargetBlock
-import info.nightscout.interfaces.GlucoseUnit
-import info.nightscout.interfaces.profile.PureProfile
 import info.nightscout.plugins.general.autotune.data.ATProfile
 import info.nightscout.plugins.general.autotune.data.PreppedGlucose
-import info.nightscout.shared.utils.DateUtil
-import info.nightscout.shared.utils.T
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.jupiter.api.BeforeEach

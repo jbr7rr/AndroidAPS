@@ -2,21 +2,21 @@ package info.nightscout.implementation.queue
 
 import android.content.Context
 import android.os.PowerManager
+import app.aaps.core.main.constraints.ConstraintObject
+import app.aaps.core.interfaces.androidPermissions.AndroidPermission
+import app.aaps.core.interfaces.constraints.ConstraintsChecker
+import app.aaps.core.interfaces.db.PersistenceLayer
+import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.pump.defs.PumpDescription
+import app.aaps.core.interfaces.queue.Command
+import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.shared.tests.TestBaseWithProfile
 import app.aaps.shared.tests.TestPumpPlugin
 import com.google.common.truth.Truth.assertThat
 import dagger.android.AndroidInjector
 import dagger.android.HasAndroidInjector
-import info.nightscout.core.constraints.ConstraintObject
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.implementation.queue.commands.CommandTempBasalAbsolute
-import info.nightscout.interfaces.AndroidPermission
-import info.nightscout.interfaces.constraints.ConstraintsChecker
-import info.nightscout.interfaces.db.PersistenceLayer
-import info.nightscout.interfaces.pump.PumpSync
-import info.nightscout.interfaces.pump.defs.PumpDescription
-import info.nightscout.interfaces.queue.Command
-import info.nightscout.interfaces.ui.UiInteraction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
@@ -74,7 +74,7 @@ class QueueThreadTest : TestBaseWithProfile() {
         val percentageConstraint = ConstraintObject(0, aapsLogger)
         Mockito.`when`(constraintChecker.applyBasalPercentConstraints(anyObject(), anyObject()))
             .thenReturn(percentageConstraint)
-        Mockito.`when`(rh.gs(ArgumentMatchers.eq(info.nightscout.core.ui.R.string.temp_basal_absolute), anyObject(), anyObject())).thenReturn("TEMP BASAL %1\$.2f U/h %2\$d min")
+        Mockito.`when`(rh.gs(ArgumentMatchers.eq(app.aaps.core.ui.R.string.temp_basal_absolute), anyObject(), anyObject())).thenReturn("TEMP BASAL %1\$.2f U/h %2\$d min")
 
         sut = QueueThread(commandQueue, context, aapsLogger, rxBus, activePlugin, rh, sp, androidPermission, config)
     }

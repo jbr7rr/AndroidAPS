@@ -1,6 +1,10 @@
 package info.nightscout.automation.actions
 
 import android.content.Context
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.shared.tests.TestBase
 import dagger.android.AndroidInjector
 import dagger.android.HasAndroidInjector
@@ -9,10 +13,6 @@ import info.nightscout.automation.elements.InputString
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.database.impl.transactions.InsertTherapyEventAnnouncementTransaction
 import info.nightscout.database.impl.transactions.Transaction
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.queue.Callback
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.shared.interfaces.ResourceHelper
 import io.reactivex.rxjava3.core.Completable
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -45,8 +45,8 @@ class ActionNotificationTest : TestBase() {
 
     @BeforeEach
     fun setup() {
-        `when`(context.getString(info.nightscout.core.ui.R.string.ok)).thenReturn("OK")
-        `when`(rh.gs(info.nightscout.core.ui.R.string.notification)).thenReturn("Notification")
+        `when`(context.getString(app.aaps.core.ui.R.string.ok)).thenReturn("OK")
+        `when`(rh.gs(app.aaps.core.ui.R.string.notification)).thenReturn("Notification")
         `when`(
             rh.gs(
                 ArgumentMatchers.eq(R.string.notification_message),
@@ -60,7 +60,7 @@ class ActionNotificationTest : TestBase() {
     }
 
     @Test fun friendlyNameTest() {
-        Assertions.assertEquals(info.nightscout.core.ui.R.string.notification, sut.friendlyName())
+        Assertions.assertEquals(app.aaps.core.ui.R.string.notification, sut.friendlyName())
     }
 
     @Test fun shortDescriptionTest() {

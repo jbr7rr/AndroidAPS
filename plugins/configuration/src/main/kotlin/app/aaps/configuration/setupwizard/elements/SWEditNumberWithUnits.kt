@@ -6,12 +6,12 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import app.aaps.core.interfaces.configuration.Constants
+import app.aaps.core.interfaces.db.GlucoseUnit
+import app.aaps.core.interfaces.profile.ProfileUtil
+import app.aaps.core.interfaces.utils.SafeParse
 import dagger.android.HasAndroidInjector
-import info.nightscout.core.ui.elements.NumberPicker
-import info.nightscout.interfaces.Constants
-import info.nightscout.interfaces.GlucoseUnit
-import info.nightscout.shared.SafeParse
-import info.nightscout.shared.interfaces.ProfileUtil
+import app.aaps.core.ui.elements.NumberPicker
 import java.text.DecimalFormat
 import javax.inject.Inject
 

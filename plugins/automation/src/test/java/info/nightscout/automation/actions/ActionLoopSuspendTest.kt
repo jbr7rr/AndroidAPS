@@ -1,8 +1,8 @@
 package info.nightscout.automation.actions
 
+import app.aaps.core.interfaces.queue.Callback
 import info.nightscout.automation.R
 import info.nightscout.automation.elements.InputDuration
-import info.nightscout.interfaces.queue.Callback
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,7 +16,7 @@ class ActionLoopSuspendTest : ActionsTestBase() {
     @BeforeEach
     fun setup() {
 
-        `when`(context.getString(info.nightscout.core.ui.R.string.suspendloop)).thenReturn("Suspend loop")
+        `when`(context.getString(app.aaps.core.ui.R.string.suspendloop)).thenReturn("Suspend loop")
         `when`(rh.gs(R.string.suspendloopforXmin)).thenReturn("Suspend loop for %d min")
         `when`(context.getString(R.string.alreadysuspended)).thenReturn("Already suspended")
 
@@ -24,7 +24,7 @@ class ActionLoopSuspendTest : ActionsTestBase() {
     }
 
     @Test fun friendlyNameTest() {
-        Assertions.assertEquals(info.nightscout.core.ui.R.string.suspendloop, sut.friendlyName())
+        Assertions.assertEquals(app.aaps.core.ui.R.string.suspendloop, sut.friendlyName())
     }
 
     @Test fun shortDescriptionTest() {

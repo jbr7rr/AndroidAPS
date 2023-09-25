@@ -7,10 +7,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import app.aaps.configuration.R
 import app.aaps.configuration.databinding.ActivityLogsettingBinding
-import info.nightscout.core.ui.activities.TranslatedDaggerAppCompatActivity
-import info.nightscout.rx.interfaces.L
-import info.nightscout.rx.interfaces.LogElement
-import info.nightscout.shared.interfaces.ResourceHelper
+import app.aaps.core.interfaces.logging.L
+import app.aaps.core.interfaces.logging.LogElement
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.ui.activities.TranslatedDaggerAppCompatActivity
 import javax.inject.Inject
 
 class LogSettingActivity : TranslatedDaggerAppCompatActivity() {

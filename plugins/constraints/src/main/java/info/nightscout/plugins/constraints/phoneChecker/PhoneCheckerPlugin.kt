@@ -2,15 +2,15 @@ package info.nightscout.plugins.constraints.phoneChecker
 
 import android.content.Context
 import android.os.Build
+import app.aaps.core.interfaces.constraints.PluginConstraints
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.plugin.PluginDescription
+import app.aaps.core.interfaces.plugin.PluginType
+import app.aaps.core.interfaces.resources.ResourceHelper
 import com.scottyab.rootbeer.RootBeer
 import dagger.android.HasAndroidInjector
-import info.nightscout.interfaces.constraints.PluginConstraints
-import info.nightscout.interfaces.plugin.PluginBase
-import info.nightscout.interfaces.plugin.PluginDescription
-import info.nightscout.interfaces.plugin.PluginType
 import info.nightscout.plugins.constraints.R
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.shared.interfaces.ResourceHelper
 import javax.inject.Inject
 import javax.inject.Singleton
 

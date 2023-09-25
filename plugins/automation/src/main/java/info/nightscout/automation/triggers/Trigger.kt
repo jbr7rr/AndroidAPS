@@ -7,6 +7,17 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import app.aaps.core.interfaces.iob.GlucoseStatusProvider
+import app.aaps.core.interfaces.iob.IobCobCalculator
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.profile.ProfileUtil
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.utils.DateUtil
 import com.google.common.base.Optional
 import dagger.android.HasAndroidInjector
 import info.nightscout.automation.R
@@ -16,17 +27,6 @@ import info.nightscout.automation.events.EventTriggerClone
 import info.nightscout.automation.events.EventTriggerRemove
 import info.nightscout.automation.services.LastLocationDataContainer
 import info.nightscout.database.impl.AppRepository
-import info.nightscout.interfaces.iob.GlucoseStatusProvider
-import info.nightscout.interfaces.iob.IobCobCalculator
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.ProfileFunction
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.shared.interfaces.ProfileUtil
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
-import info.nightscout.shared.utils.DateUtil
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -122,7 +122,7 @@ abstract class Trigger(val injector: HasAndroidInjector) {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
             }
-            setImageResource(info.nightscout.core.main.R.drawable.ic_add)
+            setImageResource(app.aaps.core.main.R.drawable.ic_add)
             contentDescription = rh.gs(R.string.add_short)
             setOnClickListener {
                 scanForActivity(context)?.supportFragmentManager?.let {
@@ -144,7 +144,7 @@ abstract class Trigger(val injector: HasAndroidInjector) {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
             }
-            setImageResource(info.nightscout.core.main.R.drawable.ic_remove)
+            setImageResource(app.aaps.core.main.R.drawable.ic_remove)
             contentDescription = rh.gs(R.string.delete_short)
             setOnClickListener {
                 rxBus.send(EventTriggerRemove(trigger))
@@ -158,7 +158,7 @@ abstract class Trigger(val injector: HasAndroidInjector) {
                 gravity = Gravity.CENTER
             }
             layoutParams = params
-            setImageResource(info.nightscout.core.main.R.drawable.ic_clone)
+            setImageResource(app.aaps.core.main.R.drawable.ic_clone)
             contentDescription = rh.gs(R.string.copy_short)
             setOnClickListener {
                 rxBus.send(EventTriggerClone(trigger))

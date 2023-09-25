@@ -1,14 +1,14 @@
 package info.nightscout.implementation.queue.commands
 
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.pump.Dana
+import app.aaps.core.interfaces.pump.Diaconn
+import app.aaps.core.interfaces.pump.Medtrum
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.core.interfaces.queue.Command
 import dagger.android.HasAndroidInjector
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.pump.Dana
-import info.nightscout.interfaces.pump.Diaconn
-import info.nightscout.interfaces.pump.Medtrum
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.queue.Callback
-import info.nightscout.interfaces.queue.Command
-import info.nightscout.rx.logging.LTag
 import javax.inject.Inject
 
 class CommandLoadEvents(
@@ -42,11 +42,11 @@ class CommandLoadEvents(
         }
     }
 
-    override fun status(): String = rh.gs(info.nightscout.core.ui.R.string.load_events)
+    override fun status(): String = rh.gs(app.aaps.core.ui.R.string.load_events)
 
     override fun log(): String = "LOAD EVENTS"
     override fun cancel() {
         aapsLogger.debug(LTag.PUMPQUEUE, "Result cancel")
-        callback?.result(PumpEnactResult(injector).success(false).comment(info.nightscout.core.ui.R.string.connectiontimedout))?.run()
+        callback?.result(PumpEnactResult(injector).success(false).comment(app.aaps.core.ui.R.string.connectiontimedout))?.run()
     }
 }

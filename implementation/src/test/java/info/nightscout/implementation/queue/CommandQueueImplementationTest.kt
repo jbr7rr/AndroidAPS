@@ -3,41 +3,41 @@ package info.nightscout.implementation.queue
 import android.content.Context
 import android.os.Handler
 import android.os.PowerManager
+import app.aaps.core.interfaces.androidPermissions.AndroidPermission
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.constraints.ConstraintsChecker
+import app.aaps.core.interfaces.db.PersistenceLayer
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.pump.DetailedBolusInfo
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.core.interfaces.queue.Command
+import app.aaps.core.interfaces.queue.CustomCommand
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.AapsSchedulers
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.ui.UiInteraction
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.DecimalFormatter
+import app.aaps.core.main.constraints.ConstraintObject
+import app.aaps.core.main.utils.fabric.FabricPrivacy
+import app.aaps.database.ValueWrapper
+import app.aaps.database.entities.Bolus
 import app.aaps.shared.tests.TestBaseWithProfile
 import app.aaps.shared.tests.TestPumpPlugin
 import com.google.common.truth.Truth.assertThat
 import dagger.android.AndroidInjector
 import dagger.android.HasAndroidInjector
-import info.nightscout.core.constraints.ConstraintObject
-import info.nightscout.core.utils.fabric.FabricPrivacy
-import info.nightscout.database.ValueWrapper
-import info.nightscout.database.entities.Bolus
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.implementation.queue.commands.CommandBolus
 import info.nightscout.implementation.queue.commands.CommandCustomCommand
 import info.nightscout.implementation.queue.commands.CommandExtendedBolus
 import info.nightscout.implementation.queue.commands.CommandLoadHistory
 import info.nightscout.implementation.queue.commands.CommandTempBasalPercent
-import info.nightscout.interfaces.AndroidPermission
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.constraints.ConstraintsChecker
-import info.nightscout.interfaces.db.PersistenceLayer
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.ProfileFunction
-import info.nightscout.interfaces.pump.DetailedBolusInfo
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.pump.PumpSync
-import info.nightscout.interfaces.queue.Callback
-import info.nightscout.interfaces.queue.Command
-import info.nightscout.interfaces.queue.CustomCommand
-import info.nightscout.interfaces.ui.UiInteraction
-import info.nightscout.interfaces.utils.DecimalFormatter
-import info.nightscout.rx.AapsSchedulers
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
-import info.nightscout.shared.utils.DateUtil
 import io.reactivex.rxjava3.core.Single
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -149,9 +149,9 @@ class CommandQueueImplementationTest : TestBaseWithProfile() {
         `when`(constraintChecker.applyBasalConstraints(anyObject(), anyObject())).thenReturn(rateConstraint)
         val percentageConstraint = ConstraintObject(0, aapsLogger)
         `when`(constraintChecker.applyBasalPercentConstraints(anyObject(), anyObject())).thenReturn(percentageConstraint)
-        `when`(rh.gs(info.nightscout.core.ui.R.string.connectiontimedout)).thenReturn("Connection timed out")
-        `when`(rh.gs(info.nightscout.core.ui.R.string.format_insulin_units)).thenReturn("%1\$.2f U")
-        `when`(rh.gs(info.nightscout.core.ui.R.string.goingtodeliver)).thenReturn("Going to deliver %1\$.2f U")
+        `when`(rh.gs(app.aaps.core.ui.R.string.connectiontimedout)).thenReturn("Connection timed out")
+        `when`(rh.gs(app.aaps.core.ui.R.string.format_insulin_units)).thenReturn("%1\$.2f U")
+        `when`(rh.gs(app.aaps.core.ui.R.string.goingtodeliver)).thenReturn("Going to deliver %1\$.2f U")
     }
 
     @Test

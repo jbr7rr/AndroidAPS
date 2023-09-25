@@ -4,10 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.resources.ResourceHelper
 import dagger.android.support.DaggerFragment
 import info.nightscout.insulin.databinding.InsulinFragmentBinding
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.shared.interfaces.ResourceHelper
 import javax.inject.Inject
 
 class InsulinFragment : DaggerFragment() {
@@ -21,8 +21,10 @@ class InsulinFragment : DaggerFragment() {
     // onDestroyView.
     private val binding get() = _binding!!
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = InsulinFragmentBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -31,7 +33,7 @@ class InsulinFragment : DaggerFragment() {
         super.onResume()
         binding.name.text = activePlugin.activeInsulin.friendlyName
         binding.comment.text = activePlugin.activeInsulin.comment
-        binding.dia.text = rh.gs(info.nightscout.core.ui.R.string.dia) + ":  " + rh.gs(info.nightscout.core.ui.R.string.format_hours, activePlugin.activeInsulin.dia)
+        binding.dia.text = rh.gs(app.aaps.core.ui.R.string.dia) + ":  " + rh.gs(app.aaps.core.ui.R.string.format_hours, activePlugin.activeInsulin.dia)
         binding.graph.show(activePlugin.activeInsulin)
     }
 

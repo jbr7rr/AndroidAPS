@@ -1,8 +1,8 @@
 package info.nightscout.automation.triggers
 
+import app.aaps.core.interfaces.utils.MidnightTime
 import com.google.common.base.Optional
 import info.nightscout.automation.R
-import info.nightscout.interfaces.utils.MidnightTime
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -66,6 +66,6 @@ class TriggerTimeRangeTest : TriggerTestBase() {
     }
 
     @Test fun iconTest() {
-        Assertions.assertEquals(Optional.of(info.nightscout.core.main.R.drawable.ic_access_alarm_24dp), TriggerTimeRange(injector).icon())
+        Assertions.assertEquals(Optional.of(app.aaps.core.main.R.drawable.ic_access_alarm_24dp), TriggerTimeRange(injector).icon())
     }
 }

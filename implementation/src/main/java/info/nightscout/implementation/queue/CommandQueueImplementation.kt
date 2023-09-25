@@ -7,18 +7,48 @@ import android.os.HandlerThread
 import android.os.SystemClock
 import android.text.Spanned
 import androidx.appcompat.app.AppCompatActivity
+import app.aaps.annotations.OpenForTesting
+import app.aaps.core.interfaces.androidPermissions.AndroidPermission
+import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.constraints.ConstraintsChecker
+import app.aaps.core.interfaces.db.PersistenceLayer
+import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.Notification
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.Profile
+import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.pump.DetailedBolusInfo
+import app.aaps.core.interfaces.pump.PumpEnactResult
+import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.queue.Callback
+import app.aaps.core.interfaces.queue.Command
+import app.aaps.core.interfaces.queue.Command.CommandType
+import app.aaps.core.interfaces.queue.CommandQueue
+import app.aaps.core.interfaces.queue.CustomCommand
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.AapsSchedulers
+import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventDismissBolusProgressIfRunning
+import app.aaps.core.interfaces.rx.events.EventDismissNotification
+import app.aaps.core.interfaces.rx.events.EventMobileToWear
+import app.aaps.core.interfaces.rx.events.EventProfileSwitchChanged
+import app.aaps.core.interfaces.rx.weardata.EventData
+import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.ui.UiInteraction
+import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.DecimalFormatter
+import app.aaps.core.main.constraints.ConstraintObject
+import app.aaps.core.main.events.EventNewNotification
+import app.aaps.core.main.extensions.getCustomizedName
+import app.aaps.core.main.profile.ProfileSealed
+import app.aaps.core.main.utils.fabric.FabricPrivacy
+import app.aaps.core.utils.HtmlHelper
+import app.aaps.database.ValueWrapper
+import app.aaps.database.entities.EffectiveProfileSwitch
+import app.aaps.database.entities.ProfileSwitch
+import app.aaps.database.entities.interfaces.end
 import dagger.android.HasAndroidInjector
-import info.nightscout.annotations.OpenForTesting
-import info.nightscout.core.constraints.ConstraintObject
-import info.nightscout.core.events.EventNewNotification
-import info.nightscout.core.extensions.getCustomizedName
-import info.nightscout.core.profile.ProfileSealed
-import info.nightscout.core.utils.HtmlHelper
-import info.nightscout.core.utils.fabric.FabricPrivacy
-import info.nightscout.database.ValueWrapper
-import info.nightscout.database.entities.EffectiveProfileSwitch
-import info.nightscout.database.entities.ProfileSwitch
-import info.nightscout.database.entities.interfaces.end
 import info.nightscout.database.impl.AppRepository
 import info.nightscout.implementation.R
 import info.nightscout.implementation.queue.commands.CommandBolus
@@ -41,35 +71,6 @@ import info.nightscout.implementation.queue.commands.CommandStopPump
 import info.nightscout.implementation.queue.commands.CommandTempBasalAbsolute
 import info.nightscout.implementation.queue.commands.CommandTempBasalPercent
 import info.nightscout.implementation.queue.commands.CommandUpdateTime
-import info.nightscout.interfaces.AndroidPermission
-import info.nightscout.interfaces.Config
-import info.nightscout.interfaces.constraints.ConstraintsChecker
-import info.nightscout.interfaces.db.PersistenceLayer
-import info.nightscout.interfaces.notifications.Notification
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.profile.Profile
-import info.nightscout.interfaces.profile.ProfileFunction
-import info.nightscout.interfaces.pump.DetailedBolusInfo
-import info.nightscout.interfaces.pump.PumpEnactResult
-import info.nightscout.interfaces.pump.PumpSync
-import info.nightscout.interfaces.queue.Callback
-import info.nightscout.interfaces.queue.Command
-import info.nightscout.interfaces.queue.Command.CommandType
-import info.nightscout.interfaces.queue.CommandQueue
-import info.nightscout.interfaces.queue.CustomCommand
-import info.nightscout.interfaces.ui.UiInteraction
-import info.nightscout.interfaces.utils.DecimalFormatter
-import info.nightscout.rx.AapsSchedulers
-import info.nightscout.rx.bus.RxBus
-import info.nightscout.rx.events.EventDismissBolusProgressIfRunning
-import info.nightscout.rx.events.EventDismissNotification
-import info.nightscout.rx.events.EventMobileToWear
-import info.nightscout.rx.events.EventProfileSwitchChanged
-import info.nightscout.rx.logging.AAPSLogger
-import info.nightscout.rx.logging.LTag
-import info.nightscout.shared.interfaces.ResourceHelper
-import info.nightscout.shared.sharedPreferences.SP
-import info.nightscout.shared.utils.DateUtil
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.kotlin.plusAssign
 import java.util.LinkedList
@@ -123,7 +124,7 @@ class CommandQueueImplementation @Inject constructor(
                                setProfile(ProfileSealed.PS(it), it.interfaceIDs.nightscoutId != null, object : Callback() {
                                    override fun run() {
                                        if (!result.success) {
-                                           uiInteraction.runAlarm(result.comment, rh.gs(info.nightscout.core.ui.R.string.failed_update_basal_profile), info.nightscout.core.ui.R.raw.boluserror)
+                                           uiInteraction.runAlarm(result.comment, rh.gs(app.aaps.core.ui.R.string.failed_update_basal_profile), app.aaps.core.ui.R.raw.boluserror)
                                        } else if (result.enacted || effective is ValueWrapper.Existing && effective.value.originalEnd < dateUtil.now() && effective.value.originalDuration != 0L) {
                                            val nonCustomized = ProfileSealed.PS(it).convertToNonCustomizedProfile(dateUtil)
                                            EffectiveProfileSwitch(
@@ -323,9 +324,9 @@ class CommandQueueImplementation @Inject constructor(
                 // Notify Wear about upcoming bolus
                 rxBus.send(
                     EventMobileToWear(
-                        info.nightscout.rx.weardata.EventData.BolusProgress(
+                        EventData.BolusProgress(
                             percent = 0,
-                            status = rh.gs(info.nightscout.core.ui.R.string.goingtodeliver, detailedBolusInfo.insulin)
+                            status = rh.gs(app.aaps.core.ui.R.string.goingtodeliver, detailedBolusInfo.insulin)
                         )
                     )
                 )

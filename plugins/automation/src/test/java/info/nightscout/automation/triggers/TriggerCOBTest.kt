@@ -1,8 +1,8 @@
 package info.nightscout.automation.triggers
 
+import app.aaps.core.interfaces.iob.CobInfo
 import com.google.common.base.Optional
 import info.nightscout.automation.elements.Comparator
-import info.nightscout.interfaces.iob.CobInfo
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -58,6 +58,6 @@ class TriggerCOBTest : TriggerTestBase() {
     }
 
     @Test fun iconTest() {
-        Assertions.assertEquals(Optional.of(info.nightscout.core.main.R.drawable.ic_cp_bolus_carbs), TriggerCOB(injector).icon())
+        Assertions.assertEquals(Optional.of(app.aaps.core.main.R.drawable.ic_cp_bolus_carbs), TriggerCOB(injector).icon())
     }
 }

@@ -1,9 +1,9 @@
 package info.nightscout.plugins.constraints.objectives.objectives
 
+import app.aaps.core.interfaces.actions.Actions
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.PluginBase
 import dagger.android.HasAndroidInjector
-import info.nightscout.interfaces.actions.Actions
-import info.nightscout.interfaces.plugin.ActivePlugin
-import info.nightscout.interfaces.plugin.PluginBase
 import info.nightscout.plugins.constraints.R
 import javax.inject.Inject
 
@@ -11,7 +11,7 @@ class Objective1 @Inject constructor(injector: HasAndroidInjector) : Objective(i
 
     @Inject lateinit var activePlugin: ActivePlugin
     val actionsPlugin: PluginBase
-        get() = activePlugin.getSpecificPluginsListByInterface(Actions::class.java)[0]
+        get() = activePlugin.getSpecificPluginsListByInterface(app.aaps.core.interfaces.actions.Actions::class.java)[0]
 
     init {
         tasks.add(object : Task(this, R.string.objectives_useprofileswitch) {

@@ -12,14 +12,14 @@ import app.aaps.configuration.maintenance.activities.CustomWatchfaceImportListAc
 import app.aaps.configuration.maintenance.activities.LogSettingActivity
 import app.aaps.configuration.maintenance.activities.PrefImportListActivity
 import app.aaps.configuration.maintenance.formats.EncryptedPrefsFormat
+import app.aaps.core.interfaces.androidPermissions.AndroidPermission
+import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.maintenance.ImportExportPrefs
+import app.aaps.core.interfaces.maintenance.PrefFileListProvider
 import dagger.Binds
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
-import info.nightscout.interfaces.AndroidPermission
-import info.nightscout.interfaces.ConfigBuilder
-import info.nightscout.interfaces.maintenance.ImportExportPrefs
-import info.nightscout.interfaces.maintenance.PrefFileListProvider
-import info.nightscout.sdk.interfaces.RunningConfiguration
+import app.aaps.core.nssdk.interfaces.RunningConfiguration
 
 @Module(
     includes = [
