@@ -50,6 +50,7 @@ buildscript {
         wearable_version = '2.9.0'
         play_services_wearable_version = '18.1.0'
         play_services_location_version = '21.0.1'
+        play_services_measurement_version = '21.3.0'
 
         kotlinx_datetime_version = '0.4.1'
         kotlinx_serialization_version = '1.6.0'
@@ -61,7 +62,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.1'
+        classpath 'com.android.tools.build:gradle:8.1.2'
         classpath 'com.google.gms:google-services:4.4.0'
         classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
 

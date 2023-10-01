@@ -33,27 +33,25 @@ import app.aaps.core.interfaces.versionChecker.VersionCheckerUtils
 import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.database.entities.TherapyEvent
 import app.aaps.database.entities.UserEntry
+import app.aaps.database.impl.AppRepository
+import app.aaps.database.impl.transactions.InsertIfNewByTimestampTherapyEventTransaction
+import app.aaps.database.impl.transactions.VersionChangeTransaction
 import app.aaps.di.DaggerAppComponent
+import app.aaps.implementation.db.CompatDBHelper
+import app.aaps.implementation.lifecycle.ProcessLifecycleListener
+import app.aaps.implementation.plugin.PluginStore
+import app.aaps.implementation.receivers.NetworkChangeReceiver
+import app.aaps.plugins.aps.utils.StaticInjector
+import app.aaps.plugins.main.general.overview.notifications.NotificationStore
+import app.aaps.plugins.main.general.themes.ThemeSwitcherPlugin
 import app.aaps.receivers.BTReceiver
 import app.aaps.receivers.ChargingStateReceiver
 import app.aaps.receivers.KeepAliveWorker
 import app.aaps.receivers.TimeDateOrTZChangeReceiver
+import app.aaps.ui.activityMonitor.ActivityMonitor
+import app.aaps.ui.widget.Widget
 import dagger.android.AndroidInjector
 import dagger.android.DaggerApplication
-import info.nightscout.androidaps.BuildConfig
-import info.nightscout.androidaps.R
-import info.nightscout.database.impl.AppRepository
-import info.nightscout.database.impl.transactions.InsertIfNewByTimestampTherapyEventTransaction
-import info.nightscout.database.impl.transactions.VersionChangeTransaction
-import info.nightscout.implementation.db.CompatDBHelper
-import info.nightscout.implementation.lifecycle.ProcessLifecycleListener
-import info.nightscout.implementation.plugin.PluginStore
-import info.nightscout.implementation.receivers.NetworkChangeReceiver
-import info.nightscout.plugins.aps.utils.StaticInjector
-import info.nightscout.plugins.general.overview.notifications.NotificationStore
-import info.nightscout.plugins.general.themes.ThemeSwitcherPlugin
-import info.nightscout.ui.activityMonitor.ActivityMonitor
-import info.nightscout.ui.widget.Widget
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.exceptions.UndeliverableException
 import io.reactivex.rxjava3.kotlin.plusAssign
@@ -83,12 +81,12 @@ class MainApp : DaggerApplication() {
     @Inject lateinit var compatDBHelper: CompatDBHelper
     @Inject lateinit var repository: AppRepository
     @Inject lateinit var dateUtil: DateUtil
-    @Suppress("unused") @Inject lateinit var staticInjector: StaticInjector// TODO avoid , here fake only to initialize
+    @Suppress("unused") @Inject lateinit var staticInjector: StaticInjector// better avoid, here fake only to initialize
     @Inject lateinit var uel: UserEntryLogger
     @Inject lateinit var uiInteraction: UiInteraction
     @Inject lateinit var notificationStore: NotificationStore
     @Inject lateinit var processLifecycleListener: Provider<ProcessLifecycleListener>
-    @Inject lateinit var profileSwitchPlugin: ThemeSwitcherPlugin
+    @Inject lateinit var themeSwitcherPlugin: ThemeSwitcherPlugin
     @Inject lateinit var localAlertUtils: LocalAlertUtils
     @Inject lateinit var rh: Provider<ResourceHelper>
 
@@ -113,7 +111,7 @@ class MainApp : DaggerApplication() {
             }
             disposable += compatDBHelper.dbChangeDisposable()
             registerActivityLifecycleCallbacks(activityMonitor)
-            runOnUiThread { profileSwitchPlugin.setThemeMode() }
+            runOnUiThread { themeSwitcherPlugin.setThemeMode() }
             aapsLogger.debug("Version: " + BuildConfig.VERSION_NAME)
             aapsLogger.debug("BuildVersion: " + BuildConfig.BUILDVERSION)
             aapsLogger.debug("Remote: " + BuildConfig.REMOTE)
@@ -130,12 +128,12 @@ class MainApp : DaggerApplication() {
             handler.postDelayed(
                 {
                     // check if identification is set
-                    if (config.isDev() && sp.getStringOrNull(info.nightscout.core.utils.R.string.key_email_for_crash_report, null).isNullOrBlank())
+                    if (config.isDev() && sp.getStringOrNull(app.aaps.core.utils.R.string.key_email_for_crash_report, null).isNullOrBlank())
                         notificationStore.add(Notification(Notification.IDENTIFICATION_NOT_SET, rh.get().gs(R.string.identification_not_set), Notification.INFO))
                     // log version
                     disposable += repository.runTransaction(VersionChangeTransaction(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, gitRemote, commitHash)).subscribe()
                     // log app start
-                    if (sp.getBoolean(info.nightscout.plugins.sync.R.string.key_ns_log_app_started_event, config.APS))
+                    if (sp.getBoolean(app.aaps.plugins.sync.R.string.key_ns_log_app_started_event, config.APS))
                         disposable += repository
                             .runTransaction(
                                 InsertIfNewByTimestampTherapyEventTransaction(
@@ -219,32 +217,32 @@ class MainApp : DaggerApplication() {
         // 3.1.0
         if (sp.contains("ns_wifionly")) {
             if (sp.getBoolean("ns_wifionly", false)) {
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_cellular, false)
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_wifi, true)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_cellular, false)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_wifi, true)
             } else {
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_cellular, true)
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_wifi, false)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_cellular, true)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_wifi, false)
             }
             sp.remove("ns_wifionly")
         }
         if (sp.contains("ns_charginonly")) {
             if (sp.getBoolean("ns_charginonly", false)) {
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_battery, false)
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_charging, true)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_battery, false)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_charging, true)
             } else {
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_battery, true)
-                sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_charging, true)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_battery, true)
+                sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_charging, true)
             }
             sp.remove("ns_charginonly")
         }
-        if (!sp.contains(info.nightscout.plugins.sync.R.string.key_ns_log_app_started_event))
-            sp.putBoolean(info.nightscout.plugins.sync.R.string.key_ns_log_app_started_event, config.APS)
-        if (sp.getString(app.aaps.configuration.R.string.key_maintenance_logs_email, "") == "logs@androidaps.org")
-            sp.putString(app.aaps.configuration.R.string.key_maintenance_logs_email, "logs@aaps.app")
+        if (!sp.contains(app.aaps.plugins.sync.R.string.key_ns_log_app_started_event))
+            sp.putBoolean(app.aaps.plugins.sync.R.string.key_ns_log_app_started_event, config.APS)
+        if (sp.getString(app.aaps.plugins.configuration.R.string.key_maintenance_logs_email, "") == "logs@androidaps.org")
+            sp.putString(app.aaps.plugins.configuration.R.string.key_maintenance_logs_email, "logs@aaps.app")
         // fix values for theme switching
-        sp.putString(info.nightscout.plugins.R.string.value_dark_theme, "dark")
-        sp.putString(info.nightscout.plugins.R.string.value_light_theme, "light")
-        sp.putString(info.nightscout.plugins.R.string.value_system_theme, "system")
+        sp.putString(app.aaps.plugins.main.R.string.value_dark_theme, "dark")
+        sp.putString(app.aaps.plugins.main.R.string.value_light_theme, "light")
+        sp.putString(app.aaps.plugins.main.R.string.value_system_theme, "system")
 
     }
 
