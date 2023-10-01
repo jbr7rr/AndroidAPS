@@ -1,12 +1,10 @@
-package info.nightscout.plugins.aps.wavez
+package app.aaps.plugins.aps.wavez
 
 import android.content.Context
 import app.aaps.annotations.OpenForTesting
 import dagger.android.HasAndroidInjector
-import info.nightscout.database.impl.AppRepository
 import app.aaps.core.interfaces.aps.DetermineBasalAdapter
 import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
-import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.iob.GlucoseStatusProvider
 import app.aaps.core.interfaces.iob.IobCobCalculator
@@ -20,9 +18,10 @@ import app.aaps.core.interfaces.sharedPreferences.SP
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.HardLimits
-import info.nightscout.plugins.aps.R
-import info.nightscout.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
-import info.nightscout.plugins.aps.utils.ScriptReader
+import app.aaps.database.impl.AppRepository
+import app.aaps.plugins.aps.R
+import app.aaps.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
+import app.aaps.plugins.aps.utils.ScriptReader
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,7 +43,6 @@ class WaveZPlugin @Inject constructor(
     dateUtil: DateUtil,
     repository: AppRepository,
     glucoseStatusProvider: GlucoseStatusProvider,
-    private val config: Config,
     private val bgQualityCheck: BgQualityCheck,
     private val tddCalculator: TddCalculator
 ) : OpenAPSSMBPlugin(
@@ -74,10 +72,7 @@ class WaveZPlugin @Inject constructor(
             .shortName(R.string.wavez_shortname)
             .preferencesId(R.xml.pref_wavez)
             .setDefault(false)
-            .showInList(config.isEngineeringMode() && config.isDev())
     }
-
-    override fun specialEnableCondition(): Boolean = config.isEngineeringMode() && config.isDev()
 
     override fun provideDetermineBasalAdapter(): DetermineBasalAdapter = DetermineBasalAdapterWaveZ(ScriptReader(context), injector)
 }

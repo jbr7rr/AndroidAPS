@@ -6,6 +6,7 @@ import app.aaps.plugins.aps.loop.LoopPlugin
 import app.aaps.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import app.aaps.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import app.aaps.plugins.aps.openAPSSMBDynamicISF.OpenAPSSMBDynamicISFPlugin
+import app.aaps.plugins.aps.wavez.WaveZPlugin
 import app.aaps.plugins.automation.AutomationPlugin
 import app.aaps.plugins.configuration.configBuilder.ConfigBuilderPlugin
 import app.aaps.plugins.configuration.maintenance.MaintenancePlugin
@@ -17,6 +18,8 @@ import app.aaps.plugins.constraints.signatureVerifier.SignatureVerifierPlugin
 import app.aaps.plugins.constraints.storage.StorageConstraintPlugin
 import app.aaps.plugins.constraints.versionChecker.VersionCheckerPlugin
 import app.aaps.plugins.insulin.InsulinLyumjevPlugin
+import app.aaps.plugins.insulin.InsulinLyumjevU100PDPlugin
+import app.aaps.plugins.insulin.InsulinLyumjevU200PDPlugin
 import app.aaps.plugins.insulin.InsulinOrefFreePeakPlugin
 import app.aaps.plugins.insulin.InsulinOrefRapidActingPlugin
 import app.aaps.plugins.insulin.InsulinOrefUltraRapidActingPlugin

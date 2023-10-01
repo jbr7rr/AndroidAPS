@@ -1,4 +1,4 @@
-package info.nightscout.ui.defaultProfile
+package app.aaps.ui.defaultProfile
 
 import app.aaps.core.interfaces.db.GlucoseUnit
 import app.aaps.core.interfaces.profile.ProfileUtil

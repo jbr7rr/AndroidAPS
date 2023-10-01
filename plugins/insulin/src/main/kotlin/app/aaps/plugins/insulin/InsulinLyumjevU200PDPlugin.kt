@@ -1,4 +1,4 @@
-package info.nightscout.insulin
+package app.aaps.plugins.insulin
 
 import dagger.android.HasAndroidInjector
 import app.aaps.core.interfaces.configuration.Config

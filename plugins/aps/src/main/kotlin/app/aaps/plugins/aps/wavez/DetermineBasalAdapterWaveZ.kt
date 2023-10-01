@@ -1,4 +1,4 @@
-package info.nightscout.plugins.aps.wavez
+package app.aaps.plugins.aps.wavez
 
 import app.aaps.core.interfaces.aps.DetermineBasalAdapter
 import app.aaps.core.interfaces.aps.SMBDefaults
@@ -19,12 +19,12 @@ import app.aaps.core.interfaces.utils.SafeParse
 import app.aaps.core.main.extensions.convertedToAbsolute
 import app.aaps.core.main.extensions.getPassedDurationToTimeInMinutes
 import app.aaps.core.main.extensions.plannedRemainingMinutes
+import app.aaps.plugins.aps.APSResultObject
+import app.aaps.plugins.aps.R
+import app.aaps.plugins.aps.logger.LoggerCallback
+import app.aaps.plugins.aps.utils.ScriptReader
+import app.aaps.plugins.aps.openAPSSMB.DetermineBasalResultSMB
 import dagger.android.HasAndroidInjector
-import info.nightscout.plugins.aps.APSResultObject
-import info.nightscout.plugins.aps.R
-import info.nightscout.plugins.aps.logger.LoggerCallback
-import info.nightscout.plugins.aps.openAPSSMB.DetermineBasalResultSMB
-import info.nightscout.plugins.aps.utils.ScriptReader
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -233,7 +233,7 @@ class DetermineBasalAdapterWaveZ internal constructor(private val scriptReader: 
         this.profile.put("carbsReqThreshold", sp.getInt(R.string.key_carbsReqThreshold, SMBDefaults.carbsReqThreshold))
         this.profile.put("current_basal", basalRate)
         this.profile.put("temptargetSet", tempTargetSet)
-        this.profile.put("autosens_max", SafeParse.stringToDouble(sp.getString(info.nightscout.core.utils.R.string.key_openapsama_autosens_max, "1.2")))
+        this.profile.put("autosens_max", SafeParse.stringToDouble(sp.getString(app.aaps.core.utils.R.string.key_openapsama_autosens_max, "1.2")))
         if (profileFunction.getUnits() == GlucoseUnit.MMOL) {
             this.profile.put("out_units", "mmol/L")
         }
@@ -367,6 +367,7 @@ class DetermineBasalAdapterWaveZ internal constructor(private val scriptReader: 
         ** Tsunami specific variables END
         */
     }
+
     private fun makeParam(jsonObject: JSONObject?, rhino: Context, scope: Scriptable): Any {
         return if (jsonObject == null) Undefined.instance
         else NativeJSON.parse(rhino, scope, jsonObject.toString()) { _: Context?, _: Scriptable?, _: Scriptable?, objects: Array<Any?> -> objects[1] }

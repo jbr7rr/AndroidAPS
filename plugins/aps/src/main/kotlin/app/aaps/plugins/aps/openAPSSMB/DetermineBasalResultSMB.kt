@@ -3,6 +3,7 @@ package app.aaps.plugins.aps.openAPSSMB
 import app.aaps.core.interfaces.aps.VariableSensitivityResult
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.plugins.aps.APSResultObject
+import app.aaps.plugins.aps.R
 import dagger.android.HasAndroidInjector
 import org.json.JSONException
 import org.json.JSONObject

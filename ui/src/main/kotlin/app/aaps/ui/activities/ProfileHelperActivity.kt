@@ -33,6 +33,7 @@ import app.aaps.ui.R
 import app.aaps.ui.databinding.ActivityProfilehelperBinding
 import app.aaps.ui.defaultProfile.DefaultProfile
 import app.aaps.ui.defaultProfile.DefaultProfileDPV
+import app.aaps.ui.defaultProfile.DefaultProfileCircadian
 import app.aaps.ui.dialogs.ProfileViewerDialog
 import com.google.android.material.tabs.TabLayout
 import com.google.common.collect.Lists

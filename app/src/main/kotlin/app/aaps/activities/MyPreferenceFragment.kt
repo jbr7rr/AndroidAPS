@@ -38,6 +38,7 @@ import app.aaps.plugins.aps.loop.LoopPlugin
 import app.aaps.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import app.aaps.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import app.aaps.plugins.aps.openAPSSMBDynamicISF.OpenAPSSMBDynamicISFPlugin
+import app.aaps.plugins.aps.wavez.WaveZPlugin
 import app.aaps.plugins.automation.AutomationPlugin
 import app.aaps.plugins.configuration.maintenance.MaintenancePlugin
 import app.aaps.plugins.constraints.safety.SafetyPlugin
