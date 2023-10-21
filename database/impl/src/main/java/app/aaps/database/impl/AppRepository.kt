@@ -86,7 +86,7 @@ import kotlin.math.roundToInt
         removed.add(Pair("ExtendedBolus", database.extendedBolusDao.deleteOlderThan(than)))
         removed.add(Pair("Bolus", database.bolusDao.deleteOlderThan(than)))
         removed.add(Pair("MultiWaveBolus", database.multiwaveBolusLinkDao.deleteOlderThan(than)))
-        // keep TDD removed.add(Pair("TotalDailyDose", database.totalDailyDoseDao.deleteOlderThan(than)))
+        removed.add(Pair("TotalDailyDose", database.totalDailyDoseDao.deleteOlderThan(than)))
         removed.add(Pair("Carbs", database.carbsDao.deleteOlderThan(than)))
         removed.add(Pair("TemporaryTarget", database.temporaryTargetDao.deleteOlderThan(than)))
         removed.add(Pair("ApsResultLink", database.apsResultLinkDao.deleteOlderThan(than)))
@@ -105,23 +105,23 @@ import kotlin.math.roundToInt
         removed.add(Pair("HeartRate", database.heartRateDao.deleteOlderThan(than)))
 
         if (deleteTrackedChanges) {
-            removed.add(Pair("GlucoseValue", database.glucoseValueDao.deleteTrackedChanges()))
-            removed.add(Pair("TherapyEvent", database.therapyEventDao.deleteTrackedChanges()))
-            removed.add(Pair("TemporaryBasal", database.temporaryBasalDao.deleteTrackedChanges()))
-            removed.add(Pair("Bolus", database.bolusDao.deleteTrackedChanges()))
-            removed.add(Pair("ExtendedBolus", database.extendedBolusDao.deleteTrackedChanges()))
-            removed.add(Pair("MultiWaveBolus", database.multiwaveBolusLinkDao.deleteTrackedChanges()))
-            // keep TDD removed.add(Pair("TotalDailyDose", database.totalDailyDoseDao.deleteTrackedChanges()))
-            removed.add(Pair("Carbs", database.carbsDao.deleteTrackedChanges()))
-            removed.add(Pair("TemporaryTarget", database.temporaryTargetDao.deleteTrackedChanges()))
-            removed.add(Pair("ApsResultLink", database.apsResultLinkDao.deleteTrackedChanges()))
-            removed.add(Pair("BolusCalculatorResult", database.bolusCalculatorResultDao.deleteTrackedChanges()))
-            removed.add(Pair("EffectiveProfileSwitch", database.effectiveProfileSwitchDao.deleteTrackedChanges()))
-            removed.add(Pair("ProfileSwitch", database.profileSwitchDao.deleteTrackedChanges()))
-            removed.add(Pair("ApsResult", database.apsResultDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES GlucoseValue", database.glucoseValueDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES TherapyEvent", database.therapyEventDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES TemporaryBasal", database.temporaryBasalDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES Bolus", database.bolusDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES ExtendedBolus", database.extendedBolusDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES MultiWaveBolus", database.multiwaveBolusLinkDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES TotalDailyDose", database.totalDailyDoseDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES Carbs", database.carbsDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES TemporaryTarget", database.temporaryTargetDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES ApsResultLink", database.apsResultLinkDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES BolusCalculatorResult", database.bolusCalculatorResultDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES EffectiveProfileSwitch", database.effectiveProfileSwitchDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES ProfileSwitch", database.profileSwitchDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES ApsResult", database.apsResultDao.deleteTrackedChanges()))
             // keep food database.foodDao.deleteHistory()
-            removed.add(Pair("OfflineEvent", database.offlineEventDao.deleteTrackedChanges()))
-            removed.add(Pair("HeartRate", database.heartRateDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES OfflineEvent", database.offlineEventDao.deleteTrackedChanges()))
+            removed.add(Pair("CHANGES HeartRate", database.heartRateDao.deleteTrackedChanges()))
         }
         val ret = StringBuilder()
         removed
@@ -212,11 +212,6 @@ import kotlin.math.roundToInt
     fun getTemporaryTargetDataIncludingInvalidFromTime(timestamp: Long, ascending: Boolean): Single<List<TemporaryTarget>> =
         database.temporaryTargetDao.getTemporaryTargetDataIncludingInvalidFromTime(timestamp)
             .map { if (!ascending) it.reversed() else it }
-            .subscribeOn(Schedulers.io())
-
-    @Suppress("unused")
-    fun getModifiedTemporaryTargetsDataFromId(lastId: Long): Single<List<TemporaryTarget>> =
-        database.temporaryTargetDao.getModifiedFrom(lastId)
             .subscribeOn(Schedulers.io())
 
     fun getTemporaryTargetActiveAt(timestamp: Long): Single<ValueWrapper<TemporaryTarget>> =
@@ -485,11 +480,6 @@ import kotlin.math.roundToInt
                 }
             }
 
-    @Suppress("unused")
-    fun getModifiedBolusesDataFromId(lastId: Long): Single<List<Bolus>> =
-        database.bolusDao.getModifiedFrom(lastId)
-            .subscribeOn(Schedulers.io())
-
     fun getLastBolusRecord(): Bolus? =
         database.bolusDao.getLastBolusRecord()
 
@@ -709,11 +699,6 @@ import kotlin.math.roundToInt
                         .map { it to nextIdElement }
                 }
             }
-
-    @Suppress("unused")
-    fun getModifiedTemporaryBasalDataFromId(lastId: Long): Single<List<TemporaryBasal>> =
-        database.temporaryBasalDao.getModifiedFrom(lastId)
-            .subscribeOn(Schedulers.io())
 
     fun getTemporaryBasalActiveAt(timestamp: Long): Single<ValueWrapper<TemporaryBasal>> =
         database.temporaryBasalDao.getTemporaryBasalActiveAt(timestamp)

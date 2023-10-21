@@ -186,7 +186,9 @@ sealed class EventData : Event() {
         val sgv: Double,
         val high: Double, // highLine
         val low: Double, // lowLine
-        val color: Int = 0
+        val color: Int = 0,
+        val deltaMgdl: Double? = null,
+        val avgDeltaMgdl: Double? = null
     ) : EventData(), Comparable<SingleBg> {
 
         override fun equals(other: Any?): Boolean =
@@ -290,10 +292,9 @@ sealed class EventData : Event() {
     }
 
     @Serializable
-    data class ActionSetCustomWatchface(
-        val customWatchfaceData: CwfData
-    ) : EventData()
-
+    data class ActionSetCustomWatchface(val customWatchfaceData: CwfData) : EventData()
+    @Serializable
+    data class ActionUpdateCustomWatchface(val customWatchfaceData: CwfData) : EventData()
     @Serializable
     data class ActionrequestCustomWatchface(val exportFile: Boolean) : EventData()
 
