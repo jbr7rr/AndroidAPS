@@ -208,7 +208,9 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
                 repository,
                 glucoseStatusProvider,
                 bgQualityCheck,
-                tddCalculator
+                tddCalculator,
+                uiInteraction,
+                objectivesPlugin
             )
         openAPSAMAPlugin =
             OpenAPSAMAPlugin(
@@ -244,7 +246,6 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         constraintsPluginsList.add(openAPSAMAPlugin)
         constraintsPluginsList.add(openAPSSMBPlugin)
         `when`(activePlugin.getSpecificPluginsListByInterface(PluginConstraints::class.java)).thenReturn(constraintsPluginsList)
-        objectivesPlugin.onStart()
     }
 
     // Combo & Objectives
