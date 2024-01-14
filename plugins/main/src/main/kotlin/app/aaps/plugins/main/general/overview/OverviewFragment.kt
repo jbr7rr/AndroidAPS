@@ -74,6 +74,7 @@ import app.aaps.core.interfaces.rx.events.EventUpdateOverviewIobCob
 import app.aaps.core.interfaces.rx.events.EventUpdateOverviewSensitivity
 import app.aaps.core.interfaces.rx.weardata.EventData
 import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.source.CGMSSource
 import app.aaps.core.interfaces.source.DexcomBoyda
 import app.aaps.core.interfaces.source.XDripSource
 import app.aaps.core.interfaces.ui.UiInteraction
@@ -136,6 +137,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
     @Inject lateinit var iobCobCalculator: IobCobCalculator
     @Inject lateinit var dexcomBoyda: DexcomBoyda
     @Inject lateinit var xDripSource: XDripSource
+    @Inject lateinit var cgmsSource: CGMSSource
     @Inject lateinit var notificationStore: NotificationStore
     @Inject lateinit var quickWizard: QuickWizard
     @Inject lateinit var config: Config
@@ -424,7 +426,7 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                 }
 
                 R.id.calibration_button  -> {
-                    if (xDripSource.isEnabled()) {
+                    if (xDripSource.isEnabled() || cgmsSource.isEnabled()) {
                         uiInteraction.runCalibrationDialog(childFragmentManager)
                     } else if (dexcomBoyda.isEnabled()) {
                         try {
@@ -589,9 +591,9 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                 && preferences.get(BooleanKey.OverviewShowInsulinButton)).toVisibility()
 
             // **** Calibration & CGM buttons ****
-            val xDripIsBgSource = xDripSource.isEnabled()
+            val xDripIsBgSource = true
             val dexcomIsSource = dexcomBoyda.isEnabled()
-            binding.buttonsLayout.calibrationButton.visibility = (xDripIsBgSource && actualBG != null && preferences.get(BooleanKey.OverviewShowCalibrationButton)).toVisibility()
+            binding.buttonsLayout.calibrationButton.visibility = (xDripIsBgSource /*&& actualBG != null*/ && preferences.get(BooleanKey.OverviewShowCalibrationButton)).toVisibility()
             if (dexcomIsSource) {
                 binding.buttonsLayout.cgmButton.setCompoundDrawablesWithIntrinsicBounds(null, rh.gd(R.drawable.ic_byoda), null, null)
                 for (drawable in binding.buttonsLayout.cgmButton.compoundDrawables) {
