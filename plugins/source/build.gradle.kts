@@ -15,6 +15,7 @@ android {
 dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:interfaces"))
+    implementation(project(":core:libraries"))
     implementation(project(":core:keys"))
     implementation(project(":core:objects"))
     implementation(project(":core:nssdk"))
@@ -22,7 +23,10 @@ dependencies {
     implementation(project(":core:utils"))
     implementation(project(":shared:impl"))
 
+    implementation("no.nordicsemi.android:ble:2.7.2")
+
     testImplementation(Libs.AndroidX.Work.testing)
+    
 
     testImplementation(project(":shared:tests"))
 

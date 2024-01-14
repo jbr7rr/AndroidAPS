@@ -52,6 +52,7 @@ import app.aaps.plugins.sensitivity.SensitivityAAPSPlugin
 import app.aaps.plugins.sensitivity.SensitivityOref1Plugin
 import app.aaps.plugins.sensitivity.SensitivityWeightedAveragePlugin
 import app.aaps.plugins.source.AidexPlugin
+import app.aaps.plugins.source.BluetoothCGMSPlugin
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.EversensePlugin
 import app.aaps.plugins.source.GlimpPlugin
@@ -125,6 +126,7 @@ class MyPreferenceFragment : PreferenceFragmentCompat(), OnSharedPreferenceChang
     @Inject lateinit var glunovoPlugin: GlunovoPlugin
     @Inject lateinit var intelligoPlugin: IntelligoPlugin
     @Inject lateinit var aidexPlugin: AidexPlugin
+    @Inject lateinit var bluetoothCGMSPlugin: BluetoothCGMSPlugin
     @Inject lateinit var smsCommunicatorPlugin: SmsCommunicatorPlugin
     @Inject lateinit var statusLinePlugin: XdripPlugin
     @Inject lateinit var tidepoolPlugin: TidepoolPlugin
@@ -210,6 +212,7 @@ class MyPreferenceFragment : PreferenceFragmentCompat(), OnSharedPreferenceChang
             addPreferencesFromResourceIfEnabled(intelligoPlugin, rootKey)
             addPreferencesFromResourceIfEnabled(poctechPlugin, rootKey)
             addPreferencesFromResourceIfEnabled(aidexPlugin, rootKey)
+            addPreferencesFromResourceIfEnabled(bluetoothCGMSPlugin, rootKey)
             addPreferencesFromResourceIfEnabled(glimpPlugin, rootKey)
             addPreferencesFromResourceIfEnabled(loopPlugin, rootKey, config.APS)
             addPreferencesFromResourceIfEnabled(openAPSAMAPlugin, rootKey, config.APS)

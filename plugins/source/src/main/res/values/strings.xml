@@ -42,5 +42,18 @@
     <string name="dexcom_log_ns_sensor_change_summary">Create event \"Sensor Change\" in NS automatically on sensor start</string>
     <string name="direction">direction</string>
 
+    <!-- BluetoothCGMS -->
+    <string name="key_bluetooth_cgms_settings" translatable="false">bluetooth_cgms_settings</string>
+    <string name="key_bluetooth_cgms_name" translatable="false">bluetooth_cgms_name</string>
+    <string name="key_bluetooth_cgms_address" translatable="false">bluetooth_cgms_address</string>
+    <string name="key_bluetooth_cgms_starttime" translatable="false">bluetooth_cgms_starttime</string>
+    <string name="start_sensor">Start sensor</string>
+    <string name="stop_sensor">Stop sensor</string>
+    <string name="bluetooth_cgms_pairing">Pairing</string>
+    <string name="selected_sensor">Selected sensor</string>
+    <string name="bluetooth_cgms">Bluetooth CGMS</string>
+    <string name="bluetooth_cgms_short">BT CGMS</string>
+    <string name="description_bluetooth_cgms">Receive BG values from Bluetooth CGMS Profile capable devices.</string>
+    <string name="ble_status_label">BLE Status</string>
 
 </resources>
