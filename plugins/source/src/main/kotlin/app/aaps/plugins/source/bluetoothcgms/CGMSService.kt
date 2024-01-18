@@ -71,6 +71,12 @@ class CGMSService : DaggerService() {
     private val connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionStateFlow: StateFlow<ConnectionState> = connectionState
 
+    private val sensorStarted = MutableStateFlow(false)
+    val sensorStartedFlow: StateFlow<Boolean> = sensorStarted
+
+    private val lastReading = MutableStateFlow(0.0)
+    val lastReadingFlow: StateFlow<Double> = lastReading
+
     override fun onCreate() {
         super.onCreate()
         disposable += rxBus
@@ -99,7 +105,9 @@ class CGMSService : DaggerService() {
     fun stopSensor() {
         aapsLogger.debug(LTag.BGSOURCE, "Stopping sensor")
         bleManager?.stopSensor()
+        // TODO: Move to callback?
         sp.remove(R.string.key_bluetooth_cgms_starttime)
+        sensorStarted.value = false
     }
 
     fun sendCalibration(bg: Double): Boolean {
@@ -121,6 +129,7 @@ class CGMSService : DaggerService() {
         bleManager?.connectionObserver = mConnectionObserver
         bleManager?.setCallback(mCGMSCallback)
         connect(sp.getString(R.string.key_bluetooth_cgms_address, ""))
+        sensorStarted.value = sp.contains(R.string.key_bluetooth_cgms_starttime)
     }
 
     fun connect(address: String?) {
@@ -201,7 +210,8 @@ class CGMSService : DaggerService() {
                 aapsLogger.debug(LTag.BGSOURCE, "No start time found")
                 dateUtil.now()
             }
-            // val timestamp = dateUtil.now()
+            
+            lastReading.value = glucoseConcentration.toDouble()
 
             if (glucoseConcentration.toDouble() > 30.0) {
                 val glucoseValues = mutableListOf<GV>()
@@ -222,6 +232,7 @@ class CGMSService : DaggerService() {
         override fun onCGMSessionStarted() {
             aapsLogger.debug(LTag.BGSOURCE, "onCGMSessionStarted")
             sp.putLong(R.string.key_bluetooth_cgms_starttime, dateUtil.now())
+            sensorStarted.value = true
         }
     }
 }

@@ -55,5 +55,7 @@
     <string name="bluetooth_cgms_short">BT CGMS</string>
     <string name="description_bluetooth_cgms">Receive BG values from Bluetooth CGMS Profile capable devices.</string>
     <string name="ble_status_label">BLE Status</string>
+    <string name="sensor_status_label">Sensor Status</string>
+    <string name="last_reading_label">Last Reading</string>
 
 </resources>

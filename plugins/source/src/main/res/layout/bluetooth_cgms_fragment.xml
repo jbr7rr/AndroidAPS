@@ -65,6 +65,82 @@
                             android:paddingEnd="5dp"
                             android:textSize="14sp" />
                     </LinearLayout>
+
+                    <!-- CGM Status -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="3dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.5"
+                            android:gravity="end"
+                            android:paddingStart="5dp"
+                            android:paddingEnd="5dp"
+                            android:text="@string/sensor_status_label"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="5dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0"
+                            android:gravity="center_horizontal"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:text=":"
+                            android:textSize="14sp" />
+
+                        <com.joanzapata.iconify.widget.IconTextView
+                            android:id="@+id/sensor_status"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="start"
+                            android:paddingStart="5dp"
+                            android:paddingEnd="5dp"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <!-- Last Reading -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="3dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.5"
+                            android:gravity="end"
+                            android:paddingStart="5dp"
+                            android:paddingEnd="5dp"
+                            android:text="@string/last_reading_label"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="5dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0"
+                            android:gravity="center_horizontal"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:text=":"
+                            android:textSize="14sp" />
+
+                        <com.joanzapata.iconify.widget.IconTextView
+                            android:id="@+id/last_reading"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="start"
+                            android:paddingStart="5dp"
+                            android:paddingEnd="5dp"
+                            android:textSize="14sp" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <View

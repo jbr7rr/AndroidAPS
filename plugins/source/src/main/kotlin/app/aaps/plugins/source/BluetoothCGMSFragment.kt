@@ -39,7 +39,7 @@ class BluetoothCGMSFragment : DaggerFragment() {
     // onDestroyView.
     private val binding get() = _binding!!
 
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Main)
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -59,6 +59,25 @@ class BluetoothCGMSFragment : DaggerFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        scope.launch {
+            cgmService?.connectionStateFlow?.collect { state ->
+                aapsLogger.debug(LTag.BGSOURCE, "Connection state: $state")
+                updateConnectionState(state)
+            }
+        }
+        scope.launch {
+            cgmService?.sensorStartedFlow?.collect { state ->
+                aapsLogger.debug(LTag.BGSOURCE, "Sensor state: $state")
+                updateSensorState(state)
+            }
+        }
+        scope.launch {
+            cgmService?.lastReadingFlow?.collect { reading ->
+                aapsLogger.debug(LTag.BGSOURCE, "Last reading: $reading")
+                updateLastReading(reading)
+            }
+        }
+
         binding.startSensor.setOnClickListener {
             bluetoothCGMSPlugin.startSensor()
         }
@@ -66,27 +85,27 @@ class BluetoothCGMSFragment : DaggerFragment() {
             bluetoothCGMSPlugin.stopSensor()
         }
 
-        pumpStatusIcon = when (cgmService?.connectionStateFlow?.value) {
+        updateConnectionState(cgmService?.connectionStateFlow?.value ?: ConnectionState.DISCONNECTED)
+        updateSensorState(cgmService?.sensorStartedFlow?.value ?: false)
+    }
+
+    private fun updateConnectionState(state: ConnectionState) {
+        pumpStatusIcon = when (state) {
+            // TODO: Hardcoded strings
             ConnectionState.CONNECTED     -> "{fa-bluetooth} Connected"
             ConnectionState.DISCONNECTED  -> "{fa-bluetooth-b} Disconnected"
             ConnectionState.CONNECTING    -> "{fa-bluetooth-b spin}"
             ConnectionState.DISCONNECTING -> "{fa-bluetooth-b spin}"
-            else                          -> "{fa-bluetooth-b}"
         }
-
         binding.bleStatus.text = pumpStatusIcon
+    }
 
-        scope.launch {
-            cgmService?.connectionStateFlow?.collect { state ->
-                aapsLogger.debug(LTag.PUMP, "MedtrumViewModel connectionStateFlow: $state")
-                pumpStatusIcon = when (state) {
-                    ConnectionState.CONNECTED     -> "{fa-bluetooth} Connected"
-                    ConnectionState.DISCONNECTED  -> "{fa-bluetooth-b} Disconnected"
-                    ConnectionState.CONNECTING    -> "{fa-bluetooth-b spin}"
-                    ConnectionState.DISCONNECTING -> "{fa-bluetooth-b spin}"
-                }
-                binding.bleStatus.text = pumpStatusIcon
-            }
-        }
+    private fun updateSensorState(state: Boolean) {
+        // TODO: Hardcoded strings
+        binding.sensorStatus.text = if (state) "Sensor started" else "Sensor stopped"
+    }
+    
+    private fun updateLastReading(reading: Double) {
+        binding.lastReading.text = String.format("%.1f %s", reading, rh.gs(app.aaps.core.ui.R.string.mgdl))
     }
 }
