@@ -54,6 +54,7 @@ class InsulinOrefFreePeakPlugin @Inject constructor(
         return rh.gs(R.string.insulin_peak_time) + ": " + peak
     }
 
+    override val isPD = false
     override val peak: Int
         get() = preferences.get(IntKey.InsulinOrefPeak)
 

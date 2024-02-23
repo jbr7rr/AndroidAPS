@@ -36,6 +36,7 @@ class InsulinLyumjevU200PDPlugin @Inject constructor(
     override fun commentStandardText(): String = rh.gs(R.string.lyumjev_U200_PD)
 
     override val peak = 45
+    override val isPD = true
 
     init {
         pluginDescription
@@ -61,7 +62,13 @@ class InsulinLyumjevU200PDPlugin @Inject constructor(
         return result
     }
 
-    private fun pdModelIobCalculation(bolus: BS, t: Double): Iob {
+    override fun iobCalcPeakForTreatment(bolus: BS, dia: Double): Iob {
+        assert(dia != 0.0)
+        assert(peak != 0)
+        return pdModelIobCalculation(bolus, 0.0, true)
+    }
+
+    private fun pdModelIobCalculation(bolus: BS, time: Double, calcForPeak: Boolean = false): Iob {
         //MP Model for estimation of PD-based peak time: (a0 + a1*X)/(1+b1*X), where X = bolus size
         val a0 = 61.33 //MP Units = min
         val a1 = 12.27
@@ -69,7 +76,12 @@ class InsulinLyumjevU200PDPlugin @Inject constructor(
         val result = Iob()
 
         val tp: Double = (a0 + a1 * bolus.amount * 2) / (1 + b1 * bolus.amount) //MP Units = min
-        
+        val t = if (calcForPeak) {
+            tp
+        } else {
+            time
+        }
+
         val tp_model = tp.pow(2.0) * 2 //MP The peak time in the model is defined as half of the square root of this variable - thus the tp entered into the model must be transformed first
          /**
          *
