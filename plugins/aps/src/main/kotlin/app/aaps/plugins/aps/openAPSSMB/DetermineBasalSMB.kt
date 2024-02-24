@@ -1058,8 +1058,8 @@ class DetermineBasalSMB @Inject constructor(
             // insulinReq is the additional insulin required to get minPredBG down to target_bg
             //console.error(minPredBG,eventualBG);
             var insulinReq =
-                if (dynIsfMode) round((min(minPredBG, eventualBG) - target_bg) / future_sens, 2)
-                else if (tsunamiResult.activityControllerActive) tsunamiResult.insReq
+                if (tsunamiResult.activityControllerActive) tsunamiResult.insReq
+                else if (dynIsfMode) round((min(minPredBG, eventualBG) - target_bg) / future_sens, 2)
                 else round((min(minPredBG, eventualBG) - target_bg) / sens, 2)
             // if that would put us over max_iob, then reduce accordingly
             if (insulinReq > max_iob - iob_data.iob) {
@@ -1218,12 +1218,19 @@ class DetermineBasalSMB @Inject constructor(
         val maxWaveSMBBasalMinutes = preferences.get(IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb)
         val waveUseSMBCap = preferences.get(BooleanKey.ApsWaveUseSMBCap)
         val waveSMBCap = preferences.get(DoubleKey.ApsWaveSmbCap)
+        val waveUseAdjustedSens = preferences.get(BooleanKey.ApsWaveUseAdjustedSens)
         // val waveSMBCapScaling = sp.getBoolean(R.string.key_wave_SMB_scaling, false) // Leave for now
 
         var insulinReqPCT = waveInsReqPct / 100.0
         val deltaReductionPCT = 0.5 // JB: Default Tsunami Wave Reduction, maybe pref?
         // JB Note: activity_target not used in wavez
-        val profile_sens = round(profile.sens, 1)
+
+        val used_sens = if (waveUseAdjustedSens) {
+            //JB TODO: Check if futuresens is needed when dynISF is active
+            adjusted_sens
+        } else {
+            round(profile.sens, 1)
+        }
         val bg = glucose_status.glucose
 
         if (!enableWaveMode) {
@@ -1259,13 +1266,13 @@ class DetermineBasalSMB @Inject constructor(
         val activityData = getTsunamiActivityData()
         val act_curr = activityData.sensorLagActivity
         val act_future = activityData.futureActivity
-        val pure_delta = round(min(glucose_status.delta + max(act_curr * profile_sens, 0.0), 35.0), 1)
-        val act_targetDelta = (pure_delta / profile_sens) * deltaReductionPCT
+        val pure_delta = round(min(glucose_status.delta + max(act_curr * used_sens, 0.0), 35.0), 1)
+        val act_targetDelta = (pure_delta / used_sens) * deltaReductionPCT
 
         // JB Note: activity_target not used in wavez
         val act_missing = round((act_targetDelta - max(act_future, 0.0)) / 5, 4)
 
-        var tsunami_insreq = 0.0
+        var tsunami_insreq: Double
         var iterations = 0
         val insulin = activePlugin.activeInsulin
         if (!insulin.isPD) {
@@ -1318,7 +1325,7 @@ class DetermineBasalSMB @Inject constructor(
             bg >= target_bg &&
             iob_data.iob > 0.1 &&
             act_curr > 0 &&
-            tsunami_insreq + iob_data.iob >= (bg - target_bg) / profile_sens
+            tsunami_insreq + iob_data.iob >= (bg - target_bg) / used_sens
         ) {
             activityControllerActive = true
 
@@ -1393,7 +1400,7 @@ class DetermineBasalSMB @Inject constructor(
             if (act_curr <= 0) {
                 consoleLog.add("Insulin activity is negative or 0.")
             }
-            if (tsunami_insreq + iob_data.iob < (bg - target_bg) / profile_sens) {
+            if (tsunami_insreq + iob_data.iob < (bg - target_bg) / used_sens) {
                 consoleLog.add("Incompatible insulin & glucose status. Let oref1 take over for now.")
             }
             consoleLog.add("------------------------------")

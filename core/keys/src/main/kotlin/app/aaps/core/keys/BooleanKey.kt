@@ -60,6 +60,8 @@ enum class BooleanKey(
     ApsAutoIsfSmbOnEvenTarget("Enable alternative activation of SMB always", false, defaultedBySM = true),   // profile target
     ApsWaveEnable("enable_wave_mode", false, defaultedBySM = true, hideParentScreenIfHidden = true),
     ApsWaveUseSMBCap("use_wave_smbcap", false, defaultedBySM = true, dependency = ApsWaveEnable),
+    ApsWaveUseAdjustedSens("wave_use_adjusted_sens", false, defaultedBySM = true, dependency = ApsWaveEnable),
+
 
     MaintenanceEnableFabric("enable_fabric2", true, defaultedBySM = true, hideParentScreenIfHidden = true),
 

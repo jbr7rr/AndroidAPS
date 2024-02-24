@@ -51,7 +51,7 @@ enum class IntKey(
     ApsAutoIsfHalfBasalExerciseTarget("half_basal_exercise_target", 160, 120, 200, defaultedBySM = true),
     ApsAutoIsfIobThPercent("iob_threshold_percent", 100, 10, 100, defaultedBySM = true),
     ApsDynIsfAdjustmentFactor("DynISFAdjust", 100, 1, 300, dependency = BooleanKey.ApsUseDynamicSensitivity),
-    ApsWaveMaxMinutesOfBasalToLimitSmb("wavesmbmaxminutes", 60, 15, 240, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
+    ApsWaveMaxMinutesOfBasalToLimitSmb("wavesmbmaxminutes", 60, 15, 240, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable, negativeDependency = BooleanKey.ApsWaveUseSMBCap),
     ApsWaveStartTime("wave_start", 11, 0, 23, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
     ApsWaveEndTime("wave_end", 21, 0, 23, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
 

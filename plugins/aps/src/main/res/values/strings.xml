@@ -124,6 +124,9 @@
     <string name="wave_smb_max_minutes">Wave SMB max minutes</string>
     <string name="wave_smb_max_minutes_summary">Max minutes of basal to limit SMB to for Wave mode</string>
 
+    <string name="wave_use_adjusted_sens_title">Use autosens/dynISF adjusted sensitivity</string>
+    <string name="wave_use_adjusted_sens_summary">EXPERIMENTAL: Use Autosens/dynISF adjusted sensitivity for Wave mode</string>
+
     <!--    Verify if needed in safety-->
     <string name="limiting_iob">Limiting IOB to %1$.1f U because of %2$s</string>
     <string name="maxvalueinpreferences">max value in preferences</string>
