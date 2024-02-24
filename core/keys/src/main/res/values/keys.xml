@@ -118,6 +118,7 @@
     <string name="key_wave_activity_target" translatable="false">wave_activity_target</string>
     <string name="key_wave_delta_reduction_scaling" translatable="false">wave_SMB_scaling</string>
     <string name="key_wave_smb_max_minutes" translatable="false">wavesmbmaxminutes</string>
+    <string name="key_wave_use_adjusted_sens" translatable="false">wave_use_adjusted_sens</string>
 
     <!--    Sensitivity-->
     <string name="key_absorption_cutoff" translatable="false">absorption_cutoff</string>

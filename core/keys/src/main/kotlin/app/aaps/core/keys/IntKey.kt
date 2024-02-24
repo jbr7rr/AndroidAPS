@@ -44,7 +44,7 @@ enum class IntKey(
     ApsMaxSmbFrequency(R.string.key_openaps_smb_interval, 3, 1, 10, defaultedBySM = true, dependency = BooleanKey.ApsUseSmb),
     ApsMaxMinutesOfBasalToLimitSmb(R.string.key_openaps_smb_max_minutes, 30, 15, 120, defaultedBySM = true, dependency = BooleanKey.ApsUseSmb),
     ApsUamMaxMinutesOfBasalToLimitSmb(R.string.key_openaps_uam_smb_max_minutes, 30, 15, 120, defaultedBySM = true, dependency = BooleanKey.ApsUseSmb),
-    ApsWaveMaxMinutesOfBasalToLimitSmb(R.string.key_wave_smb_max_minutes, 60, 15, 240, defaultedBySM = true, dependency = R.string.key_enable_wave_mode),
+    ApsWaveMaxMinutesOfBasalToLimitSmb(R.string.key_wave_smb_max_minutes, 60, 15, 240, defaultedBySM = true, dependency = R.string.key_enable_wave_mode, negativeDependency = R.string.key_wave_use_smbcap),
     ApsWaveStartTime(R.string.key_wave_start, 11, 0, 23, defaultedBySM = true, dependency = R.string.key_enable_wave_mode),
     ApsWaveEndTime(R.string.key_wave_end, 21, 0, 23, defaultedBySM = true, dependency = R.string.key_enable_wave_mode),
     ApsCarbsRequestThreshold(R.string.key_openaps_carbs_required_threshold, 1, 1, 10, defaultedBySM = true),
