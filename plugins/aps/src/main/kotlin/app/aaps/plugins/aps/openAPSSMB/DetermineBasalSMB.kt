@@ -406,6 +406,7 @@ class DetermineBasalSMB @Inject constructor(
 
         // TSUNAMI CALCULATION:
         val tsunamiResult = determineTsunamiInsReq(glucose_status, target_bg, sens, profile, iob_data, currentTime)
+        rT.reason.append(tsunamiResult.reason)
 
         // generate predicted future BGs based on IOB, COB, and current absorption rate
 
