@@ -45,6 +45,9 @@ enum class BooleanKey(
     ApsAlwaysUseShortDeltas(R.string.key_openaps_always_use_short_deltas, false, defaultedBySM = true, hideParentScreenIfHidden = true),
     ApsDynIsfAdjustSensitivity(R.string.key_dynamic_isf_adjust_sensitivity, false, defaultedBySM = true, dependency = ApsUseDynamicSensitivity), // change from default false
     ApsAmaAutosensAdjustTargets(R.string.key_openaps_ama_autosens_adjust_targets, true, defaultedBySM = true),
+    ApsWaveEnable(R.string.key_enable_wave_mode, false, defaultedBySM = true, hideParentScreenIfHidden = true),
+    ApsWaveUseSMBCap(R.string.key_wave_use_smbcap, false, defaultedBySM = true, dependency = R.string.key_enable_wave_mode),
+
     MaintenanceEnableFabric(R.string.key_enable_fabric, true, defaultedBySM = true, hideParentScreenIfHidden = true),
 
     AutotuneAutoSwitchProfile(R.string.key_autotune_auto, false),

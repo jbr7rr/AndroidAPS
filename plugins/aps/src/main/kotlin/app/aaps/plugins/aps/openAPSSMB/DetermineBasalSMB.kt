@@ -1,5 +1,7 @@
 package app.aaps.plugins.aps.openAPSSMB
 
+import app.aaps.core.data.aps.SMBDefaults
+import app.aaps.core.data.model.BS
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.AutosensResult
 import app.aaps.core.interfaces.aps.CurrentTemp
@@ -9,10 +11,23 @@ import app.aaps.core.interfaces.aps.MealData
 import app.aaps.core.interfaces.aps.OapsProfile
 import app.aaps.core.interfaces.aps.Predictions
 import app.aaps.core.interfaces.aps.RT
+import app.aaps.core.interfaces.db.PersistenceLayer
+import app.aaps.core.interfaces.iob.IobCobCalculator
+import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileUtil
+import app.aaps.core.interfaces.utils.Round
+import app.aaps.core.interfaces.utils.SafeParse
+import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.DoubleKey
+import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.Preferences
+import app.aaps.plugins.aps.R
 import java.text.DecimalFormat
 import java.time.Instant
+import java.time.LocalTime
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.ln
@@ -23,7 +38,12 @@ import kotlin.math.roundToInt
 
 @Singleton
 class DetermineBasalSMB @Inject constructor(
-    private val profileUtil: ProfileUtil
+    private val profileUtil: ProfileUtil,
+    private val activePlugin: ActivePlugin,
+    private val profileFunction: ProfileFunction,
+    private val iobCobCalculator: IobCobCalculator,
+    private val persistenceLayer: PersistenceLayer,
+    private val preferences: Preferences,
 ) {
 
     private val consoleError = mutableListOf<String>()
@@ -383,6 +403,9 @@ class DetermineBasalSMB @Inject constructor(
             consoleError = consoleError,
             variable_sens = profile.variable_sens
         )
+
+        // TSUNAMI CALCULATION:
+        val tsunamiResult = determineTsunamiInsReq(glucose_status, target_bg, sens, profile, iob_data, currentTime)
 
         // generate predicted future BGs based on IOB, COB, and current absorption rate
 
@@ -831,7 +854,8 @@ class DetermineBasalSMB @Inject constructor(
             }
         }
 
-        if (enableSMB && minGuardBG < threshold) {
+        //MP Disable the block below if tae is active - BG predictions are mostly wrong during UAM and can result in persistent highs - other safety features are in place
+        if (!tsunamiResult.activityControllerActive && enableSMB && minGuardBG < threshold) {
             consoleError.add("minGuardBG ${convert_bg(minGuardBG)} projected below ${convert_bg(threshold)} - disabling SMB")
             //rT.reason += "minGuardBG "+minGuardBG+"<"+threshold+": SMB disabled; ";
             enableSMB = false
@@ -867,7 +891,19 @@ class DetermineBasalSMB @Inject constructor(
             rT.reason.append("IOB ${iob_data.iob} < ${round(-profile.current_basal * 20 / 60, 2)}")
             rT.reason.append(" and minDelta ${convert_bg(minDelta)} > expectedDelta ${convert_bg(expectedDelta)}; ")
             // predictive low glucose suspend mode: BG is / is projected to be < threshold
-        } else if (bg < threshold || minGuardBG < threshold) {
+
+        } else if (!tsunamiResult.activityControllerActive && bg < threshold || minGuardBG < threshold) {
+            //MP Disable the block below if tae is active - BG predictions are mostly wrong during UAM and can result in persistent highs - other safety features are in place
+            rT.reason.append("minGuardBG " + convert_bg(minGuardBG) + "<" + convert_bg(threshold))
+            bgUndershoot = target_bg - minGuardBG
+            val worstCaseInsulinReq = bgUndershoot / sens
+            var durationReq = round(60 * worstCaseInsulinReq / profile.current_basal)
+            durationReq = round(durationReq / 30.0) * 30
+            // always set a 30-120m zero temp (oref0-pump-loop will let any longer SMB zero temp run)
+            durationReq = min(120, max(30, durationReq))
+            return setTempBasal(0.0, durationReq, profile, rT, currenttemp)
+        } else if (tsunamiResult.activityControllerActive && bg < threshold) {
+            //MP added to have default behaviour also if tae is on, but prediction condition was removed
             rT.reason.append("minGuardBG " + convert_bg(minGuardBG) + "<" + convert_bg(threshold))
             bgUndershoot = target_bg - minGuardBG
             val worstCaseInsulinReq = bgUndershoot / sens
@@ -885,83 +921,85 @@ class DetermineBasalSMB @Inject constructor(
             rT.reason.append("; Canceling temp at " + minutes + "m past the hour. ")
             return setTempBasal(0.0, 0, profile, rT, currenttemp)
         }
+        if (!tsunamiResult.activityControllerActive) {
+            //MP Bypass oref1 block below if TAE is active
+            if (eventualBG < min_bg) { // if eventual BG is below target:
+                rT.reason.append("Eventual BG ${convert_bg(eventualBG)} < ${convert_bg(min_bg)}")
+                // if 5m or 30m avg BG is rising faster than expected delta
+                if (minDelta > expectedDelta && minDelta > 0 && carbsReq == 0) {
+                    // if naive_eventualBG < 40, set a 30m zero temp (oref0-pump-loop will let any longer SMB zero temp run)
+                    if (naive_eventualBG < 40) {
+                        rT.reason.append(", naive_eventualBG < 40. ")
+                        return setTempBasal(0.0, 30, profile, rT, currenttemp)
+                    }
+                    if (glucose_status.delta > minDelta) {
+                        rT.reason.append(", but Delta ${convert_bg(tick.toDouble())} > expectedDelta ${convert_bg(expectedDelta)}")
+                    } else {
+                        rT.reason.append(", but Min. Delta ${minDelta.toFixed2()} > Exp. Delta ${convert_bg(expectedDelta)}")
+                    }
+                    if (currenttemp.duration > 15 && (round_basal(basal) == round_basal(currenttemp.rate))) {
+                        rT.reason.append(", temp " + currenttemp.rate + " ~ req " + round(basal, 2).withoutZeros() + "U/hr. ")
+                        return rT
+                    } else {
+                        rT.reason.append("; setting current basal of ${round(basal, 2)} as temp. ")
+                        return setTempBasal(basal, 30, profile, rT, currenttemp)
+                    }
+                }
 
-        if (eventualBG < min_bg) { // if eventual BG is below target:
-            rT.reason.append("Eventual BG ${convert_bg(eventualBG)} < ${convert_bg(min_bg)}")
-            // if 5m or 30m avg BG is rising faster than expected delta
-            if (minDelta > expectedDelta && minDelta > 0 && carbsReq == 0) {
-                // if naive_eventualBG < 40, set a 30m zero temp (oref0-pump-loop will let any longer SMB zero temp run)
-                if (naive_eventualBG < 40) {
-                    rT.reason.append(", naive_eventualBG < 40. ")
-                    return setTempBasal(0.0, 30, profile, rT, currenttemp)
+                // calculate 30m low-temp required to get projected BG up to target
+                // multiply by 2 to low-temp faster for increased hypo safety
+                var insulinReq =
+                    if (dynIsfMode) 2 * min(0.0, (eventualBG - target_bg) / future_sens)
+                    else 2 * min(0.0, (eventualBG - target_bg) / sens)
+                insulinReq = round(insulinReq, 2)
+                // calculate naiveInsulinReq based on naive_eventualBG
+                var naiveInsulinReq = min(0.0, (naive_eventualBG - target_bg) / sens)
+                naiveInsulinReq = round(naiveInsulinReq, 2)
+                if (minDelta < 0 && minDelta > expectedDelta) {
+                    // if we're barely falling, newinsulinReq should be barely negative
+                    val newinsulinReq = round((insulinReq * (minDelta / expectedDelta)), 2)
+                    //console.error("Increasing insulinReq from " + insulinReq + " to " + newinsulinReq);
+                    insulinReq = newinsulinReq
                 }
-                if (glucose_status.delta > minDelta) {
-                    rT.reason.append(", but Delta ${convert_bg(tick.toDouble())} > expectedDelta ${convert_bg(expectedDelta)}")
-                } else {
-                    rT.reason.append(", but Min. Delta ${minDelta.toFixed2()} > Exp. Delta ${convert_bg(expectedDelta)}")
+                // rate required to deliver insulinReq less insulin over 30m:
+                var rate = basal + (2 * insulinReq)
+                rate = round_basal(rate)
+
+                // if required temp < existing temp basal
+                val insulinScheduled = currenttemp.duration * (currenttemp.rate - basal) / 60
+                // if current temp would deliver a lot (30% of basal) less than the required insulin,
+                // by both normal and naive calculations, then raise the rate
+                val minInsulinReq = Math.min(insulinReq, naiveInsulinReq)
+                if (insulinScheduled < minInsulinReq - basal * 0.3) {
+                    rT.reason.append(", ${currenttemp.duration}m@${(currenttemp.rate).toFixed2()} is a lot less than needed. ")
+                    return setTempBasal(rate, 30, profile, rT, currenttemp)
                 }
-                if (currenttemp.duration > 15 && (round_basal(basal) == round_basal(currenttemp.rate))) {
-                    rT.reason.append(", temp " + currenttemp.rate + " ~ req " + round(basal, 2).withoutZeros() + "U/hr. ")
+                if (currenttemp.duration > 5 && rate >= currenttemp.rate * 0.8) {
+                    rT.reason.append(", temp ${currenttemp.rate} ~< req ${round(rate, 2)}U/hr. ")
                     return rT
                 } else {
-                    rT.reason.append("; setting current basal of ${round(basal, 2)} as temp. ")
-                    return setTempBasal(basal, 30, profile, rT, currenttemp)
-                }
-            }
-
-            // calculate 30m low-temp required to get projected BG up to target
-            // multiply by 2 to low-temp faster for increased hypo safety
-            var insulinReq =
-                if (dynIsfMode) 2 * min(0.0, (eventualBG - target_bg) / future_sens)
-                else 2 * min(0.0, (eventualBG - target_bg) / sens)
-            insulinReq = round(insulinReq, 2)
-            // calculate naiveInsulinReq based on naive_eventualBG
-            var naiveInsulinReq = min(0.0, (naive_eventualBG - target_bg) / sens)
-            naiveInsulinReq = round(naiveInsulinReq, 2)
-            if (minDelta < 0 && minDelta > expectedDelta) {
-                // if we're barely falling, newinsulinReq should be barely negative
-                val newinsulinReq = round((insulinReq * (minDelta / expectedDelta)), 2)
-                //console.error("Increasing insulinReq from " + insulinReq + " to " + newinsulinReq);
-                insulinReq = newinsulinReq
-            }
-            // rate required to deliver insulinReq less insulin over 30m:
-            var rate = basal + (2 * insulinReq)
-            rate = round_basal(rate)
-
-            // if required temp < existing temp basal
-            val insulinScheduled = currenttemp.duration * (currenttemp.rate - basal) / 60
-            // if current temp would deliver a lot (30% of basal) less than the required insulin,
-            // by both normal and naive calculations, then raise the rate
-            val minInsulinReq = Math.min(insulinReq, naiveInsulinReq)
-            if (insulinScheduled < minInsulinReq - basal * 0.3) {
-                rT.reason.append(", ${currenttemp.duration}m@${(currenttemp.rate).toFixed2()} is a lot less than needed. ")
-                return setTempBasal(rate, 30, profile, rT, currenttemp)
-            }
-            if (currenttemp.duration > 5 && rate >= currenttemp.rate * 0.8) {
-                rT.reason.append(", temp ${currenttemp.rate} ~< req ${round(rate, 2)}U/hr. ")
-                return rT
-            } else {
-                // calculate a long enough zero temp to eventually correct back up to target
-                if (rate <= 0) {
-                    bgUndershoot = (target_bg - naive_eventualBG)
-                    val worstCaseInsulinReq = bgUndershoot / sens
-                    var durationReq = round(60 * worstCaseInsulinReq / profile.current_basal)
-                    if (durationReq < 0) {
-                        durationReq = 0
-                        // don't set a temp longer than 120 minutes
+                    // calculate a long enough zero temp to eventually correct back up to target
+                    if (rate <= 0) {
+                        bgUndershoot = (target_bg - naive_eventualBG)
+                        val worstCaseInsulinReq = bgUndershoot / sens
+                        var durationReq = round(60 * worstCaseInsulinReq / profile.current_basal)
+                        if (durationReq < 0) {
+                            durationReq = 0
+                            // don't set a temp longer than 120 minutes
+                        } else {
+                            durationReq = round(durationReq / 30.0) * 30
+                            durationReq = min(120, max(0, durationReq))
+                        }
+                        //console.error(durationReq);
+                        if (durationReq > 0) {
+                            rT.reason.append(", setting ${durationReq}m zero temp. ")
+                            return setTempBasal(rate, durationReq, profile, rT, currenttemp)
+                        }
                     } else {
-                        durationReq = round(durationReq / 30.0) * 30
-                        durationReq = min(120, max(0, durationReq))
+                        rT.reason.append(", setting ${round(rate, 2)}U/hr. ")
                     }
-                    //console.error(durationReq);
-                    if (durationReq > 0) {
-                        rT.reason.append(", setting ${durationReq}m zero temp. ")
-                        return setTempBasal(rate, durationReq, profile, rT, currenttemp)
-                    }
-                } else {
-                    rT.reason.append(", setting ${round(rate, 2)}U/hr. ")
+                    return setTempBasal(rate, 30, profile, rT, currenttemp)
                 }
-                return setTempBasal(rate, 30, profile, rT, currenttemp)
             }
         }
 
@@ -1021,11 +1059,13 @@ class DetermineBasalSMB @Inject constructor(
             //console.error(minPredBG,eventualBG);
             var insulinReq =
                 if (dynIsfMode) round((min(minPredBG, eventualBG) - target_bg) / future_sens, 2)
+                else if (tsunamiResult.activityControllerActive) tsunamiResult.insReq
                 else round((min(minPredBG, eventualBG) - target_bg) / sens, 2)
             // if that would put us over max_iob, then reduce accordingly
             if (insulinReq > max_iob - iob_data.iob) {
                 rT.reason.append("max_iob $max_iob, ")
                 insulinReq = max_iob - iob_data.iob
+                consoleLog.add("InsulinReq adjusted for max_iob!")
             }
 
             // rate required to deliver insulinReq more insulin over 30m:
@@ -1046,7 +1086,12 @@ class DetermineBasalSMB @Inject constructor(
                 if (iob_data.iob > mealInsulinReq && iob_data.iob > 0) {
                     consoleError.add("IOB ${iob_data.iob} > COB ${meal_data.mealCOB}; mealInsulinReq = $mealInsulinReq")
                     consoleError.add("profile.maxUAMSMBBasalMinutes: ${profile.maxUAMSMBBasalMinutes} profile.current_basal: ${profile.current_basal}")
-                    maxBolus = round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1)
+                    if (tsunamiResult.activityControllerActive) {
+                        maxBolus = tsunamiResult.smbCap
+                    } else {
+                        maxBolus = round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1)
+                    }
+
                 } else {
                     consoleError.add("profile.maxSMBBasalMinutes: ${profile.maxSMBBasalMinutes} profile.current_basal: ${profile.current_basal}")
                     maxBolus = round(profile.current_basal * profile.maxSMBBasalMinutes / 60, 1)
@@ -1076,6 +1121,11 @@ class DetermineBasalSMB @Inject constructor(
                     smbLowTempReq = round(basal * durationReq / 30.0, 2)
                     durationReq = 30
                 }
+
+                if (tsunamiResult.activityControllerActive) {
+                    rT.reason.append("Microbolusing ${microBolus}U. ")
+                }
+
                 rT.reason.append(" insulinReq $insulinReq")
                 if (microBolus >= maxBolus) {
                     rT.reason.append("; maxBolus $maxBolus")
@@ -1096,18 +1146,17 @@ class DetermineBasalSMB @Inject constructor(
                         rT.units = microBolus
                         rT.reason.append("Microbolusing ${microBolus}U. ")
                     }
+                    // JB: Moved below code into SMB check, we only want to check this when we can actually bolus
+                    // if no zero temp is required, don't return yet; allow later code to set a high temp
+                    if (durationReq > 0) {
+                        rT.rate = smbLowTempReq
+                        rT.duration = durationReq
+                        return rT
+                    }
                 } else {
                     rT.reason.append("Waiting " + nextBolusMins + "m " + nextBolusSeconds + "s to microbolus again. ")
                 }
                 //rT.reason += ". ";
-
-                // if no zero temp is required, don't return yet; allow later code to set a high temp
-                if (durationReq > 0) {
-                    rT.rate = smbLowTempReq
-                    rT.duration = durationReq
-                    return rT
-                }
-
             }
 
             val maxSafeBasal = getMaxSafeBasal(profile)
@@ -1137,5 +1186,264 @@ class DetermineBasalSMB @Inject constructor(
             rT.reason.append("temp ${currenttemp.rate.toFixed2()} < ${round(rate, 2).withoutZeros()}U/hr. ")
             return setTempBasal(rate, 30, profile, rT, currenttemp)
         }
+    }
+
+    data class TsunamiActivityData(
+        val futureActivity: Double = 0.0,
+        val sensorLagActivity: Double = 0.0,
+        val historicActivity: Double = 0.0,
+        val currentActivity: Double = 0.0,
+        val dia: Double = 0.0
+    )
+
+    data class TsunamiResult(
+        val insReq: Double = 0.0,
+        val smbCap: Double = 0.0,
+        val activityControllerActive: Boolean = false,
+        val reason: StringBuilder
+    )
+
+    private fun determineTsunamiInsReq(glucose_status: GlucoseStatus, target_bg: Double, adjusted_sens: Double, profile: OapsProfile, iob_data: IobTotal, currentTimeMillis: Long): TsunamiResult {
+        //------------------------------- MP
+        // TSUNAMI ACTIVITY ENGINE START  MP
+        //------------------------------- MP
+
+        // Settings: 
+        val enableWaveMode = preferences.get(BooleanKey.ApsWaveEnable)
+        val waveInsReqPct = preferences.get(DoubleKey.ApsWaveInsReqPct)
+        var startTime = preferences.get(IntKey.ApsWaveStartTime).toDouble()
+        var endTime = preferences.get(IntKey.ApsWaveEndTime).toDouble()
+        val maxWaveSMBBasalMinutes = preferences.get(IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb)
+        val waveUseSMBCap = preferences.get(BooleanKey.ApsWaveUseSMBCap)
+        val waveSMBCap = preferences.get(DoubleKey.ApsWaveSmbCap)
+        // val waveSMBCapScaling = sp.getBoolean(R.string.key_wave_SMB_scaling, false) // Leave for now
+
+        var insulinReqPCT = waveInsReqPct / 100.0
+        val deltaReductionPCT = 0.5 // JB: Default Tsunami Wave Reduction, maybe pref?
+        // JB Note: activity_target not used in wavez
+        val profile_sens = round(profile.sens, 1)
+        val bg = glucose_status.glucose
+
+        if (!enableWaveMode) {
+            return TsunamiResult(0.0, 0.0, false, StringBuilder())
+        }
+
+        val currentHour = LocalTime.now().hour
+        var referenceTimer = currentHour.toDouble()
+        // active hours redefinition (allowing end times < start times)
+        if (endTime < startTime) {
+            referenceTimer = if (currentHour < startTime) {
+                currentHour - startTime + 24 //MP: Transformed timer, counting from (24 - startTime) until 23
+            } else {
+                currentHour - startTime //MP: Transformed timer, counting from 0 until (23 - startTime)
+            }
+            endTime = 24 - (startTime - endTime) //MP: Transformed end hour, represents total duration of active hours in hours
+            startTime = 0.0 //MP: Set starting hour to 0 and transform the rest
+        }
+
+        var SMBcap = if (waveUseSMBCap) {
+            waveSMBCap
+        } else {
+            round(profile.current_basal * maxWaveSMBBasalMinutes / 60, 1)
+        }
+
+        //MP Give SMBs that are 70% of SMBcap or more extra time to be absorbed before delivering another large SMB.
+        val lastBolus = persistenceLayer.getNewestBolus()?.amount
+        val lastBolusAge = round((currentTimeMillis - iob_data.lastBolusTime) / 60000.0, 1)
+        if (lastBolusAge <= 9 && lastBolus != null && lastBolus >= 0.70 * SMBcap) {
+            SMBcap = max(SMBcap - lastBolus, 0.0)
+        }
+
+        val activityData = getTsunamiActivityData()
+        val act_curr = activityData.sensorLagActivity
+        val act_future = activityData.futureActivity
+        val pure_delta = round(min(glucose_status.delta + max(act_curr * profile_sens, 0.0), 35.0), 1)
+        val act_targetDelta = (pure_delta / profile_sens) * deltaReductionPCT
+
+        // JB Note: activity_target not used in wavez
+        val act_missing = round((act_targetDelta - max(act_future, 0.0)) / 5, 4)
+
+        var tsunami_insreq = 0.0
+        var iterations = 0
+        val insulin = activePlugin.activeInsulin
+        if (!insulin.isPD) {
+            // PK BASED MODEL CODE
+            // MP Calculate the insulin required to neutralise the current delta in "peak-time" minutes
+            val act_at_peak = insulin.iobCalcPeakForTreatment(BS(timestamp = 0, amount = 1.0, type = BS.Type.NORMAL), activityData.dia).activityContrib
+            tsunami_insreq = act_missing / act_at_peak
+        } else {
+            // PD BASED MODEL CODE
+            var actRatio = 1.0 //MP initialising value
+            var act_at_peak = 0.000001 //MP Dummy value to enter while-loop
+            tsunami_insreq = 1.0 //MP Initial guess
+
+            //Iterative dose estimation (allowed rel. error: +/- 2%)
+            if (act_missing != 0.0) {
+                while (round(act_at_peak / act_missing, 2) > 1.02 || round(act_at_peak / act_missing, 2) < 0.98) {
+                    tsunami_insreq = tsunami_insreq / actRatio
+                    act_at_peak = insulin.iobCalcPeakForTreatment(BS(timestamp = 0, amount = tsunami_insreq, type = BS.Type.NORMAL), activityData.dia).activityContrib
+                    actRatio = act_at_peak / act_missing
+                    consoleLog.add("tsunami_insreq ($iterations): ${round(tsunami_insreq, 3)} | actRatio: ${round(actRatio, 3)}")
+                    iterations++
+                }
+            } else {
+                tsunami_insreq = 0.0
+            }
+        }
+
+        iterations -= 1; //MP Minus 1 as the iterations are overcounted by 1 in the while loop
+
+        val bg_correction = (bg - target_bg) / adjusted_sens
+        if (bg_correction > iob_data.iob && bg_correction > tsunami_insreq) {
+            tsunami_insreq = bg_correction
+        }
+        tsunami_insreq = round(tsunami_insreq, 2)
+
+        //MP deltaScore and BG score
+        val deltaScore: Double = Round.roundTo(glucose_status.shortAvgDelta / 4, 0.01)
+        insulinReqPCT = round(insulinReqPCT * deltaScore, 3) //MP Modify insulinReqPCT in dependence of previous delta values
+        var bgScore_upper_threshold = target_bg + 30 //MP BG above which no penalty will be given
+        var bgScore_lower_threshold = target_bg //MP BG below which tae will not deliver SMBs
+        var bgScore = round(Math.min((bg - bgScore_lower_threshold) / (bgScore_upper_threshold - bgScore_lower_threshold), 1.0), 3); //MP Penalty at low or near-target bg values. Modifies SMBcap.
+        SMBcap = round(SMBcap * bgScore, 2)
+
+        var activityControllerActive = false
+        val reason: StringBuilder = StringBuilder()
+        //MP Enable TAE SMB sizing if the safety conditions are all met
+        if (referenceTimer >= startTime &&
+            referenceTimer <= endTime &&
+            glucose_status.delta >= 4.1 &&
+            bg >= target_bg &&
+            iob_data.iob > 0.1 &&
+            act_curr > 0 &&
+            tsunami_insreq + iob_data.iob >= (bg - target_bg) / profile_sens
+        ) {
+            activityControllerActive = true
+
+            consoleLog.add("------------------------------")
+            consoleLog.add("WAVE STATUS")
+            consoleLog.add("------------------------------")
+            consoleLog.add("act. lag: ${activityData.sensorLagActivity}")
+            consoleLog.add("act. now: $act_curr (${activityData.currentActivity})")
+            consoleLog.add("act. future: ${activityData.futureActivity}")
+            consoleLog.add("miss./act. future: $act_missing")
+            consoleLog.add("-------------")
+            consoleLog.add("bg: $bg")
+            consoleLog.add("delta: ${glucose_status.delta}")
+            consoleLog.add("pure delta: $pure_delta")
+            consoleLog.add("-------------")
+            consoleLog.add("deltaScore_live: ${round(deltaScore, 3)}")
+            consoleLog.add("bgScore_live: $bgScore")
+            consoleLog.add("insulinReqPCT_live: $insulinReqPCT")
+            consoleLog.add("SMBcap_live: $SMBcap")
+            consoleLog.add("tsunami_insreq: $tsunami_insreq")
+            consoleLog.add("iterations: $iterations")
+            if (bg_correction > iob_data.iob && bg_correction > tsunami_insreq) {
+                consoleLog.add("Mode: IOB too low, correcting for BG.")
+            } else {
+                consoleLog.add("Mode: Building up activity.")
+            }
+            consoleLog.add("------------------------------")
+
+            reason.append(" ##TSUNAMI STATUS##")
+            reason.append(" act. lag: ${activityData.sensorLagActivity}")
+            reason.append("; act. now: $act_curr (${activityData.currentActivity})")
+            reason.append("; act. future: ${activityData.futureActivity}")
+            reason.append("; miss./act. future: $act_missing")
+            reason.append("; ###")
+            reason.append(" bg: $bg")
+            reason.append("; delta: ${glucose_status.delta}")
+            reason.append("; pure delta: $pure_delta")
+            reason.append("; ###")
+            reason.append(" deltaScore_live: ${round(deltaScore, 3)}")
+            reason.append("; bgScore_live: $bgScore")
+            reason.append("; insulinReqPCT_live: $insulinReqPCT")
+            reason.append("; SMBcap_live: $SMBcap")
+            reason.append("; tsunami_insreq: $tsunami_insreq")
+            reason.append("; iterations: $iterations")
+            reason.append("; ###")
+            if (bg_correction > iob_data.iob && bg_correction > tsunami_insreq) {
+                reason.append(" Mode: IOB too low, correcting for BG.")
+            } else {
+                reason.append(" Mode: Building up activity.")
+            }
+
+            reason.append(" ##TSUNAMI STATUS END##")
+
+        } else {
+            // Reporting if TAE is bypassed
+            consoleLog.add("------------------------------")
+            consoleLog.add("WAVE STATUS")
+            consoleLog.add("------------------------------")
+            consoleLog.add("TAE bypassed - reasons:")
+            if (referenceTimer < startTime || referenceTimer > endTime) {
+                consoleLog.add("Outside active hours.")
+            }
+            if (glucose_status.delta <= 4.1) {
+                consoleLog.add("Delta too low. (${glucose_status.delta})")
+            }
+            if (bg < target_bg) {
+                consoleLog.add("Glucose is below target.")
+            }
+            if (iob_data.iob <= 0.1) {
+                consoleLog.add("IOB is below minimum of 0.1 U.")
+            }
+            if (act_curr <= 0) {
+                consoleLog.add("Insulin activity is negative or 0.")
+            }
+            if (tsunami_insreq + iob_data.iob < (bg - target_bg) / profile_sens) {
+                consoleLog.add("Incompatible insulin & glucose status. Let oref1 take over for now.")
+            }
+            consoleLog.add("------------------------------")
+        }
+
+        return TsunamiResult(tsunami_insreq, SMBcap, activityControllerActive, reason)
+    }
+
+    private fun getTsunamiActivityData(): TsunamiActivityData {
+        // Get peak time if using a PK insulin model
+        // Calculate reference activity values
+        val profile = profileFunction.getProfile() ?: return TsunamiActivityData()
+
+        var currentActivity = 0.0
+        for (i in -4..0) { //MP: -4 to 0 calculates all the insulin active during the last 5 minutes
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(i.toLong()), profile)
+            currentActivity += iob.activity
+        }
+
+        var futureActivity = 0.0
+        val insulin = activePlugin.activeInsulin
+        val activityPredTime: Long = if (!insulin.isPD) { //MP if not using PD insulin models
+            // Get peak time if using a PK insulin model
+            insulin.peak.toLong() //MP act. pred. time for PK ins. models; target time = insulin peak time
+        } else { //MP if using PD insulin models
+            //MP activity prediction time for pharmacodynamic model; fixed to 65 min (approx. peak time of 1 U bolus)
+            65L
+        }
+        for (i in -4..0) { //MP: calculate 5-minute-insulin activity centering around peaktime
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(activityPredTime - i), profile)
+            futureActivity += iob.activity
+        }
+
+        val sensorLag = -10L //MP Assume that the glucose value measurement reflect the BG value from 'sensorlag' minutes ago & calculate the insulin activity then
+        var sensorLagActivity = 0.0
+        for (i in -4..0) {
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(sensorLag - i), profile)
+            sensorLagActivity += iob.activity
+        }
+
+        val activityHistoric = -20L //MP Activity at the time in minutes from now. Used to calculate activity in the past to use as target activity.
+        var historicActivity = 0.0
+        for (i in -2..2) {
+            val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(activityHistoric - i), profile)
+            historicActivity += iob.activity
+        }
+
+        futureActivity = Round.roundTo(futureActivity, 0.0001)
+        sensorLagActivity = Round.roundTo(sensorLagActivity, 0.0001)
+        historicActivity = Round.roundTo(historicActivity, 0.0001)
+        currentActivity = Round.roundTo(currentActivity, 0.0001)
+
+        return TsunamiActivityData(futureActivity, sensorLagActivity, historicActivity, currentActivity, profile.dia)
     }
 }

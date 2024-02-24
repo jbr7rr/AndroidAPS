@@ -107,6 +107,17 @@
     <string name="key_openaps_ama_min_5m_carbs_impact" translatable="false">openapsama_min_5m_carbimpact</string>
     <string name="key_openaps_smb_min_5m_carbs_impact" translatable="false">openapsama_min_5m_carbimpact</string>
     <string name="key_openaps_link_to_docs" translatable="false">link_to_docs</string>
+    <!--    APS Tsunami -->
+    <string name="key_enable_wave_mode" translatable="false">enable_wave_mode</string>
+    <string name="key_wave_use_smbcap" translatable="false">use_wave_smbcap</string>
+    <string name="key_wave_smbcap" translatable="false">wave_smbcap</string>
+    <string name="key_wave_start" translatable="false">wave_start</string>
+    <string name="key_wave_end" translatable="false">wave_end</string>
+    <string name="key_wave_insulinReqPCT" translatable="false">waveinsulinReqPCT</string>
+    <string name="key_wave_SMB_scaling" translatable="false">key_wave_SMB_scaling</string>
+    <string name="key_wave_activity_target" translatable="false">wave_activity_target</string>
+    <string name="key_wave_delta_reduction_scaling" translatable="false">wave_SMB_scaling</string>
+    <string name="key_wave_smb_max_minutes" translatable="false">wavesmbmaxminutes</string>
 
     <!--    Sensitivity-->
     <string name="key_absorption_cutoff" translatable="false">absorption_cutoff</string>

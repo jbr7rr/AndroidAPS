@@ -30,6 +30,8 @@ enum class DoubleKey(
     ApsAmaBolusSnoozeDivisor(R.string.key_openaps_ama_bolus_snooze_dia_divisor, 2.0, 1.0, 10.0, defaultedBySM = true),
     ApsAmaMin5MinCarbsImpact(R.string.key_openaps_ama_min_5m_carbs_impact, 3.0, 1.0, 12.0, defaultedBySM = true),
     ApsSmbMin5MinCarbsImpact(R.string.key_openaps_smb_min_5m_carbs_impact, 8.0, 1.0, 12.0, defaultedBySM = true),
+    ApsWaveInsReqPct(R.string.key_wave_insulinReqPCT, 65.0, 30.0, 100.0, defaultedBySM = true, dependency = R.string.key_enable_wave_mode),
+    ApsWaveSmbCap(R.string.key_wave_smbcap, 0.5, 0.0, 5.0, defaultedBySM = true, dependency = R.string.key_wave_use_smbcap),
     AbsorptionCutOff(R.string.key_absorption_cutoff, 6.0, 4.0, 10.0),
     AbsorptionMaxTime(R.string.key_absorption_maxtime, 6.0, 4.0, 10.0),
     AutosensMin(R.string.key_openaps_autosens_min, 0.7, 0.1, 1.0, defaultedBySM = true, hideParentScreenIfHidden = true),

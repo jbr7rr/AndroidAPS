@@ -527,6 +527,18 @@ open class OpenAPSSMBPlugin @Inject constructor(
             initialExpandedChildrenCount = 0
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsMaxBasal, dialogMessage = R.string.openapsma_max_basal_summary, title = R.string.openapsma_max_basal_title))
             addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsSmbMaxIob, dialogMessage = R.string.openapssmb_max_iob_summary, title = R.string.openapssmb_max_iob_title))
+            addPreference(preferenceManager.createPreferenceScreen(context).apply {
+                key = "wave_settings"
+                title = rh.gs(R.string.wave_mode_settings_title)
+
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsWaveEnable, summary = R.string.enable_wave_mode_summary, title = R.string.enable_wave_mode_title))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsWaveStartTime, dialogMessage = R.string.wave_start_summary, title = R.string.wave_start_title))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsWaveEndTime, dialogMessage = R.string.wave_end_summary, title = R.string.wave_end_title))
+                addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb, dialogMessage = R.string.wave_smb_max_minutes, title = R.string.wave_smb_max_minutes_summary))
+                addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsWaveUseSMBCap, summary = R.string.use_wave_smbcap_summary, title = R.string.use_wave_smbcap_title))
+                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsWaveSmbCap, dialogMessage = R.string.wave_smbcap_message, title = R.string.wave_smbcap_title))
+                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.ApsWaveInsReqPct, dialogMessage = R.string.wave_insulinReqPCT_message, title = R.string.wave_insulinReqPCT_title))
+            })
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseDynamicSensitivity, summary = R.string.use_dynamic_sensitivity_summary, title = R.string.use_dynamic_sensitivity_title))
             addPreference(AdaptiveSwitchPreference(ctx = context, booleanKey = BooleanKey.ApsUseAutosens, title = R.string.openapsama_use_autosens))
             addPreference(AdaptiveIntPreference(ctx = context, intKey = IntKey.ApsDynIsfAdjustmentFactor, dialogMessage = R.string.dyn_isf_adjust_summary, title = R.string.dyn_isf_adjust_title))
