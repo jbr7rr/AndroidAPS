@@ -51,6 +51,10 @@ enum class IntKey(
     ApsAutoIsfHalfBasalExerciseTarget("half_basal_exercise_target", 160, 120, 200, defaultedBySM = true),
     ApsAutoIsfIobThPercent("iob_threshold_percent", 100, 10, 100, defaultedBySM = true),
     ApsDynIsfAdjustmentFactor("DynISFAdjust", 100, 1, 300, dependency = BooleanKey.ApsUseDynamicSensitivity),
+    ApsWaveMaxMinutesOfBasalToLimitSmb("wavesmbmaxminutes", 60, 15, 240, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
+    ApsWaveStartTime("wave_start", 11, 0, 23, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
+    ApsWaveEndTime("wave_end", 21, 0, 23, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
+
     AutosensPeriod("openapsama_autosens_period", 24, 4, 24, calculatedDefaultValue = true),
     MaintenanceLogsAmount("maintenance_logs_amount", 2, 1, 10, defaultedBySM = true),
     AlertsStaleDataThreshold("missed_bg_readings_threshold", 30, 15, 10000, defaultedBySM = true, dependency = BooleanKey.AlertMissedBgReading),

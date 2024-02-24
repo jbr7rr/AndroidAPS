@@ -29,7 +29,6 @@ enum class BooleanKey(
     OverviewUseBolusAdvisor("use_bolus_advisor", true, defaultedBySM = true),
     OverviewUseBolusReminder("use_bolus_reminder", true, defaultedBySM = true),
     OverviewUseSuperBolus("key_usersuperbolus", false, defaultedBySM = true, hideParentScreenIfHidden = true),
-
     PumpBtWatchdog("bt_watchdog", false, showInNsClientMode = false, hideParentScreenIfHidden = true),
 
     AlertMissedBgReading("enable_missed_bg_readings", false),
@@ -59,6 +58,8 @@ enum class BooleanKey(
     ApsAutoIsfLowTtLowersSens("low_temptarget_lowers_sensitivity", false, defaultedBySM = true),
     ApsUseAutoIsfWeights("openapsama_enable_autoISF", false, defaultedBySM = true),
     ApsAutoIsfSmbOnEvenTarget("Enable alternative activation of SMB always", false, defaultedBySM = true),   // profile target
+    ApsWaveEnable("enable_wave_mode", false, defaultedBySM = true, hideParentScreenIfHidden = true),
+    ApsWaveUseSMBCap("use_wave_smbcap", false, defaultedBySM = true, dependency = ApsWaveEnable),
 
     MaintenanceEnableFabric("enable_fabric2", true, defaultedBySM = true, hideParentScreenIfHidden = true),
 

@@ -97,6 +97,33 @@
     <string name="use_dynamic_sensitivity_title">Enable dynamic sensitivity</string>
     <string name="use_dynamic_sensitivity_summary">Adjust algorithm to use dynamic sensitivity instead of profile value</string>
 
+    <!--    Wavez -->
+    <string name="wave_mode_settings_title" translatable="false">Wave mode settings</string>
+    <string name="enable_wave_mode_summary" translatable="false">Glucose watchdog to overrule the openAPSSMB algorithm within specified time slot if Tsunami mode is inactive.</string>
+    <string name="enable_wave_mode_title" translatable="false">Enable wave mode</string>
+    <string name="use_wave_smbcap_summary" translatable="false">Use fixed SMB cap instead of basal minutes as SMB size limiter.</string>
+    <string name="use_wave_smbcap_title" translatable="false">Use SMB cap</string>
+    <string name="wave_smbcap_message" translatable="false">max SMB size deliverable by wave mode.</string>
+    <string name="wave_smbcap_title" translatable="false">Wave SMB cap [U]</string>
+    <string name="wave_start_summary">Hour of the day from when on wave mode will be enabled.</string>
+    <string name="wave_start_title">Wave start time (incl.) [h]</string>
+    <string name="wave_end_summary">Hour of the day until (and including) which wave mode is enabled.</string>
+    <string name="wave_end_title">Wave end time (incl.) [h]</string>
+    <string name="wave_insulinReqPCT_message">Reduces the calculated insulin required to the specified percentage for delivery. Example: If calculated insulin required is 1 U and fraction size is 50%, at most 0.5 U will be delivered if no other constraints (e.g. SMB caps) apply.</string>
+    <string name="wave_insulinReqPCT_title">Wave mode insulin delivery percentage [%]</string>
+    <string name="wave_SMB_scaling_title">Enable SMB cap scaling</string>
+    <string name="wave_SMB_scaling_summary">Scales Wave SMB cap with the current profile percentage (max: 150%).</string>
+    <string name="advanced_wave_title">Advanced Wave settings</string>
+    <string name="advanced_wave_disclaimer">The following settings are for experienced users only and do not have to be adjusted! New users are advised to use the default settings.</string>
+    <string name="wave_activity_target_title">Activity target (Wave) [%]</string>
+    <string name="wave_activity_target_summary">Percentage of current IA to maintain in case of small delta values (constant activity mode for Wave).</string>
+
+    <string name="wave_delta_reduction_scaling_title">Enable delta reduction scaling</string>
+    <string name="wave_delta_reduction_scaling_summary">Scales delta reduction with the current profile percentage (max: 150%).</string>
+
+    <string name="wave_smb_max_minutes">Wave SMB max minutes</string>
+    <string name="wave_smb_max_minutes_summary">Max minutes of basal to limit SMB to for Wave mode</string>
+
     <!--    Verify if needed in safety-->
     <string name="limiting_iob">Limiting IOB to %1$.1f U because of %2$s</string>
     <string name="maxvalueinpreferences">max value in preferences</string>
