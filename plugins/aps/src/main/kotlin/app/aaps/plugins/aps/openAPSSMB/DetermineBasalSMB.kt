@@ -1105,7 +1105,9 @@ class DetermineBasalSMB @Inject constructor(
                 }
                 // bolus 1/2 the insulinReq, up to maxBolus, rounding down to nearest bolus increment
                 val roundSMBTo = 1 / profile.bolus_increment
-                val microBolus = Math.floor(Math.min(insulinReq / 2, maxBolus) * roundSMBTo) / roundSMBTo
+                // JB: Give everything (just as orig tsunamo), maybe setting??
+                val smbFactor = 1.0
+                val microBolus = Math.floor(Math.min(insulinReq * smbFactor, maxBolus) * roundSMBTo) / roundSMBTo
                 // calculate a long enough zero temp to eventually correct back up to target
                 val smbTarget = target_bg
                 val worstCaseInsulinReq = (smbTarget - (naive_eventualBG + minIOBPredBG) / 2.0) / sens
@@ -1319,7 +1321,7 @@ class DetermineBasalSMB @Inject constructor(
         tsunami_insreq = round(tsunami_insreq, 2)
 
         //MP deltaScore and BG score
-        val deltaScore: Double = Round.roundTo(glucose_status.shortAvgDelta / 4, 0.01)
+        val deltaScore: Double = min(1.0, max(glucose_status.shortAvgDelta / 4, 0.0)) //MP Modifies insulinReqPCT; deltaScore grows larger the largest the previous deltas were, until it reaches 1
         insulinReqPCT = round(insulinReqPCT * deltaScore, 3) //MP Modify insulinReqPCT in dependence of previous delta values
         var bgScore_upper_threshold = target_bg + 30 //MP BG above which no penalty will be given
         var bgScore_lower_threshold = target_bg //MP BG below which tae will not deliver SMBs
