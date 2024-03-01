@@ -617,7 +617,8 @@ class DetermineBasalSMB @Inject constructor(
             // set minPredBGs starting when currently-dosed insulin activity will peak
             // look ahead 60m (regardless of insulin type) so as to be less aggressive on slower insulins
             // add 30m to allow for insulin delivery (SMBs or temps)
-            val insulinPeakTime = 90
+            //MP Below peak variables have been changed from original
+            val insulinPeakTime = 40
             val insulinPeak5m = (insulinPeakTime / 60.0) * 12.0
             //console.error(insulinPeakTime, insulinPeak5m, profile.insulinPeakTime, profile.curve);
 
@@ -1416,6 +1417,7 @@ class DetermineBasalSMB @Inject constructor(
             consoleLog("------------------------------")
         }
 
+        tsunami_insreq = round(tsunami_insreq * insulinReqPCT, 2)
         return TsunamiResult(tsunami_insreq, SMBcap, activityControllerActive, reason)
     }
 
