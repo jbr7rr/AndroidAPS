@@ -201,7 +201,7 @@ class OpenAPSFragment : DaggerFragment(), MenuProvider {
                 val strippedEntry = entry.removePrefix("ERROR: ")
                 builder.append("$strippedEntry\n")
                 val end = builder.length
-                builder.setSpan(ForegroundColorSpan(Color.RED), start, end, SpannableStringBuilder.SPAN_EXCLUSIVE_EXCLUSIVE)
+                builder.setSpan(ForegroundColorSpan(Color.GRAY), start, end, SpannableStringBuilder.SPAN_EXCLUSIVE_EXCLUSIVE)
             } else {
                 builder.append("$entry\n")
             }
