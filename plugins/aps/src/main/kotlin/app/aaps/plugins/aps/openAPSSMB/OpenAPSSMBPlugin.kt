@@ -518,7 +518,7 @@ open class OpenAPSSMBPlugin @Inject constructor(
     }
 
     override fun addPreferenceScreen(preferenceManager: PreferenceManager, parent: PreferenceScreen, context: Context, requiredKey: String?) {
-        if (requiredKey != null && requiredKey != "absorption_smb_advanced") return
+        if (requiredKey != null && requiredKey != "absorption_smb_advanced" && requiredKey != "wave_settings") return
         val category = PreferenceCategory(context)
         parent.addPreference(category)
         category.apply {
