@@ -32,7 +32,11 @@ class BasalProgram(
     ) {
 
         fun getPulsesPerHour(): Short {
-            return (basalRateInHundredthUnitsPerHour * PULSES_PER_UNIT / 100).toShort()
+            return Math.round(basalRateInHundredthUnitsPerHour * PULSES_PER_UNIT / 100.0).toShort()
+        }
+
+        fun getTenthPulsesPerHour(): Short {
+            return (basalRateInHundredthUnitsPerHour * PULSES_PER_UNIT / 10).toShort()
         }
 
         fun getNumberOfSlots(): Short {

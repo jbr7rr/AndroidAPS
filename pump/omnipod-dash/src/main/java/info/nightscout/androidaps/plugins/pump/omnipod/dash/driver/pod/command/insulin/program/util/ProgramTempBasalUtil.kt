@@ -20,23 +20,28 @@ object ProgramTempBasalUtil {
     }
 
     fun mapTempBasalToTenthPulsesPerSlot(durationInSlots: Int, rateInUnitsPerHour: Double): ShortArray {
-        val pulsesPerHour = (rateInUnitsPerHour * 20).roundToInt().toShort()
+        val tenthPulsesPerHour = (rateInUnitsPerHour * 200).roundToInt().toShort()
         val tenthPulsesPerSlot = ShortArray(durationInSlots)
-        val tenthPulsesPerSlotShort = if (pulsesPerHour == 0.toShort() && durationInSlots > 4) {
-            // Workaround for 0.0 U/h long temp basals being cancelled by pod
-            // This will result in a 0.01 U/h temp basal for 0temps > 120 minutes
-            1.toShort()
-        } else {
-            (roundToHalf(pulsesPerHour / 2.0) * 10).toInt().toShort()
-        }
-        for (i in tenthPulsesPerSlot.indices) {
-            tenthPulsesPerSlot[i] = tenthPulsesPerSlotShort
+        var remainingTenthPulse = false
+        var i = 0
+
+        while (durationInSlots > i) {
+            if (rateInUnitsPerHour == 0.0 && durationInSlots > 4) {
+                // Workaround for 0.0 U/h long temp basals being cancelled by pod
+                // This will result in a 0.01 U/h temp basal for 0temps > 120 minutes
+                tenthPulsesPerSlot[i] = 1.toShort()
+            } else {
+                tenthPulsesPerSlot[i] = (tenthPulsesPerHour / 2).toShort()
+                if (tenthPulsesPerHour % 2 == 1) { // Do extra alternate pulse
+                    if (remainingTenthPulse) {
+                        tenthPulsesPerSlot[i] = (tenthPulsesPerSlot[i] + 1).toShort()
+                    }
+                    remainingTenthPulse = !remainingTenthPulse
+                }
+            }
+            i++
         }
         return tenthPulsesPerSlot
-    }
-
-    private fun roundToHalf(d: Double): Double {
-        return ((d * 10.0).toInt().toShort() / 5 * 5).toShort().toDouble() / 10.0
     }
 
     fun mapTempBasalToPulsesPerSlot(durationInSlots: Byte, rateInUnitsPerHour: Double): ShortArray {

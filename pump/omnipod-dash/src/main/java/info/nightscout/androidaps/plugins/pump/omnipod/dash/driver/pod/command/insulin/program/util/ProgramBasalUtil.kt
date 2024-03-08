@@ -160,16 +160,18 @@ object ProgramBasalUtil {
     fun mapBasalProgramToTenthPulsesPerSlot(basalProgram: BasalProgram): ShortArray {
         val tenthPulsesPerSlot = ShortArray(NUMBER_OF_BASAL_SLOTS.toInt())
         for (segment in basalProgram.segments) {
+            var remainingPulse = false
             for (i in segment.startSlotIndex until segment.endSlotIndex) {
-                tenthPulsesPerSlot[i] = (roundToHalf(segment.getPulsesPerHour() / 2.0) * 10).toInt()
-                    .toShort() // TODO Adrian: int conversion ok?
+                tenthPulsesPerSlot[i] = (segment.getTenthPulsesPerHour() / 2).toShort()
+                if (segment.getTenthPulsesPerHour() % 2 == 1) { // Do extra alternate pulse
+                    if (remainingPulse) {
+                        tenthPulsesPerSlot[i] = (tenthPulsesPerSlot[i] + 1).toShort()
+                    }
+                    remainingPulse = !remainingPulse
+                }
             }
         }
         return tenthPulsesPerSlot
-    }
-
-    private fun roundToHalf(d: Double): Double {
-        return ((d * 10.0).toInt().toShort() / 5 * 5).toShort().toDouble() / 10.0
     }
 
     fun mapBasalProgramToPulsesPerSlot(basalProgram: BasalProgram): ShortArray {
