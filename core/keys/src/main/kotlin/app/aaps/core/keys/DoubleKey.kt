@@ -48,4 +48,7 @@ enum class DoubleKey(
     ApsAutoIsfSmbMaxRangeExtension("openapsama_smb_max_range_extension", 1.0, 1.0, 5.0, defaultedBySM = true),
     ApsWaveInsReqPct("waveinsulinReqPCT", 65.0, 30.0, 100.0, defaultedBySM = true, dependency = BooleanKey.ApsWaveEnable),
     ApsWaveSmbCap("wave_smbcap", 0.5, 0.0, 5.0, defaultedBySM = true, dependency = BooleanKey.ApsWaveUseSMBCap),
+    InsulinPDFreePeakA0("insulin_pd_free_peak_a0", 61.33, 10.0, 120.0),
+    InsulinPDFreePeakA1("insulin_pd_free_peak_a1", 12.27, 3.0, 20.0),
+    InsulinPDFreePeakB1("insulin_pd_free_peak_b1", 0.05185, 0.02, 0.1),
 }

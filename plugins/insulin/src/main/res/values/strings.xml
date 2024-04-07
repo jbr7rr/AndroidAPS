@@ -24,4 +24,10 @@
         concentrated); This model automatically adjusts the duration of insulin action (DIA).
         YOU MUST HALVE YOUR BASALS AND DOUBLE YOUR ISFS BEFORE USE!</string>
 
+    <string name="custom_PD">Custom PD</string>
+    <string name="description_insulin_custom_PD">Allows you to define the PD parameters of the insulin model and should only be used by advanced users, only use for mixes and non lyumjev insulins. Advice to first model out your parameters before inputting them here.</string>
+    <string name="PD_a0">a0</string>
+    <string name="PD_a1">a1</string>
+    <string name="PD_b1">b1</string>
+
 </resources>
