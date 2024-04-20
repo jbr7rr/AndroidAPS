@@ -23,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.text.toSpanned
+import androidx.core.view.setPadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.GlucoseUnit
@@ -170,6 +171,8 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
     private var carbAnimation: AnimationDrawable? = null
 
     private var _binding: OverviewFragmentBinding? = null
+
+    private var customButtonIds: ArrayList<Int> = ArrayList()
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -626,8 +629,13 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
             binding.buttonsLayout.cgmButton.visibility = (preferences.get(BooleanKey.OverviewShowCgmButton) && (xDripIsBgSource || dexcomIsSource)).toVisibility()
 
             // Automation buttons
-            binding.buttonsLayout.userButtonsLayout.removeAllViews()
+            for (id in customButtonIds) {
+                binding.buttonsLayout.overviewButtonsLayout.findViewById<View>(id)?.let { binding.buttonsLayout.overviewButtonsLayout.removeView(it) }
+                binding.buttonsLayout.userButtonsLayout.findViewById<View>(id)?.let { binding.buttonsLayout.userButtonsLayout.removeView(it) }
+            }
+            customButtonIds.clear()
             val events = automation.userEvents()
+            val selectedLayout = if (events.size < 4) binding.buttonsLayout.overviewButtonsLayout else binding.buttonsLayout.userButtonsLayout
             if (!loop.isDisconnected && pump.isInitialized() && !pump.isSuspended() && profile != null)
                 for (event in events)
                     if (event.isEnabled && event.canRun())
@@ -636,21 +644,28 @@ class OverviewFragment : DaggerFragment(), View.OnClickListener, OnLongClickList
                                 it.setTextColor(rh.gac(context, app.aaps.core.ui.R.attr.treatmentButton))
                                 it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
                                 it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.5f).also { l ->
-                                    l.setMargins(0, 0, rh.dpToPx(-4), 0)
+                                    l.setMargins(rh.dpToPx(5), 0, rh.dpToPx(0), 0)
                                 }
                                 it.setCompoundDrawablesWithIntrinsicBounds(null, rh.gd(app.aaps.core.ui.R.drawable.ic_user_options), null, null)
+                                it.compoundDrawablePadding = rh.dpToPx(-8)
                                 it.text = event.title
                                 it.setOnClickListener {
                                     OKDialog.showConfirmation(context, rh.gs(R.string.run_question, event.title), { handler.post { automation.processEvent(event) } })
                                 }
-                                binding.buttonsLayout.userButtonsLayout.addView(it)
+                                it.id = View.generateViewId()
+                                customButtonIds.add(it.id)
+                                selectedLayout.addView(it)
                                 for (drawable in it.compoundDrawables) {
                                     drawable?.mutate()
                                     drawable?.colorFilter = PorterDuffColorFilter(rh.gac(context, app.aaps.core.ui.R.attr.userOptionColor), PorterDuff.Mode.SRC_IN)
                                 }
                             }
                         }
-            binding.buttonsLayout.userButtonsLayout.visibility = events.isNotEmpty().toVisibility()
+            if (selectedLayout == binding.buttonsLayout.userButtonsLayout) {
+                binding.buttonsLayout.userButtonsLayout.visibility = events.isNotEmpty().toVisibility()
+            } else {
+                binding.buttonsLayout.userButtonsLayout.visibility = View.GONE
+            }
         }
     }
 
