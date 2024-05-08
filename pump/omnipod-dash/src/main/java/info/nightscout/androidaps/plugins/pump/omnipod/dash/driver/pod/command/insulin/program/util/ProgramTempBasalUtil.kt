@@ -20,9 +20,8 @@ object ProgramTempBasalUtil {
     }
 
     fun mapTempBasalToTenthPulsesPerSlot(durationInSlots: Int, rateInUnitsPerHour: Double): ShortArray {
-        val tenthPulsesPerHour = (rateInUnitsPerHour * 200).roundToInt().toShort()
+        val tenthPulsesPerHalfHour = (rateInUnitsPerHour * 100).roundToInt().toShort()
         val tenthPulsesPerSlot = ShortArray(durationInSlots)
-        var remainingTenthPulse = false
         var i = 0
 
         while (durationInSlots > i) {
@@ -31,13 +30,7 @@ object ProgramTempBasalUtil {
                 // This will result in a 0.01 U/h temp basal for 0temps > 120 minutes
                 tenthPulsesPerSlot[i] = 1.toShort()
             } else {
-                tenthPulsesPerSlot[i] = (tenthPulsesPerHour / 2).toShort()
-                if (tenthPulsesPerHour % 2 == 1) { // Do extra alternate pulse
-                    if (remainingTenthPulse) {
-                        tenthPulsesPerSlot[i] = (tenthPulsesPerSlot[i] + 1).toShort()
-                    }
-                    remainingTenthPulse = !remainingTenthPulse
-                }
+                tenthPulsesPerSlot[i] = (tenthPulsesPerHalfHour).toShort()
             }
             i++
         }
