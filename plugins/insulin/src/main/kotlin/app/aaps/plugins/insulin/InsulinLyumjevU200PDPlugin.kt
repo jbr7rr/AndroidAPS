@@ -35,7 +35,7 @@ class InsulinLyumjevU200PDPlugin @Inject constructor(
 
     override fun commentStandardText(): String = rh.gs(R.string.lyumjev_U200_PD)
 
-    override val peak = 45
+    override val peak = 65 // JB: Use PD peak time
     override val isPD = true
 
     init {

@@ -1436,13 +1436,15 @@ class DetermineBasalSMB @Inject constructor(
 
         var futureActivity = 0.0
         val insulin = activePlugin.activeInsulin
-        val activityPredTime: Long = if (!insulin.isPD) { //MP if not using PD insulin models
-            // Get peak time if using a PK insulin model
-            insulin.peak.toLong() //MP act. pred. time for PK ins. models; target time = insulin peak time
-        } else { //MP if using PD insulin models
-            //MP activity prediction time for pharmacodynamic model; fixed to 65 min (approx. peak time of 1 U bolus)
-            65L
-        }
+        // val activityPredTime: Long = if (!insulin.isPD) { //MP if not using PD insulin models
+        //     // Get peak time if using a PK insulin model
+        //     insulin.peak.toLong() //MP act. pred. time for PK ins. models; target time = insulin peak time
+        // } else { //MP if using PD insulin models
+        //     //MP activity prediction time for pharmacodynamic model; fixed to 65 min (approx. peak time of 1 U bolus)
+        //     65L
+        // }
+        // JB: we have set PD peak times in insulin models, so we can use it directly here
+        val activityPredTime = insulin.peak.toLong()
         for (i in -4..0) { //MP: calculate 5-minute-insulin activity centering around peaktime
             val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(activityPredTime - i), profile)
             futureActivity += iob.activity

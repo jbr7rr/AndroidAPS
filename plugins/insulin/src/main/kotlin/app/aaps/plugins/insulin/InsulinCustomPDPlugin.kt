@@ -58,7 +58,9 @@ class InsulinCustomPDPlugin @Inject constructor(
         return rh.gs(R.string.custom_PD)
     }
 
-    override val peak: Int = 45
+    override val peak: Int
+        get () = a0.toInt()
+        
     override val isPD = true
 
     private val a0: Double
