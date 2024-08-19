@@ -18,6 +18,8 @@
     <string name="openapsama_autosens_min_summary">Default value: 0.7\nThe other side of the autosens safety limits, putting a cap on how low autosens can adjust basals, and how high it can adjust ISF and BG targets.</string>
     <string name="openapsama_autosens_max">Max autosens ratio</string>
     <string name="openapsama_autosens_min">Min autosens ratio</string>
+    <string name="openapsama_autosens_uam_factor">UAM detection factor</string>
+    <string name="openapsama_autosens_uam_factor_summary">Default value: 2.0\nThis is a factor for UAM detection. If the iob is higher than (factor * basal), it is considered as UAM.</string>
     <string name="openapsama_min_5m_carb_impact" translatable="false">min_5m_carbimpact</string>
     <string name="openapsama_min_5m_carb_impact_summary">Default value: 3.0 (AMA) or 8.0 (SMB). This is a setting for default carb absorption impact per 5 minutes. The default is an expected 3mg/dl/5min. This affects how fast COB are decayed, and how much carb absorption is assumed in calculating future predicted BG, when BG is falling more than expected, or not rising as much as expected.</string>
     <string name="absorption_cutoff_title">Meal max absorption time [h]</string>

@@ -250,7 +250,26 @@ class IobCobOref1Worker(
                     val currentBasal = profile.getBasal(bgTime)
                     // always exclude the first 45m after each carb entry
                     //if (iob.iob > currentBasal || uam ) {
-                    if (iob.iob > 2 * currentBasal || autosensData.uam || autosensData.mealStartCounter < 9) {
+                    val uamFactor = preferences.get(DoubleKey.AutosensUamFactor)
+                    if (iob.iob > uamFactor * currentBasal || autosensData.uam || autosensData.mealStartCounter < 9) {
+                        // Start meal counter for uam
+                        if (previous != null && (previous.type == "csf" || previous.type == "uam")) {
+                            autosensData.mealStartCounter = previous.mealStartCounter
+                        } else {
+                            autosensData.mealStartCounter = 0
+                            // Set previous 20 min to uam
+                            val initialIndex = previous?.let { autosensDataTable.indexOfKey(it.time) }
+                            var past = 0
+                            while (past < 4 && initialIndex != null) {
+                                val ad = autosensDataTable.valueAt(initialIndex - past)
+                                aapsLogger.debug(LTag.AUTOSENS) { "Setting past uam: $past, ad: $ad" }
+                                if (ad != null && ad.deviation > 0) {
+                                    ad.uam = true
+                                    ad.type = "uam"
+                                }
+                                past++
+                            }
+                        }
                         autosensData.mealStartCounter++
                         autosensData.uam = deviation > 0
                         autosensData.type = "uam"

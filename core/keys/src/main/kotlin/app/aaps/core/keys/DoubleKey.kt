@@ -34,6 +34,7 @@ enum class DoubleKey(
     AbsorptionMaxTime("absorption_maxtime", 6.0, 4.0, 10.0),
     AutosensMin("autosens_min", 0.7, 0.1, 1.0, defaultedBySM = true, hideParentScreenIfHidden = true),
     AutosensMax("autosens_max", 1.2, 0.5, 3.0, defaultedBySM = true),
+    AutosensUamFactor("autosens_uam_factor", 2.0, 1.0, 3.0, defaultedBySM = true),
     ApsAutoIsfMin("autoISF_min", 1.0, 0.3, 1.0, defaultedBySM = true),
     ApsAutoIsfMax("autoISF_max", 1.0, 1.0, 3.0, defaultedBySM = true),
     ApsAutoIsfBgAccelWeight("bgAccel_ISF_weight", 0.0, 0.0, 1.0, defaultedBySM = true),

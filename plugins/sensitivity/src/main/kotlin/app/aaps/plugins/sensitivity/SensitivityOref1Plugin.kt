@@ -250,6 +250,7 @@ class SensitivityOref1Plugin @Inject constructor(
                 title = rh.gs(app.aaps.core.ui.R.string.advanced_settings_title)
                 addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.AutosensMax, dialogMessage = R.string.openapsama_autosens_max_summary, title = R.string.openapsama_autosens_max))
                 addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.AutosensMin, dialogMessage = R.string.openapsama_autosens_min_summary, title = R.string.openapsama_autosens_min))
+                addPreference(AdaptiveDoublePreference(ctx = context, doubleKey = DoubleKey.AutosensUamFactor, dialogMessage = R.string.openapsama_autosens_uam_factor_summary, title = R.string.openapsama_autosens_uam_factor))
             })
         }
     }
