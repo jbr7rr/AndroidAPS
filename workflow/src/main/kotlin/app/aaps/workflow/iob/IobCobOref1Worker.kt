@@ -266,6 +266,8 @@ class IobCobOref1Worker(
                                 if (ad != null && ad.deviation > 0) {
                                     ad.uam = true
                                     ad.type = "uam"
+                                    ad.pastSensitivity += "u"
+                                    ad.validDeviation = false
                                 }
                                 past++
                             }
