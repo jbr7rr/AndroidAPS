@@ -6,6 +6,8 @@
     <string name="automation_missing_task_name">Voer een taaknaam in.</string>
     <string name="automation_missing_trigger">Voer minstens één trigger in.</string>
     <string name="automation_missing_action">Voer minstens één actie in.</string>
+    <string name="exportsettings_message">Instellingen Exporteren: %1$s</string>
+    <string name="export_settings_short">Tekst in behandelingen:</string>
     <string name="alarm_message">Alarm: %1$s</string>
     <string name="alarm_short">Alarm:</string>
     <string name="message_short">Boodsch:</string>
@@ -91,6 +93,8 @@
     <string name="triggerSensorAgeDesc">Sensor leeftijd %1$s %2$.1f uur</string>
     <string name="triggerCannulaAgeLabel">Canule leeftijd</string>
     <string name="triggerCannulaAgeDesc">Canule leeftijd %1$s %2$.1f uur</string>
+    <string name="triggerPodChangeLabel">Pod activering</string>
+    <string name="triggerPodChangeDesc">Pod geactiveerd</string>
     <string name="triggerInsulinAgeLabel">Insuline leeftijd</string>
     <string name="triggerInsulinAgeDesc">Insuline leeftijd %1$s %2$.1f uur</string>
     <string name="triggerPumpBatteryAgeLabel">Pomp batterij leeftijd</string>
@@ -116,8 +120,6 @@
     <string name="automation_event">Automation gebeurtenis</string>
     <string name="reorder_label">Sorteren</string>
     <string name="user_action">Gebruikersactie</string>
-    <string name="remove_automation">Verwijder automatisering</string>
-    <string name="sort_automation">Sorteer automatisering</string>
     <string name="remove_selected_items">Geselecteerde items verwijderen</string>
     <string name="count_selected">%1$d geselecteerd</string>
     <string name="system_automation">Systeem automatisering</string>

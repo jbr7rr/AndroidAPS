@@ -22,7 +22,7 @@ data class UserEntry(
     var action: Action,
     var source: Sources,
     var note: String,
-    var values: List<@JvmSuppressWildcards ValueWithUnit?>
+    var values: List<@JvmSuppressWildcards ValueWithUnit>
 ) : DBEntry, DBEntryWithTime {
 
     enum class Action {
@@ -98,6 +98,7 @@ data class UserEntry(
         DELETE_FUTURE_TREATMENTS,
         EXPORT_SETTINGS,
         IMPORT_SETTINGS,
+        SELECT_DIRECTORY,
         RESET_DATABASES,
         RESET_APS_RESULTS,
         CLEANUP_DATABASES,
@@ -136,6 +137,7 @@ data class UserEntry(
         Exercise,
         Question,
         Announcement,
+        SettingsExport,
         Actions,            //From Actions plugin
         Automation,         //From Automation plugin
         Autotune,           //From Autotune plugin

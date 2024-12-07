@@ -1,7 +1,5 @@
 package info.nightscout.androidaps.plugins.pump.omnipod.dash
 
-import android.os.Handler
-import android.os.HandlerThread
 import android.text.format.DateFormat
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.plugin.PluginType
@@ -115,8 +113,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
     @Volatile var bolusCanceled = false
     @Volatile var bolusDeliveryInProgress = false
 
-    private val handler = Handler(HandlerThread(this::class.simpleName + "Handler").also { it.start() }.looper)
-    private lateinit var statusChecker: Runnable
+    private var statusChecker: Runnable
     private var nextPodWarningCheck: Long = 0
     @Volatile var stopConnecting: CountDownLatch? = null
     private var disposables: CompositeDisposable = CompositeDisposable()
@@ -136,6 +133,8 @@ class OmnipodDashPumpPlugin @Inject constructor(
             .shortName(R.string.omnipod_dash_name_short)
             .preferencesId(R.xml.omnipod_dash_preferences)
             .description(R.string.omnipod_dash_pump_description)
+
+        private val pumpDescription = PumpDescription().fillFor(PumpType.OMNIPOD_DASH)
     }
 
     init {
@@ -151,7 +150,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
             } catch (e: Exception) {
                 aapsLogger.warn(LTag.PUMP, "Error on createFakeTBRWhenNoActivePod=$e")
             }
-            handler.postDelayed(statusChecker, STATUS_CHECK_INTERVAL_MS)
+            handler?.postDelayed(statusChecker, STATUS_CHECK_INTERVAL_MS)
         }
     }
 
@@ -473,7 +472,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
     override fun onStart() {
         super.onStart()
         podStateManager.onStart()
-        handler.postDelayed(statusChecker, STATUS_CHECK_INTERVAL_MS)
+        handler?.postDelayed(statusChecker, STATUS_CHECK_INTERVAL_MS)
         disposables += rxBus
             .toObservable(EventPreferenceChange::class.java)
             .observeOn(aapsSchedulers.main)
@@ -496,7 +495,6 @@ class OmnipodDashPumpPlugin @Inject constructor(
     override fun onStop() {
         super.onStop()
         disposables.clear()
-        handler.removeCallbacks(statusChecker)
     }
 
     private fun observeDeliverySuspended(): Completable = Completable.defer {
@@ -707,7 +705,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
             )
         }
 
-        for (tryNumber in 1..BOLUS_RETRIES) {
+        (1..BOLUS_RETRIES).forEach { tryNumber ->
             updateBolusProgressDialog(rh.gs(R.string.checking_delivery_status), 100)
 
             val cmd = if (bolusCanceled)
@@ -724,9 +722,9 @@ class OmnipodDashPumpPlugin @Inject constructor(
                 Thread.sleep(BOLUS_RETRY_INTERVAL_MS) // retry every 3 sec
             }
             if (errorGettingStatus != null) {
-                continue
+                return@forEach
             }
-            val bolusDeliveringActive = podStateManager.deliveryStatus?.bolusDeliveringActive() ?: false
+            val bolusDeliveringActive = podStateManager.deliveryStatus?.bolusDeliveringActive() == true
 
             if (bolusDeliveringActive) {
                 // delivery not complete yet
@@ -1002,7 +1000,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
             extended.put("Version", version)
             try {
                 extended.put("ActiveProfile", profileName)
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
             val tb = pumpSync.expectedPumpState().temporaryBasal
             tb?.run {
@@ -1029,7 +1027,7 @@ class OmnipodDashPumpPlugin @Inject constructor(
         return pumpJson
     }
 
-    override val pumpDescription: PumpDescription = PumpDescription().fillFor(PumpType.OMNIPOD_DASH)
+    override val pumpDescription: PumpDescription = Companion.pumpDescription
 
     override fun manufacturer(): ManufacturerType {
         return ManufacturerType.Insulet
@@ -1039,10 +1037,8 @@ class OmnipodDashPumpPlugin @Inject constructor(
         return pumpDescription.pumpType
     }
 
-    override fun serialNumber(): String {
-        return podStateManager.uniqueId?.toString()
-            ?: "n/a" // TODO i18n
-    }
+    override fun serialNumber(): String =
+        podStateManager.uniqueId?.toString() ?: Constants.PUMP_SERIAL_FOR_FAKE_TBR
 
     override fun shortStatus(veryShort: Boolean): String {
         if (!podStateManager.isActivationCompleted) {
@@ -1162,13 +1158,6 @@ class OmnipodDashPumpPlugin @Inject constructor(
             podStateManager.suspendAlertsEnabled = false
         }
         return ret
-    }
-
-    private fun observeDeliveryActive(): Completable = Completable.defer {
-        if (podStateManager.deliveryStatus != DeliveryStatus.SUSPENDED)
-            Completable.complete()
-        else
-            Completable.error(java.lang.IllegalStateException("Expected active delivery"))
     }
 
     private fun resumeDelivery(): PumpEnactResult {

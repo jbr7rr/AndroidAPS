@@ -37,7 +37,11 @@ class MedtrumActivity : MedtrumBaseActivity<ActivityMedtrumBinding>() {
         binding.apply {
             viewModel = ViewModelProvider(this@MedtrumActivity, viewModelFactory)[MedtrumViewModel::class.java]
             viewModel?.apply {
-                processIntent(intent)
+                if (savedInstanceState == null) {
+                    // Only process intent if it is not a configuration change
+                    // Otherwise the patchstep will be reset
+                    processIntent(intent)
+                }
 
                 patchStep.observe(this@MedtrumActivity) {
                     when (it) {
@@ -99,7 +103,7 @@ class MedtrumActivity : MedtrumBaseActivity<ActivityMedtrumBinding>() {
         })
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         processIntent(intent)
     }

@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
     id("kotlin-android")
-    id("kotlin-kapt")
     id("android-module-dependencies")
     id("test-module-dependencies")
     id("jacoco-module-dependencies")
@@ -22,9 +22,9 @@ dependencies {
     implementation(project(":shared:impl"))
 
 
-    api(Libs.Mockito.jupiter)
-    api(Libs.Mockito.kotlin)
-    api(Libs.JUnit.jupiterApi)
+    api(libs.org.mockito.junit.jupiter)
+    api(libs.org.mockito.kotlin)
+    api(libs.org.junit.jupiter.api)
 
-    kapt(Libs.Dagger.compiler)
+    ksp(libs.com.google.dagger.compiler)
 }

@@ -60,7 +60,11 @@ class Converters {
     fun fromSourceSensor(sourceSensor: GlucoseValue.SourceSensor?) = sourceSensor?.name
 
     @TypeConverter
-    fun toSourceSensor(sourceSensor: String?) = sourceSensor?.let { GlucoseValue.SourceSensor.valueOf(it) }
+    fun toSourceSensor(sourceSensor: String?): GlucoseValue.SourceSensor? {
+        return sourceSensor?.let {
+            GlucoseValue.SourceSensor.entries.firstOrNull { enumValue -> enumValue.name == it } ?: GlucoseValue.SourceSensor.UNKNOWN
+        }
+    }
 
     @TypeConverter
     fun fromTBRType(tbrType: TemporaryBasal.Type?) = tbrType?.name
@@ -127,28 +131,6 @@ class Converters {
             list.add(Block(jsonObject.getLong("duration"), jsonObject.getDouble("amount")))
         }
         return list
-    }
-
-    @TypeConverter
-    fun anyToString(value: Any?) = when (value) {
-        null       -> null
-        is String  -> "S$value"
-        is Int     -> "I$value"
-        is Long    -> "L$value"
-        is Boolean -> "B$value"
-        is Float   -> "F$value"
-        else       -> throw IllegalArgumentException("Type not supported")
-    }
-
-    @TypeConverter
-    fun stringToAny(value: String?): Any? = when {
-        value == null         -> null
-        value.startsWith("S") -> value.substring(1)
-        value.startsWith("I") -> value.substring(1).toInt()
-        value.startsWith("L") -> value.substring(1).toLong()
-        value.startsWith("B") -> value.substring(1).toBoolean()
-        value.startsWith("F") -> value.substring(1).toFloat()
-        else                  -> throw IllegalArgumentException("Type not supported")
     }
 
     @TypeConverter

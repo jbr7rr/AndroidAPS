@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
     id("kotlin-android")
-    id("kotlin-kapt")
     id("android-module-dependencies")
     id("all-open-dependencies")
     id("test-module-dependencies")
@@ -32,8 +32,8 @@ dependencies {
     testImplementation(project(":shared:tests"))
 
     // Phone checker
-    api(Libs.rootBeer)
+    api(libs.com.scottyab.rootbeer.lib)
 
-    kapt(Libs.Dagger.compiler)
-    kapt(Libs.Dagger.androidProcessor)
+    ksp(libs.com.google.dagger.compiler)
+    ksp(libs.com.google.dagger.android.processor)
 }

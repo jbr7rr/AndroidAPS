@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
     id("kotlin-android")
-    id("kotlin-kapt")
     id("android-module-dependencies")
     id("test-module-dependencies")
     id("jacoco-module-dependencies")
@@ -17,11 +17,11 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:utils"))
 
-    api(Libs.AndroidX.constraintLayout)
-    api(Libs.AndroidX.fragment)
-    api(Libs.AndroidX.navigationFragment)
-    api(Libs.Google.Android.material)
+    api(libs.androidx.constraintlayout)
+    api(libs.androidx.fragment)
+    api(libs.androidx.navigation.fragment)
+    api(libs.com.google.android.material)
 
-    kapt(Libs.Dagger.compiler)
-    kapt(Libs.Dagger.androidProcessor)
+    ksp(libs.com.google.dagger.compiler)
+    ksp(libs.com.google.dagger.android.processor)
 }

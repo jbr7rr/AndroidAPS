@@ -2,8 +2,9 @@ package app.aaps.core.data.model
 
 enum class SourceSensor(val text: String) {
     DEXCOM_NATIVE_UNKNOWN("AAPS-Dexcom"),
-    DEXCOM_G6_NATIVE("AAPS-DexcomG6"),
     DEXCOM_G5_NATIVE("AAPS-DexcomG5"),
+    DEXCOM_G6_NATIVE("AAPS-DexcomG6"),
+    DEXCOM_G7_NATIVE("AAPS-DexcomG7"),
     DEXCOM_G4_WIXEL("Bluetooth Wixel"),
     DEXCOM_G4_XBRIDGE("xBridge Wixel"),
     DEXCOM_G4_NATIVE("G4 Share Receiver"),
@@ -14,8 +15,8 @@ enum class SourceSensor(val text: String) {
     DEXCOM_G5_XDRIP("DexcomG5"),
     DEXCOM_G6_NATIVE_XDRIP("G6 Native"),
     DEXCOM_G5_NATIVE_XDRIP("G5 Native"),
-    DEXCOM_G6_G5_NATIVE_XDRIP("G6 Native / G5 Native"),
-    DEXCOM_G7_NATIVE_XDRIP("G7"),
+    DEXCOM_G7_NATIVE_XDRIP("G7 Native"),
+    DEXCOM_G7_XDRIP("G7"),
     LIBRE_1_OTHER("Other App"),
     LIBRE_1_NET("Network libre"),
     LIBRE_1_BLUE("BlueReader"),
@@ -28,6 +29,7 @@ enum class SourceSensor(val text: String) {
     LIBRE_1_ATOM("Bubble"),
     LIBRE_1_GLIMP("Glimp"),
     LIBRE_2_NATIVE("Libre2"),
+    LIBRE_3("Libre3"),
     POCTECH_NATIVE("Poctech"),
     GLUNOVO_NATIVE("Glunovo"),
     INTELLIGO_NATIVE("Intelligo"),
@@ -46,7 +48,7 @@ enum class SourceSensor(val text: String) {
     ZT_PREDICTION("ZTPrediction"),
     ;
 
-    fun isLibre(): Boolean = arrayListOf(
+    fun isLibre1(): Boolean = arrayListOf(
         LIBRE_1_OTHER,
         LIBRE_1_NET,
         LIBRE_1_BLUE,
@@ -58,7 +60,6 @@ enum class SourceSensor(val text: String) {
         LIBRE_1_BUBBLE,
         LIBRE_1_ATOM,
         LIBRE_1_GLIMP,
-        LIBRE_2_NATIVE,
         UNKNOWN // Better check for FLAT on unknown sources too
     ).any { it.text == text }
 

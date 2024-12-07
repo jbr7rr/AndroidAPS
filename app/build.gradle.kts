@@ -3,9 +3,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 plugins {
+    alias(libs.plugins.ksp)
     id("com.android.application")
     id("kotlin-android")
-    id("kotlin-kapt")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
     id("android-app-dependencies")
@@ -166,8 +166,6 @@ allprojects {
 }
 
 dependencies {
-    wearApp(project(":wear"))
-
     // in order to use internet"s versions you"d need to enable Jetifier again
     // https://github.com/nightscout/graphview.git
     // https://github.com/nightscout/iconify.git
@@ -217,20 +215,20 @@ dependencies {
 
     testImplementation(project(":shared:tests"))
     androidTestImplementation(project(":shared:tests"))
-    androidTestImplementation(Libs.AndroidX.Test.rules)
-    androidTestImplementation(Libs.jsonAssert)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.org.skyscreamer.jsonassert)
 
 
-    kaptAndroidTest(Libs.Dagger.androidProcessor)
+    kspAndroidTest(libs.com.google.dagger.android.processor)
 
     /* Dagger2 - We are going to use dagger.android which includes
      * support for Activity and fragment injection so we need to include
      * the following dependencies */
-    kapt(Libs.Dagger.androidProcessor)
-    kapt(Libs.Dagger.compiler)
+    ksp(libs.com.google.dagger.android.processor)
+    ksp(libs.com.google.dagger.compiler)
 
     // MainApp
-    api(Libs.Rx.rxDogTag)
+    api(libs.com.uber.rxdogtag2.rxdogtag)
 }
 
 println("-------------------")

@@ -5,6 +5,9 @@ interface Intents {
 
     companion object {
 
+        // AAPS -> AAPS
+        const val AAPS_CLIENT_WEAR_DATA = "app.aaps.aapsclient.weardata"
+
         // AAPS -> Xdrip
         const val ACTION_NEW_TREATMENT = "info.nightscout.client.NEW_TREATMENT"
         const val ACTION_NEW_PROFILE = "info.nightscout.client.NEW_PROFILE"
@@ -28,6 +31,7 @@ interface Intents {
         const val EXTRA_SENSOR_STARTED_AT = "com.eveningoutpost.dexdrip.Extras.SensorStartedAt"
         const val EXTRA_TIMESTAMP = "com.eveningoutpost.dexdrip.Extras.Time"
         const val EXTRA_RAW = "com.eveningoutpost.dexdrip.Extras.Raw"
+        const val XDRIP_DATA_SOURCE = "com.eveningoutpost.dexdrip.Extras.SourceInfo"
         const val XDRIP_DATA_SOURCE_DESCRIPTION = "com.eveningoutpost.dexdrip.Extras.SourceDesc"
         const val ACTION_NEW_BG_ESTIMATE_NO_DATA = "com.eveningoutpost.dexdrip.BgEstimateNoData"
         const val NS_EMULATOR = "com.eveningoutpost.dexdrip.NS_EMULATOR"

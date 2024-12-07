@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
     id("kotlin-android")
-    id("kotlin-kapt")
     id("android-module-dependencies")
     id("test-module-dependencies")
     id("jacoco-module-dependencies")
@@ -21,11 +21,11 @@ dependencies {
     implementation(project(":core:validators"))
     implementation(project(":pump:dana"))
 
-    api(Libs.AndroidX.media3)
+    api(libs.androidx.media3.common)
 
     testImplementation(project(":shared:tests"))
     testImplementation(project(":core:objects"))
 
-    kapt(Libs.Dagger.compiler)
-    kapt(Libs.Dagger.androidProcessor)
+    ksp(libs.com.google.dagger.compiler)
+    ksp(libs.com.google.dagger.android.processor)
 }

@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
     id("kotlin-android")
-    id("kotlin-kapt")
     id("kotlin-parcelize")
     id("android-module-dependencies")
     id("all-open-dependencies")
@@ -23,18 +23,18 @@ dependencies {
     testImplementation(project(":shared:tests"))
     testImplementation(project(":shared:impl"))
 
-    api(Libs.Kotlin.stdlibJdk8)
-    api(Libs.Google.Android.material)
-    api(Libs.Google.guava)
-    api(Libs.AndroidX.activity)
-    api(Libs.AndroidX.appCompat)
+    api(libs.kotlin.stdlib.jdk8)
+    api(libs.com.google.android.material)
+    api(libs.com.google.guava)
+    api(libs.androidx.activity)
+    api(libs.androidx.appcompat)
 
-    api(Libs.Dagger.android)
-    api(Libs.Dagger.androidSupport)
+    api(libs.com.google.dagger.android)
+    api(libs.com.google.dagger.android.support)
 
     //WorkManager
-    api(Libs.AndroidX.Work.runtimeKtx)  // DataWorkerStorage
+    api(libs.androidx.work.runtime)  // DataWorkerStorage
 
-    kapt(Libs.Dagger.compiler)
-    kapt(Libs.Dagger.androidProcessor)
+    ksp(libs.com.google.dagger.compiler)
+    ksp(libs.com.google.dagger.android.processor)
 }

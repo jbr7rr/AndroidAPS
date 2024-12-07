@@ -15,7 +15,6 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventWearDataToMobile
 import app.aaps.core.interfaces.rx.events.EventWearToMobile
 import app.aaps.core.interfaces.rx.weardata.EventData
-import app.aaps.core.interfaces.rx.weardata.EventData.ActionResendData
 import app.aaps.core.interfaces.sharedPreferences.SP
 import app.aaps.shared.impl.weardata.ZipWatchfaceFormat
 import app.aaps.wear.R
@@ -27,8 +26,6 @@ import app.aaps.wear.wearStepCount.StepCountListener
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
-import com.google.android.gms.wearable.DataEvent
-import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMap
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Node
@@ -94,11 +91,11 @@ class DataLayerListenerServiceWear : WearableListenerService() {
             .observeOn(aapsSchedulers.main)
             .subscribe { event: EventWearPreferenceChange ->
                 if (event.changedKey == getString(R.string.key_heart_rate_sampling)) updateHeartRateListener()
-                if (event.changedKey == getString(R.string.key_steps_sampling)) updatestepsCountListener()
+                if (event.changedKey == getString(R.string.key_steps_sampling)) updateStepsCountListener()
             }
 
         updateHeartRateListener()
-        updatestepsCountListener()
+        updateStepsCountListener()
     }
 
     override fun onCapabilityChanged(p0: CapabilityInfo) {
@@ -113,27 +110,6 @@ class DataLayerListenerServiceWear : WearableListenerService() {
         disposable.clear()
     }
 
-    override fun onDataChanged(dataEvents: DataEventBuffer) {
-        //aapsLogger.debug(LTag.WEAR, "onDataChanged")
-
-        dataEvents.forEach { event ->
-            if (event.type == DataEvent.TYPE_CHANGED) {
-                val path = event.dataItem.uri.path
-
-                aapsLogger.debug(LTag.WEAR, "onDataChanged: Path: $path, EventDataItem=${event.dataItem}")
-                try {
-                    @Suppress("ControlFlowWithEmptyBody", "UNUSED_EXPRESSION")
-                    when (path) {
-                    }
-                } catch (exception: Exception) {
-                    aapsLogger.error(LTag.WEAR, "onDataChanged failed", exception)
-                }
-            }
-        }
-        super.onDataChanged(dataEvents)
-    }
-
-    @ExperimentalSerializationApi
     override fun onMessageReceived(messageEvent: MessageEvent) {
         super.onMessageReceived(messageEvent)
 
@@ -190,7 +166,6 @@ class DataLayerListenerServiceWear : WearableListenerService() {
         startForeground(FOREGROUND_NOTIF_ID, notification)
     }
 
-
     private fun updateHeartRateListener() {
         if (sp.getBoolean(R.string.key_heart_rate_sampling, false)) {
             if (heartRateListener == null) {
@@ -206,7 +181,7 @@ class DataLayerListenerServiceWear : WearableListenerService() {
         }
     }
 
-    private fun updatestepsCountListener() {
+    private fun updateStepsCountListener() {
         if (sp.getBoolean(R.string.key_steps_sampling, false)) {
             if (stepCountListener == null) {
                 stepCountListener = StepCountListener(

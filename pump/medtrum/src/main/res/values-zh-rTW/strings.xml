@@ -91,7 +91,7 @@
     <string name="activating_complete">新貼片已啟動。剩餘 %.2f 單位。</string>
     <string name="can_export_settings">您可以匯出設定以便稍後恢復此貼片會話。</string>
     <string name="press_OK_to_return">按 <b>確定</b> 返回主畫面。</string>
-    <string name="deactivate_sure">您確定要停用當前貼片嗎？</string>
+    <string name="deactivate_sure">您確定要停用目前貼片嗎？</string>
     <string name="cancel_sure">您確定要取消啟動嗎？</string>
     <string name="medtrum_deactivate_pump_confirm">您確定嗎？此操作無法撤銷！！</string>
     <string name="press_next_or_cancel">按 <b>下一步</b> 停用或按 <b>取消</b> 返回主畫面。</string>
@@ -126,7 +126,15 @@
     <string name="scan_on_connection_error_summary">警告：只有在連線有問題時才啟用。如果啟用，此驅動程式會在嘗試重新連線到幫浦之前再次掃描幫浦。請確保位置權限設置為“始終允許”。</string>
     <!-- treatment state-->
     <string name="getting_pump_status">獲取幫浦狀態</string>
+    <string name="syncing_records">同步記錄中，還剩 %1$d</string>
     <string name="getting_bolus_status">獲取胰島素劑量狀態</string>
     <string name="getting_temp_basal_status">獲取臨時基礎率狀態</string>
     <string name="setting_pump_settings">設定使用者選項</string>
+    <!-- bolus-->
+    <string name="bolus_error_reason_user">注射已由用戶取消</string>
+    <string name="bolus_error_reason_not_connected">幫浦未連線</string>
+    <string name="bolus_error_reason_already_in_progress">注射已在進行中</string>
+    <string name="bolus_error_reason_unable_to_send_command">無法發送注射指令</string>
+    <string name="bolus_error_reason_communication_lost">獲取注射狀態逾時</string>
+    <string name="bolus_error_reason_pump_error">幫浦錯誤</string>
 </resources>

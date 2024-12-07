@@ -39,7 +39,6 @@
     <string name="smscommunicator_stops_ns_with_code">SMS Uzak Hizmet desteğini devre dışı bırakmak için %1$s koduyla yanıt verin.\n\nBu hizmeti yalnızca AAPS yüklü ana telefondan yeniden etkinleştirebileceğinizi unutmayın.</string>
     <string name="smscommunicator_stopped_sms">SMS Uzak Hizmeti durduruldu. Yeniden etkinleştirmek için ana telefondaki AAPS\'i kullanın.</string>
     <string name="smscommunicator_calibration_reply_with_code">Kalibrasyon için %1$.2f gönderilecek, kod ile cevap ver %2$s</string>
-    <string name="smscommunicator_bolus_failed">Bolus başarısız</string>
     <string name="smscommunicator_remote_bolus_min_distance_summary">Bir sms bolusu ile bir sonraki bolus arasında geçmesi gereken minimum süre (dk)</string>
     <string name="smscommunicator_remote_bolus_min_distance">Bir sms bolus gönderimi ile bir sonraki bolus arasında en az kaç dakika geçsin?</string>
     <string name="smscommunicator_remote_bolus_min_distance_caveat">Güvenliğiniz için en az 2 telefon numarası eklemeniz gerekir.</string>
@@ -191,7 +190,20 @@
     <string name="statuslights_bat_warning">Pompa pil seviye uyarısı [%]</string>
     <string name="statuslights_bat_critical">Kritik pompa pili seviyesi [%]</string>
     <string name="statuslights_copy_ns">Ayarları NS\'den kopyala</string>
+    <string name="graph_scale_6h">6s</string>
+    <string name="graph_scale_12h">12s</string>
+    <string name="graph_scale_18h">18s</string>
+    <string name="graph_scale_24h">24s</string>
+    <string name="graph_long_scale_6h">6 saat</string>
+    <string name="graph_long_scale_12h">12 saat</string>
+    <string name="graph_long_scale_18h">18 saat</string>
+    <string name="graph_long_scale_24h">24 saat</string>
     <string name="a11y_graph">grafik</string>
+    <string name="a11y_graph_scale">grafik ölçeğini seç</string>
+    <string name="a11y_graph_scale_6h">6 saatlik ölçek</string>
+    <string name="a11y_graph_scale_12h">12 saatlik ölçek</string>
+    <string name="a11y_graph_scale_18h">18 saatlik ölçek</string>
+    <string name="a11y_graph_scale_24h">24 saatlik ölçek</string>
     <string name="a11y_insulin_label">insülin</string>
     <string name="chart_menu">Grafik menüsü</string>
     <string name="a11y_bg_quality">kan şekeri kalitesi</string>
@@ -205,8 +217,6 @@
     <string name="overview_buttons_selection">Butonlar</string>
     <string name="show_calibration_button_summary">xDrip+\'a bir kalibrasyon gönderir veya BYODA kalibrasyon iletişim kutusunu açar</string>
     <string name="show_cgm_button_summary">xDrip+ veya BYODA\'yı açar, geri dönme düğmesi AAPS\'ye döndürür</string>
-    <string name="dexcom_app_not_installed">Dexcom uygulaması yüklü değil.</string>
-    <string name="dexcom_app_not_detected">Lütfen Dexcom uygulamanızı desteklenen sürüme güncelleyin</string>
     <string name="error_starting_cgm">CGM uygulaması başlatılamadı. Yüklendiğinden emin olun.</string>
     <string name="not_available_full">Mevcut değil</string>
     <string name="constraints_violation">Kısıtlamalar ihlali</string>
@@ -228,12 +238,6 @@
     <string name="thirdcarbsincrement">Üçüncü karbonhidrat artışı</string>
     <string name="cgm">CGM</string>
     <string name="default_temptargets">Varsayılan Geçici hedefler</string>
-    <string name="eatingsoon_duration">yakında ye süresi</string>
-    <string name="eatingsoon_target">yakında ye hedefi</string>
-    <string name="activity_duration">aktivite süresi</string>
-    <string name="activity_target">aktivite hedefi</string>
-    <string name="hypo_duration">hipo süresi</string>
-    <string name="hypo_target">hipo hedefi</string>
     <string name="fill_bolus_title">Standart insülin miktarlarını Hazırla/Doldur</string>
     <string name="button1">Buton 1</string>
     <string name="button2">Buton 2</string>
@@ -290,7 +294,6 @@
     <string name="skin">Görünüm</string>
     <string name="cannula_usage">kullanım:</string>
     <!--    Iob-->
-    <string name="send_logfiles">Bu günün kayıt dosyalarını geliştiricilere gönderin. Beklenmedik bir durum.</string>
     <!--    PersistentNotification-->
     <string name="description_persistent_notification">Döngü\'ün ne yaptığını kısa bir genel bakışla devam eden bir bildirimi gösterir</string>
     <string name="old_data">ESKİ VERİ</string>

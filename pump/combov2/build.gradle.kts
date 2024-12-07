@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
     id("kotlin-android")
-    id("kotlin-kapt")
     id("android-module-dependencies")
     id("test-module-dependencies")
     id("jacoco-module-dependencies")
@@ -9,9 +9,6 @@ plugins {
 
 android {
     namespace = "info.nightscout.pump.combov2"
-    buildFeatures {
-        dataBinding = true
-    }
 }
 
 dependencies {
@@ -23,8 +20,8 @@ dependencies {
     implementation(project(":core:utils"))
     implementation(project(":pump:combov2:comboctl"))
 
-    api(Libs.AndroidX.lifecycleViewmodel)
-    api(Libs.KotlinX.datetime)
+    api(libs.androidx.lifecycle.viewmodel)
+    api(libs.kotlinx.datetime)
 
     // This is necessary to avoid errors like these which otherwise come up often at runtime:
     // "WARNING: Failed to transform class kotlinx/datetime/TimeZone$Companion
@@ -40,8 +37,9 @@ dependencies {
     //
     // Source: https://github.com/mockk/mockk/issues/685#issuecomment-907076353:
     // TODO: Revisit this when upgrading kotlinx-datetime
-    runtimeOnly(Libs.KotlinX.serializationCore)
+    api(platform(libs.kotlinx.serialization.bom))
+    runtimeOnly(libs.kotlinx.serialization.core)
 
-    kapt(Libs.Dagger.compiler)
-    kapt(Libs.Dagger.androidProcessor)
+    ksp(libs.com.google.dagger.compiler)
+    ksp(libs.com.google.dagger.android.processor)
 }
