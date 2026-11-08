@@ -60,6 +60,14 @@
     <string name="pref_summary_aps_use_smb_after_carbs">Allow SMB for a period after carbs are entered.</string>
     <string name="pref_title_aps_use_uam">Enable UAM</string>
     <string name="pref_summary_aps_use_uam">Enable Unannounced Meals detection and treatment.</string>
+
+    <!-- Wave (Wavez fork). Stored names match 3.4 so an old backup keeps its values. -->
+    <string name="pref_title_aps_wave_enable">Enable Wave mode</string>
+    <string name="pref_summary_aps_wave_enable">Glucose watchdog that can override OpenAPS SMB inside the configured time window when glucose is not behaving as predicted.</string>
+    <string name="pref_title_aps_wave_use_smb_cap">Use SMB cap</string>
+    <string name="pref_summary_aps_wave_use_smb_cap">Use a fixed SMB cap instead of minutes of basal as the Wave SMB size limiter.</string>
+    <string name="pref_title_aps_wave_use_adjusted_sens">Use adjusted sensitivity</string>
+    <string name="pref_summary_aps_wave_use_adjusted_sens">Experimental: use the Autosens/DynamicISF adjusted sensitivity for Wave mode.</string>
     <string name="pref_title_aps_sensitivity_raises_target">Sensitivity raises target</string>
     <string name="pref_summary_aps_sensitivity_raises_target">When sensitivity is detected, raise the target glucose.</string>
     <string name="pref_title_aps_resistance_lowers_target">Resistance lowers target</string>
@@ -221,6 +229,12 @@
     <string name="pref_title_smb_max_minutes">Max minutes of basal to limit SMB</string>
     <string name="pref_title_uam_smb_max_minutes">UAM max minutes of basal to limit SMB</string>
     <string name="uam_smb_max_minutes">UAM SMB max minutes</string>
+    <string name="pref_title_aps_wave_start_time">Wave start time (inclusive) [h]</string>
+    <string name="pref_summary_aps_wave_start_time">Hour of the day from which Wave mode is enabled.</string>
+    <string name="pref_title_aps_wave_end_time">Wave end time (inclusive) [h]</string>
+    <string name="pref_summary_aps_wave_end_time">Hour of the day until which Wave mode is enabled.</string>
+    <string name="pref_title_aps_wave_max_minutes">Wave max minutes of basal to limit SMB</string>
+    <string name="pref_summary_aps_wave_max_minutes">Maximum minutes of basal used to limit the Wave SMB when the fixed SMB cap is off.</string>
     <string name="pref_title_carbs_request_threshold">Carbs required threshold</string>
     <string name="carbs_req_threshold_summary">Minimum grams of carbs to display a carbs suggestion alert. Carbs suggestions below this number will not trigger a notification.</string>
     <string name="pref_title_half_basal_exercise_target">Half basal exercise target</string>
@@ -370,6 +384,8 @@
     <string name="openapsma_max_basal_summary">This value is called max basal in OpenAPS context</string>
     <string name="pref_title_smb_max_iob">Max IOB for SMB</string>
     <string name="openapssmb_max_iob_summary">This value is called Max IOB in OpenAPS context\nOpenAPS will not add more insulin if current IOB is greater than this value. Value is affected by patient type too.</string>
+    <string name="pref_title_aps_smb_factor">SMB size factor</string>
+    <string name="pref_summary_aps_smb_factor">Scales the size of every SMB. 1.0 keeps the full calculated size; 0.5 delivers half. Wavez fork setting.</string>
     <string name="pref_title_ama_max_iob">Max IOB for AMA</string>
     <string name="openapsma_max_iob_summary">This value is called Max IOB in OpenAPS context\nThis is maximal insulin in [U] APS can deliver at once. Value is affected by patient type too.</string>
     <string name="pref_title_max_daily_multiplier">Max daily safety multiplier</string>
@@ -381,6 +397,12 @@
     <string name="pref_title_ama_min_5m_carbs_impact">AMA min 5m carbs impact</string>
     <string name="pref_title_smb_min_5m_carbs_impact">SMB min 5m carbs impact</string>
     <string name="openapsama_min_5m_carb_impact_summary">Default value: 3.0 (AMA) or 8.0 (SMB). This is a setting for default carb absorption impact per 5 minutes. The default is an expected 3mg/dl/5min. This affects how fast COB are decayed, and how much carb absorption is assumed in calculating future predicted BG, when BG is falling more than expected, or not rising as much as expected.</string>
+    <string name="pref_title_autosens_uam_factor">UAM detection factor</string>
+    <string name="pref_summary_autosens_uam_factor">Default value: 2.0\nUAM is detected when IOB is higher than this factor multiplied by the current basal rate.</string>
+    <string name="pref_title_aps_wave_ins_req_pct">Wave insulin requirement [%]</string>
+    <string name="pref_summary_aps_wave_ins_req_pct">Reduces the calculated insulin requirement to this percentage for delivery. Example: 1 U required at 50% delivers at most 0.5 U unless another cap applies.</string>
+    <string name="pref_title_aps_wave_smb_cap">Wave SMB cap [U]</string>
+    <string name="pref_summary_aps_wave_smb_cap">Maximum SMB size Wave mode may deliver when the fixed cap is enabled.</string>
     <string name="pref_title_absorption_cutoff">Absorption cutoff</string>
     <string name="absorption_cutoff_summary">Time at which any meal is considered absorbed. Remaining carbs will be cut off.</string>
     <string name="pref_title_absorption_maxtime">Absorption max time</string>
