@@ -21,6 +21,7 @@ import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.NonPreferenceKey
 import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.core.keys.interfaces.SyncDirection
 import app.aaps.implementation.maintenance.migration.PreferenceMigrations
 import app.aaps.implementation.sharedPreferences.PreferenceKeyResolverFactory
 import com.google.common.truth.Truth.assertThat
@@ -179,6 +180,71 @@ class PreferenceImportApplierTest {
 
         assertThat(outcome.changed).isEqualTo(1)
         assertThat(store.getBoolean(key.key, true)).isFalse()
+    }
+
+    // ---- 3.4 Wavez settings ----
+
+    /**
+     * The Wavez fork kept the 3.4 stored names on purpose: a settings file from 3.4.2.2 must carry
+     * its Wave, UAM and SMB-factor values into 4.0 without a migration. These literals are the old
+     * names, so a rename on the key enum fails here rather than silently losing the value.
+     */
+    @Test fun `3_4 Wave UAM and SMB factor keys import with their values`() = runTest {
+        val outcome = sut().apply(
+            prefs(
+                "enable_wave_mode" to "true",
+                "use_wave_smbcap" to "true",
+                "wave_use_adjusted_sens" to "true",
+                "wavesmbmaxminutes" to "120",
+                "wave_start" to "8",
+                "wave_end" to "23",
+                "waveinsulinReqPCT" to "80.0",
+                "wave_smbcap" to "1.5",
+                "autosens_uam_factor" to "2.5",
+                "smb_factor" to "0.7"
+            ),
+            keepPumpSettings = false
+        )
+
+        assertThat(outcome.changed).isEqualTo(10)
+        assertThat(store.getBoolean("enable_wave_mode", false)).isTrue()
+        assertThat(store.getBoolean("use_wave_smbcap", false)).isTrue()
+        assertThat(store.getBoolean("wave_use_adjusted_sens", false)).isTrue()
+        assertThat(store.getInt("wavesmbmaxminutes", 0)).isEqualTo(120)
+        assertThat(store.getInt("wave_start", 0)).isEqualTo(8)
+        assertThat(store.getInt("wave_end", 0)).isEqualTo(23)
+        assertThat(store.getDouble("waveinsulinReqPCT", 0.0)).isEqualTo(80.0)
+        assertThat(store.getDouble("wave_smbcap", 0.0)).isEqualTo(1.5)
+        assertThat(store.getDouble("autosens_uam_factor", 0.0)).isEqualTo(2.5)
+        assertThat(store.getDouble("smb_factor", 0.0)).isEqualTo(0.7)
+    }
+
+    /** The defaults a 3.4 install without these keys would fall back to. */
+    @Test fun `the Wavez keys keep their 3_4 defaults`() {
+        assertThat(BooleanKey.ApsWaveEnable.defaultValue).isFalse()
+        assertThat(BooleanKey.ApsWaveUseSMBCap.defaultValue).isFalse()
+        assertThat(BooleanKey.ApsWaveUseAdjustedSens.defaultValue).isFalse()
+        assertThat(IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb.defaultValue).isEqualTo(60)
+        assertThat(IntKey.ApsWaveStartTime.defaultValue).isEqualTo(11)
+        assertThat(IntKey.ApsWaveEndTime.defaultValue).isEqualTo(21)
+        assertThat(DoubleKey.ApsWaveInsReqPct.defaultValue).isEqualTo(65.0)
+        assertThat(DoubleKey.ApsWaveSmbCap.defaultValue).isEqualTo(0.5)
+        assertThat(DoubleKey.AutosensUamFactor.defaultValue).isEqualTo(2.0)
+        assertThat(DoubleKey.ApsSmbFactor.defaultValue).isEqualTo(1.0)
+    }
+
+    /** A client may display these values but must not push them back to the master. */
+    @Test fun `the Wavez keys are MasterOnly`() {
+        assertThat(BooleanKey.ApsWaveEnable.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(BooleanKey.ApsWaveUseSMBCap.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(BooleanKey.ApsWaveUseAdjustedSens.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(IntKey.ApsWaveStartTime.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(IntKey.ApsWaveEndTime.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(DoubleKey.ApsWaveInsReqPct.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(DoubleKey.ApsWaveSmbCap.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(DoubleKey.AutosensUamFactor.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
+        assertThat(DoubleKey.ApsSmbFactor.sync!!.direction).isEqualTo(SyncDirection.MasterOnly)
     }
 
     // ---- the checkbox ----

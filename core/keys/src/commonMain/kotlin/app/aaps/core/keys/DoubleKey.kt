@@ -99,6 +99,18 @@ enum class DoubleKey(
         unitType = UnitType.INSULIN,
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)
     ),
+    // Wavez fork. Scales every SMB, not just Wave. 1.0 = the upstream full-size behaviour.
+    ApsSmbFactor(
+        key = "smb_factor",
+        defaultValue = 1.0,
+        min = 0.5,
+        max = 1.0,
+        title = KeysStrings.pref_title_aps_smb_factor,
+        summary = KeysStrings.pref_summary_aps_smb_factor,
+        defaultedBySM = true,
+        unitType = UnitType.DOUBLE_2,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
     ApsAmaMaxIob(
         key = "openapsma_max_iob",
         defaultValue = 1.5,
@@ -165,6 +177,45 @@ enum class DoubleKey(
         defaultedBySM = true,
         unitType = UnitType.DOUBLE,
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)
+    ),
+
+    // Wavez fork: UAM detection threshold, kept from 3.4 (stored string and default).
+    AutosensUamFactor(
+        key = "autosens_uam_factor",
+        defaultValue = 2.0,
+        min = 1.0,
+        max = 3.0,
+        title = KeysStrings.pref_title_autosens_uam_factor,
+        summary = KeysStrings.pref_summary_autosens_uam_factor,
+        defaultedBySM = true,
+        unitType = UnitType.DOUBLE_2,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+
+    // Wave (Wavez fork). Old storage strings and defaults, MasterOnly sync.
+    ApsWaveInsReqPct(
+        key = "waveinsulinReqPCT",
+        defaultValue = 65.0,
+        min = 30.0,
+        max = 100.0,
+        title = KeysStrings.pref_title_aps_wave_ins_req_pct,
+        summary = KeysStrings.pref_summary_aps_wave_ins_req_pct,
+        defaultedBySM = true,
+        dependency = BooleanKey.ApsWaveEnable,
+        unitType = UnitType.PERCENT,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+    ApsWaveSmbCap(
+        key = "wave_smbcap",
+        defaultValue = 0.5,
+        min = 0.0,
+        max = 5.0,
+        title = KeysStrings.pref_title_aps_wave_smb_cap,
+        summary = KeysStrings.pref_summary_aps_wave_smb_cap,
+        defaultedBySM = true,
+        dependency = BooleanKey.ApsWaveUseSMBCap,
+        unitType = UnitType.INSULIN,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
     ),
     AbsorptionCutOff(
         key = "absorption_cutoff",

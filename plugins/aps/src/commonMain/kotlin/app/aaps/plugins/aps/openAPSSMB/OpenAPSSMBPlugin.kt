@@ -562,6 +562,7 @@ open class OpenAPSSMBPlugin(
             BooleanKey.ApsSensitivityRaisesTarget,
             BooleanKey.ApsResistanceLowersTarget,
             BooleanKey.ApsUseSmb,
+            DoubleKey.ApsSmbFactor,
             BooleanKey.ApsUseSmbWithHighTt,
             BooleanKey.ApsUseSmbAlways,
             BooleanKey.ApsUseSmbWithCob,
@@ -572,6 +573,20 @@ open class OpenAPSSMBPlugin(
             IntKey.ApsUamMaxMinutesOfBasalToLimitSmb,
             BooleanKey.ApsUseUam,
             IntKey.ApsCarbsRequestThreshold,
+            PreferenceSubScreenDef(
+                key = "wave_settings",
+                title = ApsStrings.wave_mode_settings_title,
+                items = listOf(
+                    BooleanKey.ApsWaveEnable,
+                    IntKey.ApsWaveStartTime,
+                    IntKey.ApsWaveEndTime,
+                    BooleanKey.ApsWaveUseSMBCap,
+                    DoubleKey.ApsWaveSmbCap,
+                    IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb,
+                    DoubleKey.ApsWaveInsReqPct,
+                    BooleanKey.ApsWaveUseAdjustedSens
+                )
+            ),
             PreferenceSubScreenDef(
                 key = "absorption_smb_advanced",
                 title = CoreUiStrings.advanced_settings_title,

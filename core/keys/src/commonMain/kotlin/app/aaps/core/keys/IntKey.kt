@@ -337,6 +337,44 @@ enum class IntKey(
         unitType = UnitType.MIN,
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)
     ),
+
+    // Wave (Wavez fork). Old storage strings and defaults, MasterOnly sync.
+    ApsWaveMaxMinutesOfBasalToLimitSmb(
+        key = "wavesmbmaxminutes",
+        defaultValue = 60,
+        min = 15,
+        max = 240,
+        title = KeysStrings.pref_title_aps_wave_max_minutes,
+        summary = KeysStrings.pref_summary_aps_wave_max_minutes,
+        defaultedBySM = true,
+        dependency = BooleanKey.ApsWaveEnable,
+        // The old 3.4 negative dependency: minutes-of-basal only when the fixed SMB cap is off.
+        visibility = ElementVisibility { !it.preferences.get(BooleanKey.ApsWaveUseSMBCap) },
+        unitType = UnitType.MIN,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+    ApsWaveStartTime(
+        key = "wave_start",
+        defaultValue = 11,
+        min = 0,
+        max = 23,
+        title = KeysStrings.pref_title_aps_wave_start_time,
+        summary = KeysStrings.pref_summary_aps_wave_start_time,
+        defaultedBySM = true,
+        dependency = BooleanKey.ApsWaveEnable,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+    ApsWaveEndTime(
+        key = "wave_end",
+        defaultValue = 21,
+        min = 0,
+        max = 23,
+        title = KeysStrings.pref_title_aps_wave_end_time,
+        summary = KeysStrings.pref_summary_aps_wave_end_time,
+        defaultedBySM = true,
+        dependency = BooleanKey.ApsWaveEnable,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
     ApsCarbsRequestThreshold(
         key = "carbsReqThreshold",
         defaultValue = 1,

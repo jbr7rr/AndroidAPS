@@ -437,13 +437,15 @@ class PrepareGraphDataRunner(
                     autosensData.type = "csf"
                 } else {
                     val currentBasal = profile.getBasal(bgTime)
-                    if (iob.iob > 2 * currentBasal || autosensData.uam || autosensData.mealStartCounter < 9) {
-                        autosensData.mealStartCounter++
-                        autosensData.uam = deviation > 0
-                        autosensData.type = "uam"
-                    } else {
-                        autosensData.type = "non-meal"
-                    }
+                    UamClassifier.classify(
+                        current = autosensData,
+                        previous = previous,
+                        table = autosensDataTable,
+                        iob = iob.iob,
+                        currentBasal = currentBasal,
+                        uamFactor = preferences.get(DoubleKey.AutosensUamFactor),
+                        log = { line -> aapsLogger.debug(LTag.AUTOSENS) { line } }
+                    )
                 }
 
                 when (autosensData.type) {

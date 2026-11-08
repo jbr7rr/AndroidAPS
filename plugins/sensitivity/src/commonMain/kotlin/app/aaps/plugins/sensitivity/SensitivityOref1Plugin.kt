@@ -233,7 +233,8 @@ class SensitivityOref1Plugin(
                 title = CoreUiStrings.advanced_settings_title,
                 items = listOf(
                     DoubleKey.AutosensMax,
-                    DoubleKey.AutosensMin
+                    DoubleKey.AutosensMin,
+                    DoubleKey.AutosensUamFactor
                 )
             )
         ),

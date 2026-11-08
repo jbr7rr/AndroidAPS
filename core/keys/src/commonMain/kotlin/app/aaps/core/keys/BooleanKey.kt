@@ -128,6 +128,36 @@ enum class BooleanKey(
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)
     ),
     ApsUseUam("use_uam", true, KeysStrings.pref_title_aps_use_uam, KeysStrings.pref_summary_aps_use_uam, defaultedBySM = true, sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
+
+    // Wave (Wavez fork). The stored names are the 3.4 ones so a 3.4 backup imports its values.
+    // MasterOnly: a client may show the settings but must not change the master's dosing.
+    ApsWaveEnable(
+        key = "enable_wave_mode",
+        defaultValue = false,
+        title = KeysStrings.pref_title_aps_wave_enable,
+        summary = KeysStrings.pref_summary_aps_wave_enable,
+        defaultedBySM = true,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+    ApsWaveUseSMBCap(
+        key = "use_wave_smbcap",
+        defaultValue = false,
+        title = KeysStrings.pref_title_aps_wave_use_smb_cap,
+        summary = KeysStrings.pref_summary_aps_wave_use_smb_cap,
+        defaultedBySM = true,
+        dependency = ApsWaveEnable,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+    ApsWaveUseAdjustedSens(
+        key = "wave_use_adjusted_sens",
+        defaultValue = false,
+        title = KeysStrings.pref_title_aps_wave_use_adjusted_sens,
+        summary = KeysStrings.pref_summary_aps_wave_use_adjusted_sens,
+        defaultedBySM = true,
+        dependency = ApsWaveEnable,
+        sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
+    ),
+
     ApsSensitivityRaisesTarget(
         "sensitivity_raises_target", true, KeysStrings.pref_title_aps_sensitivity_raises_target, KeysStrings.pref_summary_aps_sensitivity_raises_target, defaultedBySM = true,
         visibility = ElementVisibility {
