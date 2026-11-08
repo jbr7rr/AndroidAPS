@@ -1,5 +1,7 @@
 package app.aaps.core.data.model
 
+import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -137,5 +139,182 @@ class ICfgTest {
         assertEquals("Novorapid 75m 8h U100", list.labelOfInsulin(ICfg(insulinLabel = "Novorapid", peak = 75, dia = 8.0, concentration = 1.0)))
         assertEquals("Novorapid", list.labelOfInsulin(ICfg(insulinLabel = "Novorapid", peak = 75, dia = 9.0, concentration = 1.0)))
         assertEquals(null, list.labelOfInsulin(null))
+    }
+
+    // --- PD model integration (P3) ---
+
+    /**
+     * The old bilinear formula, copied from the pre-PD [ICfg.iobCalcForTreatment].
+     * The test compares against it with zero tolerance, so extracting the PD
+     * branch did not change any bilinear number.
+     */
+    private fun oldBilinearCurve(amount: Double, timeMinutes: Double, peak: Int, dia: Double): Pair<Double, Double> {
+        var activity = 0.0
+        var iob = 0.0
+        if (amount != 0.0) {
+            val td = (dia * 60).coerceAtLeast(300.0)
+            val tp = peak.toDouble().coerceIn(1.0, td / 2.0 - 1.0)
+            if (timeMinutes < td) {
+                val tau = tp * (1 - tp / td) / (1 - 2 * tp / td)
+                val a = 2 * tau / td
+                val s = 1 / (1 - a + (1 + a) * exp(-td / tau))
+                activity = amount * (s / tau.pow(2.0)) * timeMinutes * (1 - timeMinutes / td) * exp(-timeMinutes / tau)
+                iob = amount * (1 - s * (1 - a) * ((timeMinutes.pow(2.0) / (tau * td * (1 - a)) - timeMinutes / tau - 1) * exp(-timeMinutes / tau) + 1))
+            }
+        }
+        return activity to iob
+    }
+
+    @Test
+    fun `bilinear curve matches the pre-port formula exactly`() {
+        val configs = listOf(
+            ICfg(insulinLabel = "rapid", peak = 75, dia = 8.0, concentration = 1.0),
+            ICfg(insulinLabel = "ultra", peak = 45, dia = 5.0, concentration = 1.0),
+            ICfg(insulinLabel = "slow", peak = 120, dia = 6.0, concentration = 1.0),
+            // Degenerate peak at the old singular point: the defensive clamp must stay.
+            ICfg(insulinLabel = "singular", peak = 150, dia = 5.0, concentration = 1.0),
+            // The DB v33 sentinel: the existing floor must stay.
+            ICfg(insulinLabel = "sentinel", insulinEndTime = -1L, insulinPeakTime = -1L, concentration = 1.0),
+        )
+        val amounts = listOf(0.1, 1.0, 5.0)
+        val times = listOf(0.0, 30.0, 60.0, 120.0, 300.0, 479.0, 480.0)
+
+        configs.forEach { iCfg ->
+            amounts.forEach { amount ->
+                times.forEach { minutes ->
+                    val expected = oldBilinearCurve(amount, minutes, iCfg.peak, iCfg.dia)
+                    val actual = iCfg.iobCalcForTreatment(bolus(amount, iCfg), time = minutes.toLong() * 60_000L)
+                    assertEquals(expected.first, actual.activityContrib, 0.0, "activity ${iCfg.insulinLabel} ${amount}U @${minutes}min")
+                    assertEquals(expected.second, actual.iobContrib, 0.0, "iob ${iCfg.insulinLabel} ${amount}U @${minutes}min")
+                }
+            }
+        }
+    }
+
+    /**
+     * Duration vs profile DIA decision for PD:
+     *
+     * The 3.4 PD plugins always used a fixed 8 h curve, whatever DIA the profile
+     * had. 4.0 keeps that: the PD branch uses
+     * [InsulinModel.Pd.durationMinutes], not [ICfg.insulinEndTime]. P5 sets the
+     * PD presets to DIA 8 h so the 4.0 IOB query window covers the full curve.
+     * This test pins both parts: the curve is 8 h even with a 5 h DIA, and the
+     * result does not depend on the DIA.
+     */
+    @Test
+    fun `PD curve uses durationMinutes and not the profile DIA`() {
+        val model = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, durationMinutes = 480)
+        val dia5 = ICfg(insulinLabel = "Custom PD", peak = 51, dia = 5.0, concentration = 1.0, insulinModel = model)
+        val dia8 = dia5.copy(insulinEndTime = 8L * 3600 * 1000)
+        val amount = 1.0
+
+        listOf(0.0, 30.0, 60.0, 120.0, 300.0, 479.0).forEach { minutes ->
+            val expected = model.iobContrib(amount, minutes, dia5.concentration)
+            val fromDia5 = dia5.iobCalcForTreatment(bolus(amount, dia5), time = minutes.toLong() * 60_000L)
+            val fromDia8 = dia8.iobCalcForTreatment(bolus(amount, dia8), time = minutes.toLong() * 60_000L)
+
+            assertEquals(expected, fromDia5.iobContrib, 0.0, "DIA 5h at $minutes min")
+            assertEquals(fromDia5.iobContrib, fromDia8.iobContrib, 0.0, "DIA must not change the PD curve at $minutes min")
+        }
+        assertTrue(dia5.iobCalcForTreatment(bolus(amount, dia5), time = 479L * 60_000L).iobContrib > 0.0)
+        assertEquals(0.0, dia5.iobCalcForTreatment(bolus(amount, dia5), time = 480L * 60_000L).iobContrib)
+    }
+
+    @Test
+    fun `deepClone copies the insulin model`() {
+        val model = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = false)
+        val original = ICfg(insulinLabel = "Custom PD", peak = 51, dia = 8.0, concentration = 1.0, insulinModel = model)
+            .also { it.insulinNickname = "custom" }
+
+        val clone = original.deepClone()
+
+        assertEquals(original, clone)
+        assertEquals(model, clone.insulinModel)
+        assertEquals("custom", clone.insulinNickname)
+    }
+
+    @Test
+    fun `isEqual and hasSameCurve include the insulin model and its parameters`() {
+        val bilinear = ICfg(insulinLabel = "PD", peak = 51, dia = 8.0, concentration = 1.0)
+        val model = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = false)
+        val pd = bilinear.copy(insulinModel = model)
+
+        assertFalse(pd.isEqual(bilinear))
+        assertFalse(bilinear.isEqual(pd))
+        assertFalse(pd.hasSameCurve(bilinear))
+        assertFalse(bilinear.hasSameCurve(pd))
+        assertTrue(pd.isEqual(pd.copy()))
+        assertTrue(pd.hasSameCurve(pd.copy()))
+
+        // Same peak, DIA and concentration, but another curve parameter.
+        val otherModel = model.copy(b1 = 0.05186)
+        assertFalse(pd.isEqual(pd.copy(insulinModel = otherModel)))
+        assertFalse(pd.hasSameCurve(pd.copy(insulinModel = otherModel)))
+
+        // Scaling the peak is a different curve too.
+        assertFalse(pd.hasSameCurve(pd.copy(insulinModel = model.copy(concentrationScalesPeak = true))))
+        assertFalse(pd.hasSameCurve(pd.copy(insulinModel = model.copy(durationMinutes = 300))))
+    }
+
+    @Test
+    fun `peakMinutesForDose returns peak for bilinear and tp for PD`() {
+        val bilinear = ICfg(insulinLabel = "rapid", peak = 75, dia = 8.0, concentration = 1.0)
+        assertEquals(75.0, bilinear.peakMinutesForDose(1.0))
+
+        val custom = bilinear.copy(
+            insulinLabel = "Custom PD",
+            insulinPeakTime = 51L * 60_000,
+            insulinModel = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = false)
+        )
+        assertEquals(60.151162237961685, custom.peakMinutesForDose(1.0), 1e-12)
+
+        val lyumjevU200 = bilinear.copy(
+            insulinLabel = "Lyumjev PD",
+            insulinPeakTime = 65L * 60_000,
+            concentration = 2.0,
+            insulinModel = InsulinModel.Pd(a0 = 61.33, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = true)
+        )
+        assertEquals(81.63711555830204, lyumjevU200.peakMinutesForDose(1.0), 1e-12)
+    }
+
+    @Test
+    fun `activityAtPeak evaluates the curve at the peak`() {
+        val bilinear = ICfg(insulinLabel = "rapid", peak = 75, dia = 8.0, concentration = 1.0)
+        val (expectedBilinearActivity, _) = oldBilinearCurve(1.0, 75.0, bilinear.peak, bilinear.dia)
+        assertEquals(expectedBilinearActivity, bilinear.activityAtPeak(1.0), 0.0)
+
+        val custom = bilinear.copy(
+            insulinLabel = "Custom PD",
+            insulinPeakTime = 51L * 60_000,
+            insulinModel = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = false)
+        )
+        assertEquals(0.01008344040491123, custom.activityAtPeak(1.0), 1e-12)
+    }
+
+    @Test
+    fun `an invalid PD model makes the ICfg unusable and returns zero instead of NaN`() {
+        val invalid = ICfg(
+            insulinLabel = "broken",
+            peak = 51,
+            dia = 8.0,
+            concentration = 1.0,
+            insulinModel = InsulinModel.Pd(a0 = Double.NaN, a1 = 12.27, b1 = 0.05185)
+        )
+
+        assertFalse(invalid.isUsable)
+        val iob = invalid.iobCalcForTreatment(bolus(1.0, invalid), time = 30L * 60_000L)
+        assertEquals(0.0, iob.iobContrib)
+        assertEquals(0.0, iob.activityContrib)
+        assertEquals(0.0, invalid.activityAtPeak(1.0))
+    }
+
+    @Test
+    fun `a PD model needs a positive finite concentration`() {
+        val model = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = false)
+
+        assertTrue(ICfg(insulinLabel = "pd", peak = 51, dia = 8.0, concentration = 1.0, insulinModel = model).isUsable)
+        assertFalse(ICfg(insulinLabel = "pd", peak = 51, dia = 8.0, concentration = 0.0, insulinModel = model).isUsable)
+        assertFalse(ICfg(insulinLabel = "pd", peak = 51, dia = 8.0, concentration = -1.0, insulinModel = model).isUsable)
+        assertFalse(ICfg(insulinLabel = "pd", peak = 51, dia = 8.0, concentration = Double.NaN, insulinModel = model).isUsable)
     }
 }
