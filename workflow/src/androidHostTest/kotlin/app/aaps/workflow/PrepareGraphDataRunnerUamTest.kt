@@ -204,10 +204,14 @@ class PrepareGraphDataRunnerUamTest {
     @Test
     fun `the first nine buckets after a meal stay UAM`() {
         val current = bucket(time = 100L * 60_000, deviation = 2.0).apply { mealStartCounter = 8 }
+        val previous = bucket(time = 95L * 60_000, deviation = 1.0).apply {
+            type = "uam"
+            mealStartCounter = 8
+        }
 
         val isUam = UamClassifier.classify(
             current = current,
-            previous = null,
+            previous = previous,
             table = tableOf(buckets(deviation = doubleArrayOf())),
             iob = 0.0,
             currentBasal = 1.0,
@@ -236,7 +240,7 @@ class PrepareGraphDataRunnerUamTest {
 
     private fun tableOf(buckets: List<FakeAutosensData>): LongSparseArray<AutosensData> =
         LongSparseArray<AutosensData>().apply {
-            buckets.forEachIndexed { index, bucket -> put(index.toLong(), bucket) }
+            buckets.forEach { bucket -> put(bucket.time, bucket) }
         }
 
     private fun bucket(time: Long, deviation: Double) = FakeAutosensData(time).apply {
