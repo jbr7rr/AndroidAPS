@@ -25,6 +25,7 @@ import app.aaps.core.ui.compose.icons.IcProfile
 import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.profileHelper.ProfileType
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfile
+import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileCircadian
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileDPV
 import app.aaps.ui.compose.stats.TddStatsData
 import dev.zacsweers.metro.AppScope
@@ -62,6 +63,7 @@ class ProfileHelperViewModel(
     private val tddCalculator: TddCalculator,
     private val defaultProfile: DefaultProfile,
     private val defaultProfileDPV: DefaultProfileDPV,
+    private val defaultProfileCircadian: DefaultProfileCircadian,
     private val rxBus: RxBus,
     private val fabricPrivacy: FabricPrivacy
 ) : ViewModel() {
@@ -148,12 +150,16 @@ class ProfileHelperViewModel(
         basalPct: Double,
         profileType: ProfileType,
         profileIndex: Int,
-        profileSwitchIndex: Int
+        profileSwitchIndex: Int,
+        isf: Double = 0.0,
+        ic: Double = 0.0,
+        timeshift: Double = 0.0
     ): PureProfile? {
         return try {
             when (profileType) {
                 ProfileType.MOTOL_DEFAULT     -> defaultProfile.profile(age, tdd, weight, profileFunction.getUnits())
                 ProfileType.DPV_DEFAULT       -> defaultProfileDPV.profile(age, tdd, basalPct, profileFunction.getUnits())
+                ProfileType.CIRCADIAN_DEFAULT -> defaultProfileCircadian.profile(age, tdd, basalPct, isf, ic, timeshift, profileFunction.getUnits())
                 ProfileType.CURRENT           -> uiState.value.currentProfile
 
                 ProfileType.AVAILABLE_PROFILE -> {
@@ -196,6 +202,7 @@ class ProfileHelperViewModel(
             else rh.gs(UiStrings.format_with_weight, age, weight)
 
             ProfileType.DPV_DEFAULT       -> rh.gs(UiStrings.format_with_tdd_and_pct, age, tdd, (basalPct * 100).toInt())
+            ProfileType.CIRCADIAN_DEFAULT -> rh.gs(UiStrings.format_with_tdd_and_pct, age, tdd, (basalPct * 100).toInt())
             ProfileType.CURRENT           -> uiState.value.currentProfileName
 
             ProfileType.AVAILABLE_PROFILE -> {
@@ -218,12 +225,17 @@ class ProfileHelperViewModel(
         tdd: Double,
         weight: Double,
         pct: Double,
-        profileType: ProfileType
+        profileType: ProfileType,
+        isf: Double = 0.0,
+        ic: Double = 0.0,
+        timeshift: Double = 0.0
     ) {
-        val profile = if (profileType == ProfileType.MOTOL_DEFAULT)
-            defaultProfile.profile(age, tdd, weight, profileFunction.getUnits())
-        else
-            defaultProfileDPV.profile(age, tdd, pct / 100.0, profileFunction.getUnits())
+        val units = profileFunction.getUnits()
+        val profile = when (profileType) {
+            ProfileType.MOTOL_DEFAULT     -> defaultProfile.profile(age, tdd, weight, units)
+            ProfileType.CIRCADIAN_DEFAULT -> defaultProfileCircadian.profile(age, tdd, pct / 100.0, isf, ic, timeshift, units)
+            else                          -> defaultProfileDPV.profile(age, tdd, pct / 100.0, units)
+        }
 
         profile?.let {
             rxBus.send(

@@ -274,6 +274,7 @@
     <string name="format_with_tdd_and_pct">Age: %1$d TDD: %2$.0f U %3$d%%</string>
     <string name="format_with_weight">Age: %1$d Weight: %2$.0f kg</string>
     <string name="dpv_default_profile">DPV Default profile</string>
+    <string name="circadian_default_profile">Circadian Default profile</string>
 
     <!-- Other dialogs -->
 
