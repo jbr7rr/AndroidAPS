@@ -91,9 +91,16 @@ private fun ProfileType.generatesProfile(): Boolean =
 /**
  * A generated profile is only comparable/cloneable once every input it needs has been entered.
  *
- * Circadian starts with blank fields on purpose: no unit-blind ISF default (the old helper showed
- * 50 mmol/L to mmol/L users). A blank ISF or IC is therefore an unfinished form, not a zero value.
+ * Every helper starts with blank fields on purpose: no unit-blind ISF default (the old helper
+ * showed 50 mmol/L to mmol/L users), and no prefilled age or basal percentage either. A blank value
+ * is therefore an unfinished form, not a zero that should be dosed.
  */
+private fun motolInputsAreValid(age: Int, tdd: Double, weight: Double): Boolean =
+    age in 1..99 && (tdd > 0.0 || weight > 0.0)
+
+private fun dpvInputsAreValid(age: Int, tdd: Double, basalPct: Double): Boolean =
+    age in 1..99 && tdd > 0.0 && basalPct > 0.0
+
 private fun circadianInputsAreValid(age: Int, tdd: Double, basalPct: Double, isf: Double, ic: Double): Boolean =
     age in 1..100 && tdd > 0.0 && basalPct > 0.0 && isf > 0.0 && ic > 0.0
 
@@ -114,10 +121,10 @@ fun ProfileHelperScreen(
             ProfileType.CURRENT
         )
     }
-    val ages = remember { mutableStateListOf(15, 15) }
+    val ages = remember { mutableStateListOf(0, 0) }
     val weights = remember { mutableStateListOf(0.0, 0.0) }
     val tdds = remember { mutableStateListOf(0.0, 0.0) }
-    val pcts = remember { mutableStateListOf(32.0, 32.0) }
+    val pcts = remember { mutableStateListOf(0.0, 0.0) }
     // Blank, not a unit-specific default: NumberInputRow shows zero as an empty field. The old
     // helper started ISF at 50.0 regardless of units, so an mmol/L user saw 50 mmol/L.
     val isfs = remember { mutableStateListOf(0.0, 0.0) }
@@ -129,14 +136,16 @@ fun ProfileHelperScreen(
     // Check if comparison data is valid (both profiles have sufficient data)
     val isCompareTabValid = run {
         val profile0Valid = when (profileTypes[0]) {
-            ProfileType.MOTOL_DEFAULT, ProfileType.DPV_DEFAULT -> tdds[0] > 0 || weights[0] > 0
-            ProfileType.CIRCADIAN_DEFAULT                      -> circadianInputsAreValid(ages[0], tdds[0], pcts[0], isfs[0], ics[0])
-            else                                               -> true
+            ProfileType.MOTOL_DEFAULT     -> motolInputsAreValid(ages[0], tdds[0], weights[0])
+            ProfileType.DPV_DEFAULT       -> dpvInputsAreValid(ages[0], tdds[0], pcts[0])
+            ProfileType.CIRCADIAN_DEFAULT -> circadianInputsAreValid(ages[0], tdds[0], pcts[0], isfs[0], ics[0])
+            else                          -> true
         }
         val profile1Valid = when (profileTypes[1]) {
-            ProfileType.MOTOL_DEFAULT, ProfileType.DPV_DEFAULT -> tdds[1] > 0 || weights[1] > 0
-            ProfileType.CIRCADIAN_DEFAULT                      -> circadianInputsAreValid(ages[1], tdds[1], pcts[1], isfs[1], ics[1])
-            else                                               -> true
+            ProfileType.MOTOL_DEFAULT     -> motolInputsAreValid(ages[1], tdds[1], weights[1])
+            ProfileType.DPV_DEFAULT       -> dpvInputsAreValid(ages[1], tdds[1], pcts[1])
+            ProfileType.CIRCADIAN_DEFAULT -> circadianInputsAreValid(ages[1], tdds[1], pcts[1], isfs[1], ics[1])
+            else                          -> true
         }
         profile0Valid && profile1Valid
     }
