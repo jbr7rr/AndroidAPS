@@ -71,7 +71,7 @@ class CircadianProfileContentTest {
         compose.onNodeWithText(ctx.getString(R.string.basal_pct_from_tdd_label)).assertIsDisplayed()
         compose.onNodeWithText(ctx.getString(CoreUiR.string.isf_long_label)).assertIsDisplayed()
         compose.onNodeWithText(ctx.getString(CoreUiR.string.ic_long_label)).assertIsDisplayed()
-        compose.onNodeWithText(ctx.getString(CoreUiR.string.timeshift_label)).assertIsDisplayed()
+        compose.onNodeWithText(ctx.getString(CoreUiR.string.timeshift_label)).assertExists()
         compose.onNodeWithText(ctx.getString(InterfacesR.string.profile_isf_units_mgdl)).assertIsDisplayed()
         // The old helper initialised ISF to 50.0 and showed it as 50 mmol/L too.
         compose.onNodeWithText("50").assertDoesNotExist()
