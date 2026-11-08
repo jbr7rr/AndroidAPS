@@ -46,6 +46,19 @@ class NumberInputRowTest {
     }
 
     @Test
+    fun focusingAndLeavingAnEmptyFieldDoesNotPublishTheMinimum() {
+        val changes = mutableListOf<Double>()
+        setRow(2.0..1000.0) { changes.add(it) }
+
+        val field = compose.onNode(hasSetTextAction())
+        field.performClick()
+        field.performImeAction()
+
+        assertThat(changes).doesNotContain(2.0)
+        assertThat(changes.lastOrNull() ?: 0.0).isEqualTo(0.0)
+    }
+
+    @Test
     fun clearingTheFieldPublishesZeroInsteadOfTheRangeMinimum() {
         val changes = mutableListOf<Double>()
         setRow(2.0..1000.0) { changes.add(it) }
