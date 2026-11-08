@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.graph.profile.ProfileCompareContent
 import app.aaps.core.graph.profile.buildBasalRows
@@ -56,6 +57,7 @@ import app.aaps.core.graph.profile.buildIsfRows
 import app.aaps.core.graph.profile.buildTargetRows
 import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.interfaces.navigation.ElementType
+import app.aaps.core.interfaces.utils.HardLimits
 import app.aaps.core.objects.profile.ProfileSealed
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsTopAppBar
@@ -76,10 +78,24 @@ enum class ProfileType {
 
     MOTOL_DEFAULT,
     DPV_DEFAULT,
+    CIRCADIAN_DEFAULT,
     CURRENT,
     AVAILABLE_PROFILE,
     PROFILE_SWITCH
 }
+
+/** The profile types this screen can generate, as opposed to the ones it only displays. */
+private fun ProfileType.generatesProfile(): Boolean =
+    this == ProfileType.MOTOL_DEFAULT || this == ProfileType.DPV_DEFAULT || this == ProfileType.CIRCADIAN_DEFAULT
+
+/**
+ * A generated profile is only comparable/cloneable once every input it needs has been entered.
+ *
+ * Circadian starts with blank fields on purpose: no unit-blind ISF default (the old helper showed
+ * 50 mmol/L to mmol/L users). A blank ISF or IC is therefore an unfinished form, not a zero value.
+ */
+private fun circadianInputsAreValid(age: Int, tdd: Double, basalPct: Double, isf: Double, ic: Double): Boolean =
+    age in 1..100 && tdd > 0.0 && basalPct > 0.0 && isf > 0.0 && ic > 0.0
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,6 +118,11 @@ fun ProfileHelperScreen(
     val weights = remember { mutableStateListOf(0.0, 0.0) }
     val tdds = remember { mutableStateListOf(0.0, 0.0) }
     val pcts = remember { mutableStateListOf(32.0, 32.0) }
+    // Blank, not a unit-specific default: NumberInputRow shows zero as an empty field. The old
+    // helper started ISF at 50.0 regardless of units, so an mmol/L user saw 50 mmol/L.
+    val isfs = remember { mutableStateListOf(0.0, 0.0) }
+    val ics = remember { mutableStateListOf(0.0, 0.0) }
+    val timeshifts = remember { mutableStateListOf(0.0, 0.0) }
     val profileIndices = remember { mutableStateListOf(0, 0) }
     val profileSwitchIndices = remember { mutableStateListOf(0, 0) }
 
@@ -109,10 +130,12 @@ fun ProfileHelperScreen(
     val isCompareTabValid = run {
         val profile0Valid = when (profileTypes[0]) {
             ProfileType.MOTOL_DEFAULT, ProfileType.DPV_DEFAULT -> tdds[0] > 0 || weights[0] > 0
+            ProfileType.CIRCADIAN_DEFAULT                      -> circadianInputsAreValid(ages[0], tdds[0], pcts[0], isfs[0], ics[0])
             else                                               -> true
         }
         val profile1Valid = when (profileTypes[1]) {
             ProfileType.MOTOL_DEFAULT, ProfileType.DPV_DEFAULT -> tdds[1] > 0 || weights[1] > 0
+            ProfileType.CIRCADIAN_DEFAULT                      -> circadianInputsAreValid(ages[1], tdds[1], pcts[1], isfs[1], ics[1])
             else                                               -> true
         }
         profile0Valid && profile1Valid
@@ -121,8 +144,8 @@ fun ProfileHelperScreen(
     // Determine which profile index to use for Clone action
     val cloneIndex = when {
         selectedTab == 2 -> {
-            // On comparison tab, prefer profile 0 if it's MOTOL/DPV, otherwise profile 1
-            if (profileTypes[0] == ProfileType.MOTOL_DEFAULT || profileTypes[0] == ProfileType.DPV_DEFAULT) 0 else 1
+            // On comparison tab, prefer profile 0 if it generates a profile, otherwise profile 1
+            if (profileTypes[0].generatesProfile()) 0 else 1
         }
 
         else             -> selectedTab
@@ -130,10 +153,9 @@ fun ProfileHelperScreen(
 
     // Determine if Clone button should be shown in top bar (visible on all tabs when comparison is available)
     val showCloneAction = isCompareTabValid && when (selectedTab) {
-        2    -> profileTypes[0] == ProfileType.MOTOL_DEFAULT || profileTypes[0] == ProfileType.DPV_DEFAULT ||
-            profileTypes[1] == ProfileType.MOTOL_DEFAULT || profileTypes[1] == ProfileType.DPV_DEFAULT
+        2    -> profileTypes[0].generatesProfile() || profileTypes[1].generatesProfile()
 
-        else -> profileTypes[selectedTab] == ProfileType.MOTOL_DEFAULT || profileTypes[selectedTab] == ProfileType.DPV_DEFAULT
+        else -> profileTypes[selectedTab].generatesProfile()
     }
 
     ProfileHelperContent(
@@ -149,14 +171,25 @@ fun ProfileHelperScreen(
                 tdds[cloneIndex],
                 weights[cloneIndex],
                 pcts[cloneIndex],
-                profileTypes[cloneIndex]
+                profileTypes[cloneIndex],
+                isfs[cloneIndex],
+                ics[cloneIndex],
+                timeshifts[cloneIndex]
             )
         },
         onBackClick = onBackClick,
         focusManager = focusManager,
         comparisonContent = {
-            val profile0 = viewModel.getProfile(ages[0], tdds[0], weights[0], pcts[0] / 100.0, profileTypes[0], profileIndices[0], profileSwitchIndices[0])
-            val profile1 = viewModel.getProfile(ages[1], tdds[1], weights[1], pcts[1] / 100.0, profileTypes[1], profileIndices[1], profileSwitchIndices[1])
+            val profile0 = viewModel.getProfile(
+                ages[0], tdds[0], weights[0], pcts[0] / 100.0,
+                profileTypes[0], profileIndices[0], profileSwitchIndices[0],
+                isfs[0], ics[0], timeshifts[0]
+            )
+            val profile1 = viewModel.getProfile(
+                ages[1], tdds[1], weights[1], pcts[1] / 100.0,
+                profileTypes[1], profileIndices[1], profileSwitchIndices[1],
+                isfs[1], ics[1], timeshifts[1]
+            )
 
             if (profile0 != null && profile1 != null) {
                 val name0 = viewModel.getProfileName(ages[0], tdds[0], weights[0], pcts[0] / 100.0, profileTypes[0], profileIndices[0], profileSwitchIndices[0])
@@ -219,6 +252,25 @@ fun ProfileHelperScreen(
                         )
                     }
 
+                    ProfileType.CIRCADIAN_DEFAULT                      -> {
+                        CircadianProfileContent(
+                            age = ages[tabIndex],
+                            onAgeChange = { ages[tabIndex] = it },
+                            tdd = tdds[tabIndex],
+                            onTddChange = { tdds[tabIndex] = it },
+                            pct = pcts[tabIndex],
+                            onPctChange = { pcts[tabIndex] = it },
+                            isf = isfs[tabIndex],
+                            onIsfChange = { isfs[tabIndex] = it },
+                            ic = ics[tabIndex],
+                            onIcChange = { ics[tabIndex] = it },
+                            timeshift = timeshifts[tabIndex],
+                            onTimeshiftChange = { timeshifts[tabIndex] = it },
+                            units = viewModel.getUnits(),
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+
                     ProfileType.CURRENT                                -> {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -254,7 +306,7 @@ fun ProfileHelperScreen(
                 }
             }
 
-            if (profileTypes[tabIndex] == ProfileType.MOTOL_DEFAULT || profileTypes[tabIndex] == ProfileType.DPV_DEFAULT) {
+            if (profileTypes[tabIndex].generatesProfile()) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ElevatedCard(
@@ -423,6 +475,7 @@ private fun ProfileTypeDropdown(
     val profileTypeOptions = listOf(
         ProfileType.MOTOL_DEFAULT to stringResource(UiStrings.motol_default_profile),
         ProfileType.DPV_DEFAULT to stringResource(UiStrings.dpv_default_profile),
+        ProfileType.CIRCADIAN_DEFAULT to stringResource(UiStrings.circadian_default_profile),
         ProfileType.CURRENT to stringResource(UiStrings.current_profile),
         ProfileType.AVAILABLE_PROFILE to stringResource(UiStrings.available_profile),
         ProfileType.PROFILE_SWITCH to stringResource(CoreUiStrings.careportal_profileswitch)
@@ -462,6 +515,7 @@ fun getProfileTypeDisplayName(type: ProfileType): String {
     return when (type) {
         ProfileType.MOTOL_DEFAULT     -> stringResource(UiStrings.motol_default_profile)
         ProfileType.DPV_DEFAULT       -> stringResource(UiStrings.dpv_default_profile)
+        ProfileType.CIRCADIAN_DEFAULT -> stringResource(UiStrings.circadian_default_profile)
         ProfileType.CURRENT           -> stringResource(UiStrings.current_profile)
         ProfileType.AVAILABLE_PROFILE -> stringResource(UiStrings.available_profile)
         ProfileType.PROFILE_SWITCH    -> stringResource(CoreUiStrings.careportal_profileswitch)
@@ -514,6 +568,85 @@ fun DefaultProfileContent(
             valueRange = 32.0..37.0,
             step = 1.0,
             unitLabel = CoreUiStrings.units_percent
+        )
+    }
+}
+
+/**
+ * Inputs for the Circadian generator.
+ *
+ * The ISF field is in the current glucose unit and changes its step with it: 1.0 for mg/dL,
+ * 0.1 for mmol/L. A zero value is rendered as an empty field by [NumberInputRow], so an untouched
+ * ISF is blank rather than a unit-blind 50.
+ *
+ * @see DefaultProfileCircadianPreview
+ */
+@Composable
+fun CircadianProfileContent(
+    age: Int, onAgeChange: (Int) -> Unit,
+    tdd: Double, onTddChange: (Double) -> Unit,
+    pct: Double, onPctChange: (Double) -> Unit,
+    isf: Double, onIsfChange: (Double) -> Unit,
+    ic: Double, onIcChange: (Double) -> Unit,
+    timeshift: Double, onTimeshiftChange: (Double) -> Unit,
+    units: GlucoseUnit,
+    modifier: Modifier = Modifier
+) {
+    val isfMin = if (units == GlucoseUnit.MGDL) HardLimits.LIMIT_ISF.start else HardLimits.LIMIT_ISF.start * Constants.MGDL_TO_MMOLL
+    val isfMax = if (units == GlucoseUnit.MGDL) HardLimits.LIMIT_ISF.endInclusive else HardLimits.LIMIT_ISF.endInclusive * Constants.MGDL_TO_MMOLL
+    val isfStep = if (units == GlucoseUnit.MGDL) 1.0 else 0.1
+    val isfDecimals = if (units == GlucoseUnit.MGDL) 0 else 1
+    Column(modifier = modifier) {
+        Text(text = stringResource(UiStrings.profile_parameters), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 16.dp))
+        NumberInputRow(
+            labelRef = UiStrings.age,
+            value = age.toDouble(),
+            onValueChange = { onAgeChange(it.toInt()) },
+            valueRange = 1.0..100.0,
+            step = 1.0,
+            unitLabel = CoreUiStrings.units_years
+        )
+        NumberInputRow(
+            labelRef = CoreUiStrings.tdd_total,
+            value = tdd,
+            onValueChange = onTddChange,
+            valueRange = 0.0..200.0,
+            step = 1.0,
+            unitLabel = CoreUiStrings.units_insulin
+        )
+        NumberInputRow(
+            labelRef = UiStrings.basal_pct_from_tdd_label,
+            value = pct,
+            onValueChange = onPctChange,
+            valueRange = 30.0..70.0,
+            step = 1.0,
+            unitLabel = CoreUiStrings.units_percent
+        )
+        NumberInputRow(
+            labelRef = CoreUiStrings.isf_long_label,
+            value = isf,
+            onValueChange = onIsfChange,
+            valueRange = isfMin..isfMax,
+            step = isfStep,
+            decimalPlaces = isfDecimals,
+            unitLabel = if (units == GlucoseUnit.MGDL) InterfacesStrings.profile_isf_units_mgdl else InterfacesStrings.profile_isf_units_mmol
+        )
+        NumberInputRow(
+            labelRef = CoreUiStrings.ic_long_label,
+            value = ic,
+            onValueChange = onIcChange,
+            valueRange = 0.1..100.0,
+            step = 0.1,
+            decimalPlaces = 1,
+            unitLabel = InterfacesStrings.profile_carbs_per_unit
+        )
+        NumberInputRow(
+            labelRef = CoreUiStrings.timeshift_label,
+            value = timeshift,
+            onValueChange = onTimeshiftChange,
+            valueRange = Constants.CPP_TIMESHIFT_RANGE,
+            step = 1.0,
+            unitLabel = CoreUiStrings.units_hours
         )
     }
 }

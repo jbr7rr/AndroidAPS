@@ -32,6 +32,8 @@ class ProfileHelperContentTest {
 
     private lateinit var tab1: String
     private lateinit var tab2: String
+    private lateinit var defaultProfile: String
+    private lateinit var circadianProfile: String
 
     @Before
     fun setUp() {
@@ -41,6 +43,8 @@ class ProfileHelperContentTest {
         val ctx: Context = RuntimeEnvironment.getApplication()
         tab1 = ctx.getString(R.string.profile_tab_1)
         tab2 = ctx.getString(R.string.profile_tab_2)
+        defaultProfile = ctx.getString(R.string.motol_default_profile)
+        circadianProfile = ctx.getString(R.string.circadian_default_profile)
     }
 
     @Test
@@ -67,5 +71,29 @@ class ProfileHelperContentTest {
         compose.onNodeWithText(tab1).assertIsDisplayed()
         compose.onNodeWithText(tab2).performClick()
         assertThat(selectedIdx).isEqualTo(1)
+    }
+
+    @Test
+    fun dropdownOffersTheCircadianDefaultProfile() {
+        compose.setContent {
+            MaterialTheme {
+                ProfileHelperContent(
+                    selectedTab = 0,
+                    onTabSelected = {},
+                    profileTypes = listOf(ProfileType.MOTOL_DEFAULT, ProfileType.CURRENT),
+                    onProfileTypeChange = { _, _ -> },
+                    isCompareTabValid = true,
+                    showCloneAction = false,
+                    onCloneClick = {},
+                    onBackClick = {},
+                    focusManager = LocalFocusManager.current,
+                    comparisonContent = {},
+                    profileTabContent = {}
+                )
+            }
+        }
+
+        compose.onNodeWithText(defaultProfile).performClick()
+        compose.onNodeWithText(circadianProfile).assertIsDisplayed()
     }
 }

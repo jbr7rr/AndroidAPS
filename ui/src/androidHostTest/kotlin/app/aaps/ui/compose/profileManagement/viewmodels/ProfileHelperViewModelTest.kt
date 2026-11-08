@@ -13,6 +13,7 @@ import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.ui.compose.profileHelper.ProfileType
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfile
+import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileCircadian
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileDPV
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,7 @@ internal class ProfileHelperViewModelTest {
     @Mock private lateinit var tddCalculator: TddCalculator
     @Mock private lateinit var defaultProfile: DefaultProfile
     @Mock private lateinit var defaultProfileDPV: DefaultProfileDPV
+    @Mock private lateinit var defaultProfileCircadian: DefaultProfileCircadian
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var fabricPrivacy: FabricPrivacy
 
@@ -55,7 +57,7 @@ internal class ProfileHelperViewModelTest {
         whenever(persistenceLayer.observeChanges(EPS::class)).thenReturn(emptyFlow())
         sut = ProfileHelperViewModel(
             persistenceLayer, profileRepository, profileFunction, profileUtil, rh, dateUtil,
-            tddCalculator, defaultProfile, defaultProfileDPV, rxBus, fabricPrivacy
+            tddCalculator, defaultProfile, defaultProfileDPV, defaultProfileCircadian, rxBus, fabricPrivacy
         )
     }
 
