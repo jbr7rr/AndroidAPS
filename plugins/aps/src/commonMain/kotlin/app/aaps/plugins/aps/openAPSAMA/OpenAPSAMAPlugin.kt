@@ -122,6 +122,13 @@ class OpenAPSAMAPlugin(
             aapsLogger.debug(LTag.APS, rh.gs(CoreUiStrings.no_profile_set))
             return@withContext
         }
+        // Refuse to run on an invalid insulin model instead of dosing with a curve that is not
+        // the one the user selected. ICfg.isUsable also covers the DB sentinel and bad PD params.
+        if (!profile.iCfg.isUsable) {
+            rxBus.send(EventResetOpenAPSGui(rh.gs(ApsStrings.openapsma_invalid_insulin)))
+            aapsLogger.error(LTag.APS, "Refusing to run: insulin '${profile.iCfg.insulinLabel}' is not usable")
+            return@withContext
+        }
         if (!isEnabled()) {
             rxBus.send(EventResetOpenAPSGui(rh.gs(ApsStrings.openapsma_disabled)))
             aapsLogger.debug(LTag.APS, rh.gs(ApsStrings.openapsma_disabled))

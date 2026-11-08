@@ -768,11 +768,12 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         // migration32to33 carries the v3 columns across, so for a profile switch the row already knows. The
         // legacy preferences answer the rows that have nothing, boluses above all - v3 never stamped one.
         //
-        // The record, not profileFunction.getProfile(): this runs before app init completes, and no profile
-        // is handed out until then. getRunningOrRequestedICfg() rejects an unusable iCfg, so a running row
-        // that still carries the sentinel falls through instead of writing the sentinel back over itself.
+        // The running record from the database, not profileFunction.getProfile(): this runs before app
+        // init completes, and no profile is handed out until then. Read it directly rather than through
+        // getRunningOrRequestedICfg(), which rejects an unusable model; an invalid model must be kept and
+        // repaired visibly, not replaced. InsulinMigration.plan still filters the sentinel itself.
         val plan = insulinMigration.plan(
-            recordICfg = profileFunction.getRunningOrRequestedICfg(),
+            recordICfg = persistenceLayer.getEffectiveProfileSwitchActiveAt(dateUtil.now())?.iCfg,
             legacy = legacyInsulin,
             harvest = profileDia,
             activeProfileName = persistenceLayer.getEffectiveProfileSwitchActiveAt(dateUtil.now())?.originalProfileName

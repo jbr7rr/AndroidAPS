@@ -143,14 +143,15 @@ class InsulinMigration(
      * [recordICfg] is the running record's own insulin, which after `migration32to33` is the v3 value and
      * therefore the right answer. It is consulted FIRST, which is the opposite of the old order: that asked
      * the legacy preferences whenever any DIA had been harvested, so an install whose row knew the answer
-     * got a reconstruction anyway. It still has to be [ICfg.isUsable] - a row that carries the sentinel
-     * reports a DIA of 0.0, and reading that back would write the sentinel over itself for ever.
+     * got a reconstruction anyway. It still has to be [ICfg.isPresent] - a row that carries the sentinel
+     * reports a DIA of 0.0, and reading that back would write the sentinel over itself for ever. An
+     * invalid model is present on purpose: the plan keeps it visible instead of substituting another curve.
      *
      * [activeProfileName] is the running record's `originalProfileName`, used to pick that profile's DIA out
      * of the harvest.
      */
     fun plan(recordICfg: ICfg?, legacy: LegacyInsulin?, harvest: ProfileDiaHarvest, activeProfileName: String?): InsulinMigrationPlan {
-        if (recordICfg?.isUsable == true) return plan(recordICfg, InsulinMigrationPlan.Source.RECORD)
+        if (recordICfg?.isPresent == true) return plan(recordICfg, InsulinMigrationPlan.Source.RECORD)
         // Null only if nothing read the store, which the start-up order rules out. Same treatment as an
         // install with no row: v3's own default.
         val insulin = legacy ?: LegacyInsulin(rh.gs(InsulinType.OREF_RAPID_ACTING.label), InsulinType.OREF_RAPID_ACTING.insulinPeakTime, fromExplicitKey = false)

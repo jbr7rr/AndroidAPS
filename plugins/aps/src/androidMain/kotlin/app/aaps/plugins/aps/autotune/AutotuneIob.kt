@@ -261,7 +261,7 @@ open class AutotuneIob(
         for (pos in boluses.indices) {
             val t = boluses[pos]
             if (!t.isValid) continue
-            if (t.timestamp > time || t.timestamp < time - iCfg.insulinEndTime) continue
+            if (t.timestamp > time || t.timestamp < time - iCfg.iobEndTime) continue
             val tIOB = t.iobCalc(time, iCfg)
             if (detailedLog)
                 log(

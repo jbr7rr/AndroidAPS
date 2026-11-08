@@ -309,6 +309,81 @@ class ICfgTest {
     }
 
     @Test
+    fun `isPresent keeps the old sentinel meaning and isUsable adds the model`() {
+        val invalidModel = ICfg(
+            insulinLabel = "broken",
+            peak = 51,
+            dia = 8.0,
+            concentration = 1.0,
+            insulinModel = InsulinModel.Pd(a0 = Double.NaN, a1 = 12.27, b1 = 0.05185)
+        )
+        assertTrue(invalidModel.isPresent)
+        assertFalse(invalidModel.isUsable)
+
+        val sentinel = ICfg(insulinLabel = "", insulinEndTime = -1, insulinPeakTime = -1, concentration = 1.0)
+        assertFalse(sentinel.isPresent)
+        assertFalse(sentinel.isUsable)
+
+        val zeroPeak = ICfg(insulinLabel = "", insulinEndTime = 8L * 3600 * 1000, insulinPeakTime = 0, concentration = 1.0)
+        assertFalse(zeroPeak.isPresent)
+        assertFalse(zeroPeak.isUsable)
+    }
+
+    @Test
+    fun `a PD model whose curve term overflows is not usable`() {
+        val huge = ICfg(
+            insulinLabel = "huge",
+            peak = 51,
+            dia = 8.0,
+            concentration = 1.0,
+            insulinModel = InsulinModel.Pd(a0 = 1e308, a1 = 12.27, b1 = 0.05185)
+        )
+        assertTrue(huge.isPresent)
+        assertFalse(huge.isUsable)
+        // The curve must not return a value derived from Infinity.
+        assertEquals(0.0, huge.activityAtPeak(1.0))
+        assertEquals(0.0, huge.iobCalcForTreatment(bolus(1.0, huge), time = 30L * 60_000L).iobContrib)
+    }
+
+    @Test
+    fun `peakMinutesForDose never returns NaN for an unusable model`() {
+        val invalid = ICfg(
+            insulinLabel = "broken",
+            peak = 51,
+            dia = 8.0,
+            concentration = 1.0,
+            insulinModel = InsulinModel.Pd(a0 = Double.NaN, a1 = 12.27, b1 = 0.05185)
+        )
+        assertTrue(invalid.peakMinutesForDose(1.0).isFinite())
+        assertEquals(51.0, invalid.peakMinutesForDose(1.0), 0.0)
+    }
+
+    @Test
+    fun `PD IOB duration covers the model duration when DIA is shorter`() {
+        val model = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, durationMinutes = 480)
+        val pd5 = ICfg(insulinLabel = "Custom PD", peak = 51, dia = 5.0, concentration = 1.0, insulinModel = model)
+        assertEquals(5.0, pd5.dia)
+        assertEquals(8.0, pd5.iobDurationHours)
+        assertEquals(8L * 3600 * 1000, pd5.iobEndTime)
+
+        val pd8 = pd5.copy(insulinEndTime = 8L * 3600 * 1000)
+        assertEquals(8.0, pd8.iobDurationHours)
+        assertEquals(8L * 3600 * 1000, pd8.iobEndTime)
+
+        val pd10 = pd5.copy(insulinEndTime = 10L * 3600 * 1000)
+        assertEquals(10.0, pd10.iobDurationHours)
+        assertEquals(10L * 3600 * 1000, pd10.iobEndTime)
+
+        val bilinear = ICfg(insulinLabel = "rapid", peak = 75, dia = 5.0, concentration = 1.0)
+        assertEquals(5.0, bilinear.iobDurationHours)
+        assertEquals(5L * 3600 * 1000, bilinear.iobEndTime)
+
+        val sentinel = ICfg(insulinLabel = "", insulinEndTime = -1, insulinPeakTime = -1, concentration = 1.0)
+        assertEquals(0.0, sentinel.iobDurationHours)
+        assertEquals(-1L, sentinel.iobEndTime)
+    }
+
+    @Test
     fun `a PD model needs a positive finite concentration`() {
         val model = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = false)
 

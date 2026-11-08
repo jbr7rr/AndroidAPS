@@ -2,6 +2,7 @@ package app.aaps.implementation.profile
 
 import app.aaps.core.data.model.EPS
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.model.PS
 import app.aaps.core.data.model.data.Block
 import app.aaps.core.data.time.T
@@ -230,6 +231,22 @@ class ProfileFunctionImplTest : TestBaseWithProfile() {
         advanceUntilIdle()
 
         assertThat(sut.runningICfg.value).isNull()
+    }
+
+    // An invalid PD model is not the sentinel: the record still has a real insulin and a real
+    // concentration, so the pump mirror must keep it. Only dosing callers reject it.
+    @Test
+    fun anInvalidModelStaysInTheMirrorButNotInTheDosingAccessor() = runTest {
+        whenever(persistenceLayer.observeChanges(EPS::class)).thenReturn(emptyFlow())
+        val invalid = someICfg.copy(insulinModel = InsulinModel.Pd(a0 = Double.NaN, a1 = 12.27, b1 = 0.05185))
+        whenever(persistenceLayer.getEffectiveProfileSwitchActiveAt(anyLong())).thenReturn(effectiveProfileSwitch.copy(iCfg = invalid))
+        whenever(persistenceLayer.getProfileSwitchActiveAt(anyLong())).thenReturn(null)
+
+        val sut = createSut()
+        advanceUntilIdle()
+
+        assertThat(sut.runningICfg.value).isEqualTo(invalid)
+        assertThat(sut.getRunningOrRequestedICfg()).isNull()
     }
 
     @Test

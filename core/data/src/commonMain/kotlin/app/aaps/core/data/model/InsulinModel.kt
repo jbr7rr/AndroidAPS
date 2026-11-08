@@ -94,6 +94,15 @@ sealed interface InsulinModel {
         fun activityAtPeak(amount: Double, concentration: Double = 1.0): Double =
             activityContrib(amount, peakMinutesForDose(amount, concentration), concentration)
 
+        /**
+         * True when [concentration] can produce a real curve for a typical 1 U dose.
+         *
+         * This checks the whole `tpModel = 2 * tp^2` term, not just `tp`: an extreme but finite
+         * `a0` can leave `tp` finite while `tpModel` overflows to Infinity, which would make every
+         * curve zero. Such a model must not be reported as usable.
+         */
+        fun isUsableFor(concentration: Double): Boolean = tpModelForDose(1.0, concentration) != null
+
         private fun tpModelForDose(amount: Double, concentration: Double): Double? {
             if (!isUsable || !concentration.isFinite() || concentration <= 0.0) return null
             val tp = peakMinutesForDose(amount, concentration)
