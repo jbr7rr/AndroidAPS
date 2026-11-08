@@ -272,9 +272,11 @@
     <string name="available_profile">Available profile</string>
     <string name="format_with_tdd">Age: %1$d TDD: %2$.0f U</string>
     <string name="format_with_tdd_and_pct">Age: %1$d TDD: %2$.0f U %3$d%%</string>
+    <string name="format_with_tdd_and_pct_circadian">Circadian: Age %1$d TDD %2$.0f U %3$d%%</string>
     <string name="format_with_weight">Age: %1$d Weight: %2$.0f kg</string>
     <string name="dpv_default_profile">DPV Default profile</string>
     <string name="circadian_default_profile">Circadian Default profile</string>
+    <string name="circadian_values_scaled_note" comment="Shown under the Circadian profile inputs. ISF and IC are divided by the age-band factors, so a value that looks inside the hard limits can land outside them after scaling.">ISF and IC are scaled by the age-band factors. Keep them inside the hard limits.</string>
 
     <!-- Other dialogs -->
 

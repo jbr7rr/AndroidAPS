@@ -18,6 +18,7 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowDialog
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.HardLimits
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.objects.profile.ProfileSealed
 import app.aaps.core.ui.CoreUiStrings
@@ -64,6 +65,7 @@ class ProfileHelperViewModel(
     private val defaultProfile: DefaultProfile,
     private val defaultProfileDPV: DefaultProfileDPV,
     private val defaultProfileCircadian: DefaultProfileCircadian,
+    private val hardLimits: HardLimits,
     private val rxBus: RxBus,
     private val fabricPrivacy: FabricPrivacy
 ) : ViewModel() {
@@ -140,6 +142,20 @@ class ProfileHelperViewModel(
 
     fun getUnits(): GlucoseUnit = profileFunction.getUnits()
 
+    /** IC limits for the current safety age, as used by the profile editor. */
+    fun getIcRange(): ClosedFloatingPointRange<Double> = hardLimits.icRange()
+
+    /**
+     * A generated profile is only offered for comparison or cloning when AAPS would accept it.
+     *
+     * The Circadian factors divide ISF and IC, so a value the user entered inside the raw hard
+     * limits can still land outside them in the generated blocks. This check also catches a basal
+     * rate that is out of range. It is the same semantic validation the profile repository and the
+     * setup wizard use, so the helper cannot create a profile that is rejected immediately after.
+     */
+    fun isProfileValid(profile: PureProfile): Boolean =
+        ProfileSealed.Pure(profile, activePlugin = null).validateSemantic(rh, hardLimits).isValid
+
     /**
      * Get profile based on type and parameters
      */
@@ -202,7 +218,7 @@ class ProfileHelperViewModel(
             else rh.gs(UiStrings.format_with_weight, age, weight)
 
             ProfileType.DPV_DEFAULT       -> rh.gs(UiStrings.format_with_tdd_and_pct, age, tdd, (basalPct * 100).toInt())
-            ProfileType.CIRCADIAN_DEFAULT -> rh.gs(UiStrings.format_with_tdd_and_pct, age, tdd, (basalPct * 100).toInt())
+            ProfileType.CIRCADIAN_DEFAULT -> rh.gs(UiStrings.format_with_tdd_and_pct_circadian, age, tdd, (basalPct * 100).toInt())
             ProfileType.CURRENT           -> uiState.value.currentProfileName
 
             ProfileType.AVAILABLE_PROFILE -> {
@@ -233,8 +249,11 @@ class ProfileHelperViewModel(
         val units = profileFunction.getUnits()
         val profile = when (profileType) {
             ProfileType.MOTOL_DEFAULT     -> defaultProfile.profile(age, tdd, weight, units)
+            ProfileType.DPV_DEFAULT       -> defaultProfileDPV.profile(age, tdd, pct / 100.0, units)
             ProfileType.CIRCADIAN_DEFAULT -> defaultProfileCircadian.profile(age, tdd, pct / 100.0, isf, ic, timeshift, units)
-            else                          -> defaultProfileDPV.profile(age, tdd, pct / 100.0, units)
+            // CURRENT, AVAILABLE_PROFILE and PROFILE_SWITCH only display a profile; there is
+            // nothing to generate or copy for them.
+            else                          -> null
         }
 
         profile?.let {

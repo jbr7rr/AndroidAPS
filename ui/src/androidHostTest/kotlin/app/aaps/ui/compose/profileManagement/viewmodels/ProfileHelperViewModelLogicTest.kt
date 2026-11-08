@@ -2,6 +2,9 @@ package app.aaps.ui.compose.profileManagement.viewmodels
 
 import app.aaps.core.data.model.EPS
 import app.aaps.core.data.model.GlucoseUnit
+import app.aaps.core.data.model.data.Block
+import app.aaps.core.data.model.data.TargetBlock
+import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileRepository
@@ -12,6 +15,7 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowDialog
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.HardLimits
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.ui.compose.profileHelper.ProfileType
@@ -70,6 +74,7 @@ internal class ProfileHelperViewModelLogicTest {
     @Mock private lateinit var defaultProfile: DefaultProfile
     @Mock private lateinit var defaultProfileDPV: DefaultProfileDPV
     @Mock private lateinit var defaultProfileCircadian: DefaultProfileCircadian
+    @Mock private lateinit var hardLimits: HardLimits
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var fabricPrivacy: FabricPrivacy
 
@@ -87,7 +92,7 @@ internal class ProfileHelperViewModelLogicTest {
         whenever(profileFunction.getUnits()).thenReturn(GlucoseUnit.MGDL)
         sut = ProfileHelperViewModel(
             persistenceLayer, profileRepository, profileFunction, profileUtil, rh, dateUtil,
-            tddCalculator, defaultProfile, defaultProfileDPV, defaultProfileCircadian, rxBus, fabricPrivacy
+            tddCalculator, defaultProfile, defaultProfileDPV, defaultProfileCircadian, hardLimits, rxBus, fabricPrivacy
         )
     }
 
@@ -124,12 +129,12 @@ internal class ProfileHelperViewModelLogicTest {
     }
 
     @Test
-    fun `CIRCADIAN label carries the basal percentage as a whole number`() {
+    fun `CIRCADIAN label is distinct from the DPV label`() {
         val name = sut.getProfileName(
             age = 12, tdd = 30.0, weight = 40.0, basalPct = 0.35,
             profileType = ProfileType.CIRCADIAN_DEFAULT, profileIndex = 0, profileSwitchIndex = 0
         )
-        assertThat(name).isEqualTo("format_with_tdd_and_pct|12,30.0,35")
+        assertThat(name).isEqualTo("format_with_tdd_and_pct_circadian|12,30.0,35")
     }
 
     @Test
@@ -185,6 +190,49 @@ internal class ProfileHelperViewModelLogicTest {
         verify(defaultProfileDPV, never()).profile(any(), any(), any(), any())
     }
 
+    // ---- generated-profile validity ---------------------------------------------------------
+
+    private fun profileWith(isf: Double = 50.0, ic: Double = 10.0, basal: Double = 1.0): PureProfile =
+        PureProfile(
+            basalBlocks = listOf(Block(T.hours(1).msecs(), basal)),
+            isfBlocks = listOf(Block(T.hours(1).msecs(), isf)),
+            icBlocks = listOf(Block(T.hours(1).msecs(), ic)),
+            targetBlocks = listOf(TargetBlock(T.hours(24).msecs(), 108.0, 108.0)),
+            glucoseUnit = GlucoseUnit.MGDL,
+            utcOffset = 0
+        )
+
+    @Test
+    fun `isProfileValid accepts values inside the hard limits`() {
+        whenever(hardLimits.maxBasal()).thenReturn(10.0)
+        whenever(hardLimits.icRange()).thenReturn(2.0..100.0)
+
+        assertThat(sut.isProfileValid(profileWith())).isTrue()
+    }
+
+    @Test
+    fun `isProfileValid rejects a scaled IC below the hard limit`() {
+        whenever(hardLimits.maxBasal()).thenReturn(10.0)
+        whenever(hardLimits.icRange()).thenReturn(2.0..100.0)
+
+        assertThat(sut.isProfileValid(profileWith(ic = 1.5))).isFalse()
+    }
+
+    @Test
+    fun `isProfileValid rejects a scaled ISF below the hard limit`() {
+        whenever(hardLimits.maxBasal()).thenReturn(10.0)
+        whenever(hardLimits.icRange()).thenReturn(2.0..100.0)
+
+        assertThat(sut.isProfileValid(profileWith(isf = 1.5))).isFalse()
+    }
+
+    @Test
+    fun `getIcRange delegates to the configured hard limits`() {
+        whenever(hardLimits.icRange()).thenReturn(0.3..100.0)
+
+        assertThat(sut.getIcRange()).isEqualTo(0.3..100.0)
+    }
+
     @Test
     fun `a generator failure shows no profile instead of crashing the screen`() {
         whenever(defaultProfile.profile(12, 30.0, 40.0, GlucoseUnit.MGDL))
@@ -234,6 +282,16 @@ internal class ProfileHelperViewModelLogicTest {
         verify(defaultProfileCircadian).profile(12, 30.0, 0.32, 50.0, 10.0, -3.0, GlucoseUnit.MGDL)
         verify(defaultProfileDPV, never()).profile(any(), any(), any(), any())
         verify(rxBus).send(any<EventShowDialog.OkCancel>())
+    }
+
+    @Test
+    fun `copy to local of a display-only profile does not fall back to the DPV generator`() {
+        sut.copyToLocal(age = 12, tdd = 30.0, weight = 40.0, pct = 32.0, profileType = ProfileType.CURRENT)
+
+        verify(rxBus, never()).send(any())
+        verify(defaultProfile, never()).profile(any(), any(), any(), any())
+        verify(defaultProfileDPV, never()).profile(any(), any(), any(), any())
+        verify(defaultProfileCircadian, never()).profile(any(), any(), any(), any(), any(), any(), any())
     }
 
     @Test
