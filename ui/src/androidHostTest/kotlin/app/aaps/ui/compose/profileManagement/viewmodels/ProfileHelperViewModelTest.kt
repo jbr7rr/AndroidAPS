@@ -10,6 +10,7 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.stats.TddCalculator
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.HardLimits
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.ui.compose.profileHelper.ProfileType
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfile
@@ -42,6 +43,7 @@ internal class ProfileHelperViewModelTest {
     @Mock private lateinit var defaultProfile: DefaultProfile
     @Mock private lateinit var defaultProfileDPV: DefaultProfileDPV
     @Mock private lateinit var defaultProfileCircadian: DefaultProfileCircadian
+    @Mock private lateinit var hardLimits: HardLimits
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var fabricPrivacy: FabricPrivacy
 
@@ -57,7 +59,7 @@ internal class ProfileHelperViewModelTest {
         whenever(persistenceLayer.observeChanges(EPS::class)).thenReturn(emptyFlow())
         sut = ProfileHelperViewModel(
             persistenceLayer, profileRepository, profileFunction, profileUtil, rh, dateUtil,
-            tddCalculator, defaultProfile, defaultProfileDPV, defaultProfileCircadian, rxBus, fabricPrivacy
+            tddCalculator, defaultProfile, defaultProfileDPV, defaultProfileCircadian, hardLimits, rxBus, fabricPrivacy
         )
     }
 

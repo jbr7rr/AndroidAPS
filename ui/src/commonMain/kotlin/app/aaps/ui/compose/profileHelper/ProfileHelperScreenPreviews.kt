@@ -130,6 +130,7 @@ internal fun DefaultProfileCircadianPreview() {
             timeshift = 0.0,
             onTimeshiftChange = {},
             units = GlucoseUnit.MGDL,
+            icRange = 2.0..100.0,
             modifier = Modifier.padding(16.dp)
         )
     }

@@ -4,6 +4,7 @@ import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.time.T
 import app.aaps.core.data.time.systemUtcOffsetAt
 import app.aaps.core.interfaces.profile.PureProfile
+import app.aaps.core.objects.profile.ProfileSealed
 import app.aaps.shared.tests.TestBaseWithProfile
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileCircadian
 import com.google.common.truth.Truth.assertThat
@@ -165,6 +166,29 @@ class DefaultProfileCircadianTest : TestBaseWithProfile() {
         val mmol = requireProfile(profile(isf = mmolValue, units = GlucoseUnit.MMOL))
         assertThat(mmol.isfBlocks[0].amount).isWithin(1e-12).of(mmolValue / oneToTen[23])
         assertThat(mmol.glucoseUnit).isEqualTo(GlucoseUnit.MMOL)
+    }
+
+    @Test
+    fun `a profile whose scaled values stay inside the hard limits passes semantic validation`() {
+        val p = requireProfile(profile(age = 61, tdd = 30.0, basalSumPct = 0.4, isf = 50.0, ic = 10.0))
+        val check = ProfileSealed.Pure(p, activePlugin).validateSemantic(baseText, hardLimits)
+        assertThat(check.isValid).isTrue()
+    }
+
+    @Test
+    fun `a profile whose scaled ISF falls below the hard limit is rejected by semantic validation`() {
+        // entered 2.0 mg/dL is at the raw LIMIT_ISF start, but the 61+ band divides by up to 1.43.
+        val p = requireProfile(profile(age = 61, isf = 2.0))
+        val check = ProfileSealed.Pure(p, activePlugin).validateSemantic(baseText, hardLimits)
+        assertThat(check.isValid).isFalse()
+    }
+
+    @Test
+    fun `a profile whose scaled IC falls below the hard limit is rejected by semantic validation`() {
+        // entered 2.0 g/U is at the adult hard minimum, but the 61+ band divides by up to 1.43.
+        val p = requireProfile(profile(age = 61, ic = 2.0))
+        val check = ProfileSealed.Pure(p, activePlugin).validateSemantic(baseText, hardLimits)
+        assertThat(check.isValid).isFalse()
     }
 
     @Test

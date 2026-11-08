@@ -158,7 +158,16 @@ fun NumberInputRow(
 
     fun validateAndCommit(text: String) {
         val cleaned = text.trim().replace(",", ".")
-        val parsed = if (cleaned.isEmpty()) 0.0 else cleaned.toDoubleOrNull()
+        // An empty field means "not set" (0.0), not "the range minimum". Coercing it to
+        // valueRange.start silently turns a skipped field into a real value: a blank ISF of
+        // 2.0..1000.0 would become 2.0 just by focusing and leaving the field. The parent decides
+        // from the zero whether the form is complete.
+        if (cleaned.isEmpty()) {
+            isError = false
+            onValueChange(0.0)
+            return
+        }
+        val parsed = cleaned.toDoubleOrNull()
         if (parsed == null) {
             isError = true
             errorMessage = errorInvalidNumber

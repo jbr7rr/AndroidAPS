@@ -35,6 +35,11 @@ class DefaultProfileCircadian(
      * the helper screen leaves its fields blank instead of supplying defaults, so a zero here is
      * an unfinished form and must not produce a profile that could be activated.
      *
+     * [isf] and [ic] are nominal values; the age-band factors divide them. This class does not
+     * clamp or validate against HardLimits, because that depends on the configured safety age and
+     * on the glucose unit. The caller must check the generated blocks before offering them - the
+     * helper screen runs the same semantic validation as the profile repository.
+     *
      * Basal uses the time shift as entered; ISF and IC use the old `timeshift + 1` rule. The
      * profile is built directly rather than through a JSON document, so the values stay exactly
      * what the factors produce.
