@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import app.aaps.core.data.model.GlucoseUnit
 
 @Preview(showBackground = true)
 @Composable
@@ -106,6 +107,29 @@ internal fun DefaultProfileContentPreview() {
             showPct = true,
             showWeight = false,
             showTdd = true,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+internal fun DefaultProfileCircadianPreview() {
+    MaterialTheme {
+        CircadianProfileContent(
+            age = 40,
+            onAgeChange = {},
+            tdd = 30.0,
+            onTddChange = {},
+            pct = 35.0,
+            onPctChange = {},
+            isf = 50.0,
+            onIsfChange = {},
+            ic = 10.0,
+            onIcChange = {},
+            timeshift = 0.0,
+            onTimeshiftChange = {},
+            units = GlucoseUnit.MGDL,
             modifier = Modifier.padding(16.dp)
         )
     }

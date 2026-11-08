@@ -16,6 +16,7 @@ import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.ui.compose.profileHelper.ProfileType
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfile
+import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileCircadian
 import app.aaps.ui.compose.profileHelper.defaultProfile.DefaultProfileDPV
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,7 @@ internal class ProfileHelperViewModelLogicTest {
     @Mock private lateinit var tddCalculator: TddCalculator
     @Mock private lateinit var defaultProfile: DefaultProfile
     @Mock private lateinit var defaultProfileDPV: DefaultProfileDPV
+    @Mock private lateinit var defaultProfileCircadian: DefaultProfileCircadian
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var fabricPrivacy: FabricPrivacy
 
@@ -85,7 +87,7 @@ internal class ProfileHelperViewModelLogicTest {
         whenever(profileFunction.getUnits()).thenReturn(GlucoseUnit.MGDL)
         sut = ProfileHelperViewModel(
             persistenceLayer, profileRepository, profileFunction, profileUtil, rh, dateUtil,
-            tddCalculator, defaultProfile, defaultProfileDPV, rxBus, fabricPrivacy
+            tddCalculator, defaultProfile, defaultProfileDPV, defaultProfileCircadian, rxBus, fabricPrivacy
         )
     }
 
@@ -117,6 +119,15 @@ internal class ProfileHelperViewModelLogicTest {
         val name = sut.getProfileName(
             age = 12, tdd = 30.0, weight = 40.0, basalPct = 0.35,
             profileType = ProfileType.DPV_DEFAULT, profileIndex = 0, profileSwitchIndex = 0
+        )
+        assertThat(name).isEqualTo("format_with_tdd_and_pct|12,30.0,35")
+    }
+
+    @Test
+    fun `CIRCADIAN label carries the basal percentage as a whole number`() {
+        val name = sut.getProfileName(
+            age = 12, tdd = 30.0, weight = 40.0, basalPct = 0.35,
+            profileType = ProfileType.CIRCADIAN_DEFAULT, profileIndex = 0, profileSwitchIndex = 0
         )
         assertThat(name).isEqualTo("format_with_tdd_and_pct|12,30.0,35")
     }
@@ -160,6 +171,21 @@ internal class ProfileHelperViewModelLogicTest {
     }
 
     @Test
+    fun `CIRCADIAN profile is built from the Circadian inputs and the current units`() {
+        val expected: PureProfile = mock()
+        whenever(defaultProfileCircadian.profile(12, 30.0, 0.32, 50.0, 10.0, 2.0, GlucoseUnit.MGDL)).thenReturn(expected)
+
+        val profile = sut.getProfile(
+            age = 12, tdd = 30.0, weight = 40.0, basalPct = 0.32,
+            profileType = ProfileType.CIRCADIAN_DEFAULT, profileIndex = 0, profileSwitchIndex = 0,
+            isf = 50.0, ic = 10.0, timeshift = 2.0
+        )
+
+        assertThat(profile).isSameInstanceAs(expected)
+        verify(defaultProfileDPV, never()).profile(any(), any(), any(), any())
+    }
+
+    @Test
     fun `a generator failure shows no profile instead of crashing the screen`() {
         whenever(defaultProfile.profile(12, 30.0, 40.0, GlucoseUnit.MGDL))
             .thenThrow(IllegalStateException("boom"))
@@ -193,6 +219,20 @@ internal class ProfileHelperViewModelLogicTest {
         sut.copyToLocal(age = 12, tdd = 30.0, weight = 40.0, pct = 32.0, profileType = ProfileType.DPV_DEFAULT)
 
         verify(defaultProfileDPV).profile(12, 30.0, 0.32, GlucoseUnit.MGDL)
+        verify(rxBus).send(any<EventShowDialog.OkCancel>())
+    }
+
+    @Test
+    fun `copy to local of a CIRCADIAN profile passes its inputs and turns the percent into a fraction`() {
+        whenever(defaultProfileCircadian.profile(12, 30.0, 0.32, 50.0, 10.0, -3.0, GlucoseUnit.MGDL)).thenReturn(mock())
+
+        sut.copyToLocal(
+            age = 12, tdd = 30.0, weight = 40.0, pct = 32.0,
+            profileType = ProfileType.CIRCADIAN_DEFAULT, isf = 50.0, ic = 10.0, timeshift = -3.0
+        )
+
+        verify(defaultProfileCircadian).profile(12, 30.0, 0.32, 50.0, 10.0, -3.0, GlucoseUnit.MGDL)
+        verify(defaultProfileDPV, never()).profile(any(), any(), any(), any())
         verify(rxBus).send(any<EventShowDialog.OkCancel>())
     }
 
