@@ -92,6 +92,7 @@ autoISF_min|DoubleKey|true
 autosens_adjust_targets|BooleanKey|true
 autosens_max|DoubleKey|true
 autosens_min|DoubleKey|true
+autosens_uam_factor|DoubleKey|true
 autotune_additional_log|BooleanKey|true
 autotune_auto|BooleanKey|true
 autotune_circadian_ic_isf|BooleanKey|true
@@ -181,6 +182,7 @@ enable_fabric2|BooleanKey|true
 enable_missed_bg_readings|BooleanKey|true
 enable_pump_unreachable_alert|BooleanKey|true
 enable_unattended_export|BooleanKey|true
+enable_wave_mode|BooleanKey|true
 eopatch_alarms|EopatchStringNonKey|true
 eopatch_bolus_current|EopatchStringNonKey|true
 eopatch_expiration_reminders|EopatchIntKey|true
@@ -441,6 +443,7 @@ simple_mode|BooleanKey|true
 site_rotation_manage_cgm|BooleanKey|true
 site_rotation_manage_pump|BooleanKey|true
 site_rotation_user_profile|IntKey|true
+smb_factor|DoubleKey|true
 smbinterval|IntKey|true
 smbmaxminutes|IntKey|true
 smscommunicator_allowednumbers|StringKey|true
@@ -502,12 +505,19 @@ use_dark_mode|StringKey|true
 use_dynamic_sensitivity|BooleanKey|true
 use_smb|BooleanKey|true
 use_uam|BooleanKey|true
+use_wave_smbcap|BooleanKey|true
 used_autosens_on_main_phone|BooleanNonKey|true
 vacuum_in_progress|BooleanNonKey|false
 virtual_pump_is_suspended|VirtualBooleanNonPreferenceKey|true
 virtual_pump_serial_number|VirtualStringNonPreferenceKey|true
 virtualpump_type|StringKey|true
 virtualpump_uploadstatus|BooleanKey|true
+wave_end|IntKey|true
+wave_smbcap|DoubleKey|true
+wave_start|IntKey|true
+wave_use_adjusted_sens|BooleanKey|true
+waveinsulinReqPCT|DoubleKey|true
+wavesmbmaxminutes|IntKey|true
 wear_broadcast_data|BooleanKey|true
 wear_custom_watchface_autorization|BooleanKey|true
 wear_cwf_author_version|StringNonKey|true
