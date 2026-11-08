@@ -24,11 +24,28 @@ data class ICfg(
     /**
      * Insulin concentration (0.2 for U20, 2.0 for U200 insulin)
      */
-    var concentration: Double = 1.0
+    var concentration: Double = 1.0,
+    /**
+     * Insulin action model. [InsulinModel.Bilinear] is the default and keeps
+     * every existing insulin unchanged. PD insulins set [InsulinModel.Pd].
+     */
+    var insulinModel: InsulinModel = InsulinModel.Bilinear
 ) {
 
-    constructor(insulinLabel: String, peak: Int, dia: Double, concentration: Double)
-        : this(insulinLabel = insulinLabel, insulinEndTime = (dia * 3600 * 1000).toLong(), insulinPeakTime = (peak * 60000).toLong(), concentration = concentration)
+    constructor(
+        insulinLabel: String,
+        peak: Int,
+        dia: Double,
+        concentration: Double,
+        insulinModel: InsulinModel = InsulinModel.Bilinear
+    )
+        : this(
+            insulinLabel = insulinLabel,
+            insulinEndTime = (dia * 3600 * 1000).toLong(),
+            insulinPeakTime = (peak * 60000).toLong(),
+            concentration = concentration,
+            insulinModel = insulinModel
+        )
 
     /**
      * Used in InsulinPlugin (insulin editor)
@@ -43,21 +60,24 @@ data class ICfg(
                 return false
             if (concentration != iCfg.concentration)
                 return false
+            if (insulinModel != iCfg.insulinModel)
+                return false
             return true
         }
         return false
     }
 
     /**
-     * Same insulin action (DIA, peak, concentration), whatever the name. Use this to ask "is this insulin
-     * in the list", because a name can change while the insulin stays the same: the list rebuilds every
-     * label at start, and a profile switch keeps the label it was made with.
+     * Same insulin action (DIA, peak, concentration, model), whatever the name. Use this to ask "is this
+     * insulin in the list", because a name can change while the insulin stays the same: the list rebuilds
+     * every label at start, and a profile switch keeps the label it was made with.
      */
     fun hasSameCurve(iCfg: ICfg?): Boolean =
         iCfg != null &&
             insulinEndTime == iCfg.insulinEndTime &&
             insulinPeakTime == iCfg.insulinPeakTime &&
-            concentration == iCfg.concentration
+            concentration == iCfg.concentration &&
+            insulinModel == iCfg.insulinModel
 
     /**
      * DIA (insulinEndTime) in hours rounded to 1 decimal place
@@ -76,11 +96,20 @@ data class ICfg(
      * (and for anything else non-positive). Such a record is not an insulin: [dia] rounds to `0.0`, which is
      * outside the hard limits, so an APS run that accepts it aborts every cycle instead of dosing.
      *
+     * Also false for an invalid insulin model: non-finite or non-positive PD parameters, a non-positive
+     * duration, a bad concentration, or a peak that cannot produce a real curve. Such a model must never be
+     * dosed with the bilinear curve instead.
+     *
      * Treat it as "no insulin" — the same as absent — so callers fall through to their normal
      * ask-or-refuse path rather than propagating a degenerate curve.
      */
     val isUsable: Boolean
-        get() = insulinEndTime > 0 && insulinPeakTime > 0
+        get() = insulinEndTime > 0 && insulinPeakTime > 0 && when (val model = insulinModel) {
+            InsulinModel.Bilinear -> true
+            is InsulinModel.Pd -> model.isUsable &&
+                concentration.isFinite() && concentration > 0.0 &&
+                model.peakMinutesForDose(1.0, concentration).let { it.isFinite() && it > 0.0 }
+        }
 
     /**
      * Set insulinEndTime aka DIA
@@ -106,9 +135,22 @@ data class ICfg(
     /**
      * deepClone is only used in insulin editor
      */
-    fun deepClone(): ICfg = ICfg(insulinLabel, insulinEndTime, insulinPeakTime, concentration).also { it.insulinNickname = insulinNickname }
+    fun deepClone(): ICfg = ICfg(insulinLabel, insulinEndTime, insulinPeakTime, concentration, insulinModel)
+        .also { it.insulinNickname = insulinNickname }
 
-    fun iobCalcForTreatment(bolus: BS, time: Long): Iob {
+    /**
+     * IOB and activity contribution of [bolus] at [time], using this ICfg's [insulinModel].
+     */
+    fun iobCalcForTreatment(bolus: BS, time: Long): Iob = when (val model = insulinModel) {
+        InsulinModel.Bilinear -> bilinearIobCalcForTreatment(bolus, time)
+        is InsulinModel.Pd -> pdIobCalcForTreatment(bolus, time, model)
+    }
+
+    /**
+     * The classic AAPS bilinear curve. Kept byte-for-byte identical to the pre-PD code, so existing
+     * insulins produce the same numbers.
+     */
+    private fun bilinearIobCalcForTreatment(bolus: BS, time: Long): Iob {
         devAssert(insulinEndTime != 0L)
         devAssert(insulinPeakTime != 0L)
         val result = Iob()
@@ -134,6 +176,57 @@ data class ICfg(
             }
         }
         return result
+    }
+
+    /**
+     * The PD curve uses [InsulinModel.Pd.durationMinutes], not [insulinEndTime]. The 3.4 plugins always
+     * used 8 h, so an old profile with a shorter DIA keeps the same curve. An unusable model returns zero
+     * instead of NaN; [isUsable] also refuses such an insulin upstream.
+     */
+    private fun pdIobCalcForTreatment(bolus: BS, time: Long, model: InsulinModel.Pd): Iob {
+        if (bolus.amount == 0.0 || !isUsable) return Iob()
+        val t = (time - bolus.timestamp) / 1000.0 / 60.0
+        return Iob(
+            iobContrib = model.iobContrib(bolus.amount, t, concentration),
+            activityContrib = model.activityContrib(bolus.amount, t, concentration)
+        )
+    }
+
+    /**
+     * Activity at the insulin's peak time. Wave uses this as the amplitude of a dose.
+     *
+     * Bilinear: the existing curve evaluated at [peak], the same value the old
+     * `iobCalcPeakForTreatment` returned. PD: the model's dose-dependent peak.
+     */
+    fun activityAtPeak(amount: Double): Double = when (val model = insulinModel) {
+        InsulinModel.Bilinear -> bilinearActivityAtPeak(amount)
+        is InsulinModel.Pd -> if (isUsable) model.activityAtPeak(amount, concentration) else 0.0
+    }
+
+    private fun bilinearActivityAtPeak(amount: Double): Double {
+        if (amount == 0.0) return 0.0
+        val td = (dia * 60).coerceAtLeast(MIN_DIA_MINUTES)
+        val tp = peak.toDouble().coerceIn(MIN_PEAK_MINUTES, td / 2.0 - 1.0)
+        // The old `iobCalcPeakForTreatment` evaluated the curve at the configured peak, not at the
+        // defensive clamp. Keep that: only the curve parameters use the clamp.
+        val t = peak.toDouble()
+        if (t >= td) return 0.0
+        val tau = tp * (1 - tp / td) / (1 - 2 * tp / td)
+        val a = 2 * tau / td
+        val s = 1 / (1 - a + (1 + a) * exp(-td / tau))
+        val activity = amount * (s / tau.pow(2.0)) * t * (1 - t / td) * exp(-t / tau)
+        return if (activity.isFinite()) activity else 0.0
+    }
+
+    /**
+     * Time to peak in minutes for [amount], for the UI and the insulin graph only.
+     *
+     * Wave deliberately uses [peak] (the fixed profile value), not this
+     * dose-dependent value, to keep the 3.4 future window.
+     */
+    fun peakMinutesForDose(amount: Double): Double = when (val model = insulinModel) {
+        InsulinModel.Bilinear -> peak.toDouble()
+        is InsulinModel.Pd -> model.peakMinutesForDose(amount, concentration)
     }
 
     companion object {
