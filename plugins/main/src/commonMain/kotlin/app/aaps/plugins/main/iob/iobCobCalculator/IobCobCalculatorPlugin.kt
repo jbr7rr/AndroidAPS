@@ -437,7 +437,7 @@ class IobCobCalculatorPlugin(
         // predict IOB out to DIA plus 30m
         var time = dateUtil.now()
         time = ads.roundUpTime(time)
-        val len = ((profile.iCfg.dia * 60 + 30) / 5).toInt()
+        val len = ((profile.iCfg.iobDurationHours * 60 + 30) / 5).toInt()
         val array = Array(len) { IobTotal(0) }
         for ((pos, i) in (0 until len).withIndex()) {
             val t = time + i * 5 * 60000
@@ -555,7 +555,7 @@ class IobCobCalculatorPlugin(
      *  Time range to the past for IOB calculation
      *  @return milliseconds
      */
-    private suspend fun range(): Long = ((profileFunction.getProfile()?.iCfg?.dia ?: Constants.DEFAULT_DIA) * 60 * 60 * 1000).toLong()
+    private suspend fun range(): Long = ((profileFunction.getProfile()?.iCfg?.iobDurationHours ?: Constants.DEFAULT_DIA) * 60 * 60 * 1000).toLong()
 
     override suspend fun calculateIobFromBolus(): IobTotal = calculateIobFromBolusToTime(dateUtil.now())
 

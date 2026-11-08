@@ -1,6 +1,7 @@
 package app.aaps.plugins.sync.nsclientV3
 
 import app.aaps.core.data.model.BCR
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.insulin.InsulinType
@@ -295,6 +296,19 @@ class NsIncomingDataProcessorTest : TestBaseWithProfile() {
         processor.processTreatments(treatments, doFullSync = false)
 
         verify(storeDataForDb).addToBoluses(argThat { iCfg == someICfg })
+    }
+
+    // The mirror keeps an invalid model for the pump concentration, but a guess stamped onto imported
+    // history must be safe to dose. Do not copy a broken model onto a record that carried none.
+    @Test
+    fun `bolus arriving without an iCfg does not copy an invalid model`() {
+        val invalid = someICfg.copy(insulinModel = InsulinModel.Pd(a0 = Double.NaN, a1 = 12.27, b1 = 0.05185))
+        whenever(profileFunction.runningICfg).thenReturn(MutableStateFlow(invalid))
+        val treatments = listOf<NSTreatment>(bolusWithoutICfg())
+
+        processor.processTreatments(treatments, doFullSync = false)
+
+        verify(storeDataForDb).addToBoluses(argThat { iCfg == InsulinType.OREF_RAPID_ACTING.iCfg })
     }
 
     // The fresh-install full sync: nothing is in force yet because the very profile switches that would

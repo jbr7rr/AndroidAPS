@@ -1,6 +1,7 @@
 package app.aaps.implementation.maintenance.migration
 
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.insulin.InsulinType
@@ -163,6 +164,18 @@ class InsulinMigrationTest {
         assertThat(plan.source).isEqualTo(InsulinMigrationPlan.Source.RECORD)
         assertThat(plan.iCfg).isEqualTo(record)
         assertThat(plan.isGuess).isFalse()
+    }
+
+    @Test fun `a record with a present but invalid model is still used`() {
+        // An invalid PD model is not the sentinel: the row knows which insulin was delivered. Keep it
+        // visible instead of replacing it with another curve.
+        val record = ICfg("Custom PD", DIA_6H, PEAK_75M, 1.0)
+            .copy(insulinModel = InsulinModel.Pd(a0 = Double.NaN, a1 = 12.27, b1 = 0.05185))
+
+        val plan = sut().plan(record, legacyRapid(), harvestOf("Adult" to 5.0), activeProfileName = "Adult")
+
+        assertThat(plan.source).isEqualTo(InsulinMigrationPlan.Source.RECORD)
+        assertThat(plan.iCfg).isEqualTo(record)
     }
 
     @Test fun `a record still carrying the sentinel is not used`() {

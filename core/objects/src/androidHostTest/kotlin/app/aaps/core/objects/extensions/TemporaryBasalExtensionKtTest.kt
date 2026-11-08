@@ -1,9 +1,12 @@
 package app.aaps.core.objects.extensions
 
 import app.aaps.core.data.aps.SMBDefaults
+import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.model.TB
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.aps.AutosensResult
+import app.aaps.core.objects.profile.ProfileSealed
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
@@ -48,5 +51,29 @@ class TemporaryBasalExtensionKtTest : TestBaseWithProfile() {
         assertThat(
             temporaryBasal.iobCalc(now + T.hours(1).msecs(), effectiveProfile, asResult, SMBDefaults.exercise_mode, SMBDefaults.half_basal_exercise_target, true).basaliob
         ).isEqualTo(0.0)
+    }
+
+    @Test
+    fun `PD temp basal IOB is not cut at a shorter DIA`() {
+        val pdCfg = ICfg(
+            insulinLabel = "Custom PD",
+            peak = 51,
+            dia = 5.0,
+            concentration = 1.0,
+            insulinModel = InsulinModel.Pd(a0 = 51.0, a1 = 12.27, b1 = 0.05185, durationMinutes = 480)
+        )
+        val pdProfile = ProfileSealed.EPS(effectiveProfileSwitch.copy(iCfg = pdCfg), activePlugin)
+
+        // Delivered 6 h ago: outside the 5 h DIA, still inside the 8 h PD curve.
+        val temporaryBasal = TB(
+            timestamp = now - T.hours(6).msecs(),
+            rate = 200.0,
+            isAbsolute = false,
+            duration = T.hours(1).msecs(),
+            type = TB.Type.NORMAL
+        )
+
+        assertThat(pdProfile.iCfg.iobDurationHours).isEqualTo(8.0)
+        assertThat(temporaryBasal.iobCalc(now, pdProfile).basaliob).isGreaterThan(0.0)
     }
 }

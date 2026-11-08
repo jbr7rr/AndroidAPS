@@ -111,15 +111,18 @@ class ProfileFunctionImpl(
      * Not through [getProfile], because that answers null until app init completes, and the pump needs
      * the concentration before that: `PumpWithConcentrationImpl` falls back to 1.0 without it, which is
      * wrong for any other insulin. This is the same value `ProfileSealed.EPS` exposes as `iCfg`.
+     *
+     * [ICfg.isPresent], not [ICfg.isUsable]: an invalid model must stay visible here so the pump keeps
+     * the right concentration. Dosing callers use [getRunningOrRequestedICfg], which rejects it.
      */
     private suspend fun readRunningICfg(): ICfg? =
-        persistenceLayer.getEffectiveProfileSwitchActiveAt(dateUtil.now())?.iCfg?.takeIf { it.isUsable }
+        persistenceLayer.getEffectiveProfileSwitchActiveAt(dateUtil.now())?.iCfg?.takeIf { it.isPresent }
 
     // Same rule as the interface default, requested first, but the running insulin is read from the database
     // rather than through getProfile(): the data migrations in MainApp ask for it before app init completes,
     // and with a null profile there they would stamp old records with a substitute insulin.
     override suspend fun getRunningOrRequestedICfg(): ICfg? =
-        getRequestedProfile()?.iCfg?.takeIf { it.isUsable } ?: readRunningICfg()
+        getRequestedProfile()?.iCfg?.takeIf { it.isUsable } ?: readRunningICfg()?.takeIf { it.isUsable }
 
     override suspend fun getProfileName(): String =
         getProfileName(dateUtil.now(), customized = true, showRemainingTime = false)
@@ -341,7 +344,8 @@ class ProfileFunctionImpl(
      */
     private suspend fun insulinRefusal(ps: PS): String? {
         if (ps.duration == 0L) return null
-        val permanent = persistenceLayer.getPermanentProfileSwitchActiveAt(ps.timestamp)?.iCfg?.takeIf { it.isUsable } ?: return null
+        // isPresent: an invalid model must not make this check silently do nothing.
+        val permanent = persistenceLayer.getPermanentProfileSwitchActiveAt(ps.timestamp)?.iCfg?.takeIf { it.isPresent } ?: return null
         if (ps.iCfg.hasSameCurve(permanent)) return null
         return rh.gs(CoreUiStrings.profile_switch_insulin_not_permanent, ps.iCfg.insulinLabel, permanent.insulinLabel)
     }

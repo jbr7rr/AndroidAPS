@@ -178,9 +178,10 @@ interface ProfileFunction {
      * is a catalogue to choose from, never a source of "the current one" — so a null result means the caller
      * must ask the user or refuse the action, and must not substitute.
      *
-     * A profile carrying the DB v33 migration sentinel counts as *not* having one — see [ICfg.isUsable]. A
+     * A profile carrying the DB v33 migration sentinel counts as *not* having one — see [ICfg.isPresent]. A
      * record whose DIA rounds to zero is not a value the caller can act on, and letting it through here is
-     * what turns a bad migration into a loop that aborts every cycle.
+     * what turns a bad migration into a loop that aborts every cycle. An invalid insulin model is also
+     * rejected for dosing — see [ICfg.isUsable].
      *
      * @return the in-force [ICfg], or null when no profile is running, none is pending, or what they carry
      *   is unusable
@@ -209,8 +210,12 @@ interface ProfileFunction {
      * not see a requested-but-not-yet-effective switch. **Use [getRunningOrRequestedICfg] wherever a
      * coroutine is available**; reach for this only when the call site genuinely cannot suspend.
      *
-     * `null` carries the same meaning as there — nothing is in force, so the caller must ask the user or
-     * refuse, never substitute a catalogue entry.
+     * This keeps a record whose model is invalid: the pump still needs its concentration. It is not a
+     * dosing value. [getRunningOrRequestedICfg] rejects an unusable model, so a caller that doses must use
+     * that instead.
+     *
+     * `null` means nothing is in force, so the caller must ask the user or refuse, never substitute a
+     * catalogue entry.
      */
     val runningICfg: StateFlow<ICfg?>
 }

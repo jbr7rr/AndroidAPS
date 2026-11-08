@@ -92,23 +92,56 @@ data class ICfg(
         get() = (insulinPeakTime / 60000).toInt()
 
     /**
+     * True when the record carries an insulin at all: a positive DIA and peak.
+     *
+     * This is the old [isUsable] meaning. Use it for paths that must keep working with an invalid
+     * model, for example reading the pump concentration, checking that a temporary switch has the
+     * same insulin as the permanent one, or migrating an old record whose model cannot be repaired.
+     * Those paths must not treat an invalid model as "no insulin".
+     */
+    val isPresent: Boolean
+        get() = insulinEndTime > 0 && insulinPeakTime > 0
+
+    /**
      * False for the `insulinEndTime = -1` sentinel the DB v33 migration writes into rows that predate ICfg
      * (and for anything else non-positive). Such a record is not an insulin: [dia] rounds to `0.0`, which is
      * outside the hard limits, so an APS run that accepts it aborts every cycle instead of dosing.
      *
      * Also false for an invalid insulin model: non-finite or non-positive PD parameters, a non-positive
-     * duration, a bad concentration, or a peak that cannot produce a real curve. Such a model must never be
-     * dosed with the bilinear curve instead.
+     * duration, a bad concentration, or a curve that cannot produce a real time to peak. Such a model must
+     * never be dosed with the bilinear curve instead.
      *
-     * Treat it as "no insulin" — the same as absent — so callers fall through to their normal
-     * ask-or-refuse path rather than propagating a degenerate curve.
+     * Treat it as "no dosing insulin" — the same as absent — so dosing callers fall through to their normal
+     * ask-or-refuse path rather than propagating a degenerate curve. Non-dosing callers that only need the
+     * insulin's identity or concentration use [isPresent].
      */
     val isUsable: Boolean
-        get() = insulinEndTime > 0 && insulinPeakTime > 0 && when (val model = insulinModel) {
+        get() = isPresent && when (val model = insulinModel) {
             InsulinModel.Bilinear -> true
-            is InsulinModel.Pd -> model.isUsable &&
-                concentration.isFinite() && concentration > 0.0 &&
-                model.peakMinutesForDose(1.0, concentration).let { it.isFinite() && it > 0.0 }
+            is InsulinModel.Pd -> model.isUsableFor(concentration)
+        }
+
+    /**
+     * How long this insulin's IOB curve lasts, in milliseconds.
+     *
+     * Bilinear: the DIA. PD: at least the model's fixed duration, because the 3.4 PD plugins always
+     * used 8 h and a shorter profile DIA never shortened the curve. Use this for IOB query windows
+     * and record selection; use [insulinEndTime] for the displayed DIA.
+     */
+    val iobEndTime: Long
+        get() = if (!isPresent) insulinEndTime else when (val model = insulinModel) {
+            InsulinModel.Bilinear -> insulinEndTime
+            is InsulinModel.Pd -> maxOf(insulinEndTime, model.durationMinutes * 60_000L)
+        }
+
+    /**
+     * [iobEndTime] in hours. Bilinear keeps the rounded [dia] used by the old code; PD is at least
+     * the model duration, so the IOB array covers the whole curve.
+     */
+    val iobDurationHours: Double
+        get() = if (!isPresent) dia else when (val model = insulinModel) {
+            InsulinModel.Bilinear -> dia
+            is InsulinModel.Pd -> maxOf(dia, model.durationMinutes / 60.0)
         }
 
     /**
@@ -226,7 +259,12 @@ data class ICfg(
      */
     fun peakMinutesForDose(amount: Double): Double = when (val model = insulinModel) {
         InsulinModel.Bilinear -> peak.toDouble()
-        is InsulinModel.Pd -> model.peakMinutesForDose(amount, concentration)
+        is InsulinModel.Pd -> {
+            val tp = model.peakMinutesForDose(amount, concentration)
+            // UI/graph only: never return NaN/Infinity. For an unusable model the configured peak
+            // is the only finite value that still means something.
+            if (isUsable && tp.isFinite()) tp else peak.toDouble()
+        }
     }
 
     companion object {

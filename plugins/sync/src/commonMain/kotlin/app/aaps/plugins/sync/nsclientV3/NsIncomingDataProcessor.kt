@@ -88,8 +88,12 @@ class NsIncomingDataProcessor(
      * profile switches that would establish it are arriving in this same batch); it matches what a fresh
      * install seeds. Read per record, not hoisted, so records later in a batch pick up a profile switch that
      * landed earlier in it.
+     *
+     * A running insulin with an invalid model is not copied onto new records: the mirror keeps it for the
+     * pump concentration, but a guess stamped onto history must be safe to dose. The default does that.
      */
-    private fun fallbackICfg(): ICfg = profileFunction.runningICfg.value ?: InsulinType.OREF_RAPID_ACTING.iCfg
+    private fun fallbackICfg(): ICfg =
+        profileFunction.runningICfg.value?.takeIf { it.isUsable } ?: InsulinType.OREF_RAPID_ACTING.iCfg
 
     /**
      * Whether BG from Nightscout is taken: when Nightscout is the BG source, when the user accepts CGM data
