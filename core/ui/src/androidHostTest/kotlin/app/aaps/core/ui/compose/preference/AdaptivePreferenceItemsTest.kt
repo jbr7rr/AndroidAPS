@@ -1,14 +1,17 @@
 package app.aaps.core.ui.compose.preference
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.DoubleKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
+import app.aaps.core.keys.interfaces.AppPlatform
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.ui.compose.LocalConfig
 import app.aaps.core.ui.compose.LocalPreferences
@@ -16,6 +19,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
@@ -65,6 +69,34 @@ class AdaptivePreferenceItemsTest {
     fun doubleItemRenders() {
         render { AdaptiveDoublePreferenceItem(doubleKey = DoubleKey.OverviewInsulinButtonIncrement1) }
         compose.onRoot().assertIsDisplayed()
+    }
+
+    /**
+     * The Wave insulin-requirement key is a Double with a range, so it takes the slider path and
+     * formats its value through the key's unit. PERCENT formats with `%1$d`, which throws
+     * IllegalFormatConversionException for a Double; this test failed that way before the unit was
+     * changed. Wave must be enabled for the row to be visible.
+     *
+     * This one cannot use [render]: PreviewTheme provides its own PreviewPreferences inside the
+     * outer provider, which would override the stubbed enable switch. It composes the same layers
+     * with the real Preferences mock in place instead.
+     */
+    @Test
+    fun doubleWaveInsulinRequirementRenders() {
+        whenever(config.platform).thenReturn(AppPlatform.Android)
+        whenever(prefs.get(BooleanKey.ApsWaveEnable)).thenReturn(true)
+        whenever(prefs.get(DoubleKey.ApsWaveInsReqPct)).thenReturn(65.0)
+        compose.setContent {
+            CompositionLocalProvider(LocalPreferences provides prefs, LocalConfig provides config) {
+                MaterialTheme {
+                    ProvidePreferenceTheme {
+                        AdaptiveDoublePreferenceItem(doubleKey = DoubleKey.ApsWaveInsReqPct)
+                    }
+                }
+            }
+        }
+        compose.onRoot().assertIsDisplayed()
+        compose.onNodeWithText("65.0").assertIsDisplayed()
     }
 
     @Test

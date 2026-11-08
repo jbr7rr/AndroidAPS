@@ -202,7 +202,9 @@ enum class DoubleKey(
         summary = KeysStrings.pref_summary_aps_wave_ins_req_pct,
         defaultedBySM = true,
         dependency = BooleanKey.ApsWaveEnable,
-        unitType = UnitType.PERCENT,
+        // Not PERCENT: that unit formats with %d and crashes on a Double. The title carries the
+        // unit, and DOUBLE keeps the 3.4 decimal input.
+        unitType = UnitType.DOUBLE,
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
     ),
     ApsWaveSmbCap(

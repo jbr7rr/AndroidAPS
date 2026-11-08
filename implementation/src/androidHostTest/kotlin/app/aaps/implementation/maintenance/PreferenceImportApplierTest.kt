@@ -222,6 +222,7 @@ class PreferenceImportApplierTest {
     /** The defaults a 3.4 install without these keys would fall back to. */
     @Test fun `the Wavez keys keep their 3_4 defaults`() {
         assertThat(BooleanKey.ApsWaveEnable.defaultValue).isFalse()
+        assertThat(BooleanKey.ApsWaveEnable.hideParentScreenIfHidden).isTrue()
         assertThat(BooleanKey.ApsWaveUseSMBCap.defaultValue).isFalse()
         assertThat(BooleanKey.ApsWaveUseAdjustedSens.defaultValue).isFalse()
         assertThat(IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb.defaultValue).isEqualTo(60)

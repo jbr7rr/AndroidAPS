@@ -137,6 +137,8 @@ enum class BooleanKey(
         title = KeysStrings.pref_title_aps_wave_enable,
         summary = KeysStrings.pref_summary_aps_wave_enable,
         defaultedBySM = true,
+        // 3.4 behaviour: hide the whole Wave section when this switch is itself hidden (simple mode).
+        hideParentScreenIfHidden = true,
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.MasterOnly)
     ),
     ApsWaveUseSMBCap(
