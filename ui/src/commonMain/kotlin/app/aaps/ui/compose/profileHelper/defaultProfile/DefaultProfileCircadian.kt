@@ -31,9 +31,9 @@ class DefaultProfileCircadian(
      * Builds a 24-hour profile from the age band's fixed circadian factors.
      *
      * [isf] is entered in [units], like every other profile field. [ic] is g/U. The target is
-     * always 108 mg/dL converted to [units]. All inputs must be positive: the helper screen leaves
-     * its fields blank instead of supplying defaults, so a zero here is an unfinished form and
-     * must not produce a profile that could be activated.
+     * always 108 mg/dL converted to [units]. TDD, basal percentage, ISF and IC must be positive:
+     * the helper screen leaves its fields blank instead of supplying defaults, so a zero here is
+     * an unfinished form and must not produce a profile that could be activated.
      *
      * Basal uses the time shift as entered; ISF and IC use the old `timeshift + 1` rule. The
      * profile is built directly rather than through a JSON document, so the values stay exactly
