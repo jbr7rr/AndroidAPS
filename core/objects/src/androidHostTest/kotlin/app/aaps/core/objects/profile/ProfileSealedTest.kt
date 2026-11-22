@@ -232,4 +232,30 @@ class ProfileSealedTest : TestBase() {
             .validatePump("Test", testPumpPlugin, config, text, notificationManager, false)
         assertThat(at200.isValid).isFalse()
     }
+
+    @Test
+    fun highTarget80IsAcceptedAndNotClamped() {
+        val profileJson =
+            "{\"iCfg\":{\"insulinLabel\":\"\",\"insulinEndTime\":18000000,\"insulinPeakTime\":4500000,\"concentration\":\"1.0\"},\"carbratio\":[{\"time\":\"00:00\",\"value\":\"15\"}]," +
+                "\"sens\":[{\"time\":\"00:00\",\"value\":\"50\"}],\"timezone\":\"UTC\",\"basal\":[{\"time\":\"00:00\",\"value\":\"0.5\"}],\"target_low\":[{\"time\":\"00:00\",\"value\":\"80\"}],\"target_high\":[{\"time\":\"00:00\",\"value\":\"80\"}],\"startDate\":\"1970-01-01T00:00:00.000Z\",\"units\":\"mg/dl\"}"
+        val profile = ProfileSealed.Pure(pureProfileFromJson(JSONObject(profileJson), dateUtil)!!, activePlugin)
+
+        val semantic = profile.validateSemantic(text, hardLimits)
+        assertThat(semantic.isValid).isTrue()
+        assertThat(semantic.reasons).isEmpty()
+        assertThat(profile.getTargetHighMgdl(0L)).isWithin(0.01).of(80.0)
+    }
+
+    @Test
+    fun highTarget79IsRejectedWithClearMessage() {
+        val profileJson =
+            "{\"iCfg\":{\"insulinLabel\":\"\",\"insulinEndTime\":18000000,\"insulinPeakTime\":4500000,\"concentration\":\"1.0\"},\"carbratio\":[{\"time\":\"00:00\",\"value\":\"15\"}]," +
+                "\"sens\":[{\"time\":\"00:00\",\"value\":\"50\"}],\"timezone\":\"UTC\",\"basal\":[{\"time\":\"00:00\",\"value\":\"0.5\"}],\"target_low\":[{\"time\":\"00:00\",\"value\":\"80\"}],\"target_high\":[{\"time\":\"00:00\",\"value\":\"79\"}],\"startDate\":\"1970-01-01T00:00:00.000Z\",\"units\":\"mg/dl\"}"
+        val profile = ProfileSealed.Pure(pureProfileFromJson(JSONObject(profileJson), dateUtil)!!, activePlugin)
+
+        val semantic = profile.validateSemantic(text, hardLimits)
+        assertThat(semantic.isValid).isFalse()
+        assertThat(semantic.reasons).hasSize(1)
+        assertThat(semantic.reasons.single()).contains("79")
+    }
 }

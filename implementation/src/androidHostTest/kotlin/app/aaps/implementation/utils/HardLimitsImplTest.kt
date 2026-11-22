@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -261,5 +263,27 @@ class HardLimitsImplTest : TestBase() {
     fun `verifyHardLimits handles very small values`() {
         val result = hardLimits.verifyHardLimits(-1000000.0, app.aaps.core.interfaces.R.string.bolus, 0.0, 10.0)
         assertThat(result).isEqualTo(0.0)
+    }
+
+    @Test
+    fun `LIMIT_MAX_BG accepts 80 without clamping and clamps 79 with notification`() {
+        assertThat(HardLimits.LIMIT_MAX_BG).isEqualTo(80.0..200.0)
+
+        assertThat(hardLimits.checkHardLimits(80.0, app.aaps.core.interfaces.R.string.profile_high_target, HardLimits.LIMIT_MAX_BG)).isTrue()
+        assertThat(hardLimits.verifyHardLimits(80.0, app.aaps.core.interfaces.R.string.profile_high_target, HardLimits.LIMIT_MAX_BG)).isEqualTo(80.0)
+        verify(notificationManager, never()).post(any<NotificationId>(), any<String>(), any<NotificationLevel>(), any<Int>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull())
+
+        assertThat(hardLimits.checkHardLimits(79.0, app.aaps.core.interfaces.R.string.profile_high_target, HardLimits.LIMIT_MAX_BG)).isFalse()
+        assertThat(hardLimits.verifyHardLimits(79.0, app.aaps.core.interfaces.R.string.profile_high_target, HardLimits.LIMIT_MAX_BG)).isEqualTo(80.0)
+        verify(notificationManager, times(2)).post(any<NotificationId>(), any<String>(), any<NotificationLevel>(), any<Int>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull())
+    }
+
+    @Test
+    fun `other BG and temp target hard limit ranges remain unchanged`() {
+        assertThat(HardLimits.LIMIT_MIN_BG).isEqualTo(80.0..180.2)
+        assertThat(HardLimits.LIMIT_TARGET_BG).isEqualTo(80.0..200.0)
+        assertThat(HardLimits.LIMIT_TEMP_MIN_BG).isEqualTo(72.0..180.16)
+        assertThat(HardLimits.LIMIT_TEMP_MAX_BG).isEqualTo(72.0..270.0)
+        assertThat(HardLimits.LIMIT_TEMP_TARGET_BG).isEqualTo(72.0..200.0)
     }
 }

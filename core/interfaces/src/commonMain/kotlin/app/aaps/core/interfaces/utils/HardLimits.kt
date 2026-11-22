@@ -22,7 +22,9 @@ interface HardLimits {
         // or even the raw 180.16) makes the loop clamp a valid 10.0 mmol low target and warn every run.
         // (The temp-target low path is checked UNROUNDED, so LIMIT_TEMP_MIN_BG only needs 180.16.)
         val LIMIT_MIN_BG = 80.0..180.2
-        val LIMIT_MAX_BG = 90.0..200.0
+        // Wavez fork divergence from upstream (upstream is 90.0..200.0): allow profile high targets
+        // down to 80 mg/dL to match LIMIT_MIN_BG and the 3.4 Wavez fork behavior.
+        val LIMIT_MAX_BG = 80.0..200.0
         val LIMIT_TARGET_BG = 80.0..200.0
 
         // Very Hard Limits Ranges for Temp Targets [mg/dL]
