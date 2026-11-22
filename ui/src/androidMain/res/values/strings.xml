@@ -167,6 +167,17 @@
     <string name="insulin_external_update_message">A paired client changed the insulin configuration. Tap OK to load their changes and discard your unsaved edits, or Cancel to keep editing (your next save will overwrite theirs).</string>
     <string name="insulin_edit_target_gone">This insulin was removed elsewhere, so your edit could not be saved. The list has been reloaded.</string>
     <string name="insulin_activation_applied">Insulin activation applied</string>
+    <string name="insulin_model_label">Action model</string>
+    <string name="insulin_model_bilinear">Bilinear</string>
+    <string name="insulin_model_pd">PD</string>
+    <string name="insulin_pd_a0_label">PD a0</string>
+    <string name="insulin_pd_a1_label">PD a1</string>
+    <string name="insulin_pd_b1_label">PD b1</string>
+    <string name="insulin_pd_scale_concentration">Scale peak by concentration (U200)</string>
+    <string name="insulin_pd_dia_locked">PD models use a fixed 8 h curve duration.</string>
+    <string name="insulin_pd_invalid_params">PD parameters out of range (a0: 10–120, a1: 3–20, b1: 0.02–0.1).</string>
+    <string name="insulin_pd_invalid_concentration">PD insulin concentration must be between U20 (0.2) and U200 (2.0).</string>
+    <string name="insulin_pd_badge">PD</string>
     <!-- Client→master round-trip pending dialog -->
     <string name="clientcontrol_pending_working_title">Applying…</string>
     <string name="clientcontrol_pending_working_text">Waiting for the master to confirm…</string>

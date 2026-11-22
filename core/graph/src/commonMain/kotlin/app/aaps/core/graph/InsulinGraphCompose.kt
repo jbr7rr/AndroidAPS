@@ -58,6 +58,9 @@ private val IobColor = Color(0xFFE040FB)       // Magenta
  * @param diaSample Optional DIA override in hours (for preview while editing)
  * @param modifier Modifier for the chart container
  */
+internal fun insulinGraphEffectKey(iCfg: ICfg, diaSample: Double?): List<Any?> =
+    listOf(iCfg.insulinPeakTime, iCfg.insulinEndTime, iCfg.concentration, iCfg.insulinModel, diaSample)
+
 @Composable
 fun InsulinGraphCompose(
     iCfg: ICfg,
@@ -68,8 +71,8 @@ fun InsulinGraphCompose(
     val activityLabel = stringResource(CoreUiStrings.activity)
     val iobLabel = stringResource(CoreUiStrings.iob)
 
-    LaunchedEffect(iCfg.insulinPeakTime, iCfg.insulinEndTime, iCfg.concentration, diaSample) {
-        val dia = diaSample ?: iCfg.dia
+    LaunchedEffect(insulinGraphEffectKey(iCfg, diaSample)) {
+        val dia = diaSample ?: iCfg.iobDurationHours
         val hours = floor(dia + 1).toLong()
         val bolus = BS(
             timestamp = 0,

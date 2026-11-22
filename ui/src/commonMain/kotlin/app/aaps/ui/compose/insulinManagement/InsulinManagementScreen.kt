@@ -30,12 +30,14 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -118,10 +120,11 @@ fun InsulinManagementScreen(
         viewModel.setScreenMode(initialMode)
     }
 
+    val effectiveDia = if (uiState.editorIsPd) InsulinManagementViewModel.PD_FIXED_DIA_HOURS else uiState.editorDiaHours
     val suffixDisplay = viewModel.insulinManager.buildDisplaySuffix(
         nickname = uiState.editorNickname.trim(),
         peak = uiState.editorPeakMinutes,
-        dia = uiState.editorDiaHours,
+        dia = effectiveDia,
         concentration = uiState.editorConcentration.value,
         excludeIndex = uiState.currentCardIndex
     )
@@ -402,18 +405,110 @@ fun InsulinManagementScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // DIA editor
+                            // Action model selector (Bilinear / PD)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(UiStrings.insulin_model_label),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = !uiState.editorIsPd,
+                                    onClick = { viewModel.updateEditorModel(isPd = false) },
+                                    enabled = editorEnabled,
+                                    label = { Text(stringResource(UiStrings.insulin_model_bilinear)) }
+                                )
+                                FilterChip(
+                                    selected = uiState.editorIsPd,
+                                    onClick = { viewModel.updateEditorModel(isPd = true) },
+                                    enabled = editorEnabled,
+                                    label = { Text(stringResource(UiStrings.insulin_model_pd)) }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // DIA editor (locked read-only at 8 h when PD model is selected)
                             NumberInputRow(
                                 labelRef = CoreUiStrings.dia_label,
-                                value = uiState.editorDiaHours,
+                                value = if (uiState.editorIsPd) InsulinManagementViewModel.PD_FIXED_DIA_HOURS else uiState.editorDiaHours,
                                 onValueChange = { viewModel.updateEditorDia(it) },
                                 valueRange = viewModel.diaRange(),
                                 step = 0.1,
                                 decimalPlaces = 1,
                                 unitLabel = CoreUiStrings.units_hours,
-                                enabled = editorEnabled,
+                                enabled = editorEnabled && !uiState.editorIsPd,
                                 modifier = Modifier.fillMaxWidth()
                             )
+
+                            if (uiState.editorIsPd) {
+                                Text(
+                                    text = stringResource(UiStrings.insulin_pd_dia_locked),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                                )
+
+                                NumberInputRow(
+                                    labelRef = UiStrings.insulin_pd_a0_label,
+                                    value = uiState.editorPdA0,
+                                    onValueChange = { viewModel.updateEditorPdA0(it) },
+                                    valueRange = InsulinManagementViewModel.PD_A0_RANGE,
+                                    step = 0.5,
+                                    decimalPlaces = 2,
+                                    unitLabel = CoreUiStrings.units_min,
+                                    enabled = editorEnabled,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                NumberInputRow(
+                                    labelRef = UiStrings.insulin_pd_a1_label,
+                                    value = uiState.editorPdA1,
+                                    onValueChange = { viewModel.updateEditorPdA1(it) },
+                                    valueRange = InsulinManagementViewModel.PD_A1_RANGE,
+                                    step = 0.1,
+                                    decimalPlaces = 2,
+                                    enabled = editorEnabled,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                NumberInputRow(
+                                    labelRef = UiStrings.insulin_pd_b1_label,
+                                    value = uiState.editorPdB1,
+                                    onValueChange = { viewModel.updateEditorPdB1(it) },
+                                    valueRange = InsulinManagementViewModel.PD_B1_RANGE,
+                                    step = 0.001,
+                                    decimalPlaces = 5,
+                                    enabled = editorEnabled,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(UiStrings.insulin_pd_scale_concentration),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Switch(
+                                        checked = uiState.editorPdConcentrationScalesPeak,
+                                        onCheckedChange = { viewModel.updateEditorPdConcentrationScalesPeak(it) },
+                                        enabled = editorEnabled
+                                    )
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(16.dp))
 

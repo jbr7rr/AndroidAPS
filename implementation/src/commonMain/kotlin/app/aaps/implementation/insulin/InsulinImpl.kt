@@ -119,6 +119,8 @@ class InsulinImpl(
         InsulinType.OREF_RAPID_ACTING,
         InsulinType.OREF_ULTRA_RAPID_ACTING,
         InsulinType.OREF_LYUMJEV,
+        InsulinType.CUSTOM_PD,
+        InsulinType.LYUMJEV_PD,
         InsulinType.OREF_FREE_PEAK
     )
 
@@ -141,7 +143,7 @@ class InsulinImpl(
     override fun updateInsulin(originalLabel: String, edited: ICfg): UpdateResult = lock.withLock {
         val index = insulins.indexOfFirst { it.insulinLabel == originalLabel }
         if (index < 0) return@withLock UpdateResult.NotFound
-        val nickname = edited.insulinNickname.ifBlank { rh.gs(InsulinType.fromPeak(edited.insulinPeakTime).label) }
+        val nickname = edited.insulinNickname.ifBlank { rh.gs(InsulinType.fromICfg(edited).label) }
         val label = uniqueName(insulins, nickname, edited.peak, edited.dia, edited.concentration, excludeIndex = index)
         // uniqueName gives up after 100 numbered tries, so the name can still be taken.
         if (insulins.withIndex().any { (i, insulin) -> i != index && insulin.insulinLabel == label })
@@ -160,7 +162,7 @@ class InsulinImpl(
     // Fills the nickname and a label that is unique within [list], then appends a copy to [list].
     // Does not persist. [list] is always a new list that the caller swaps in afterwards.
     private fun addTo(list: ArrayList<ICfg>, newICfg: ICfg, ue: Boolean, keepName: Boolean = false): ICfg {
-        val template = InsulinType.fromPeak(newICfg.insulinPeakTime)
+        val template = InsulinType.fromICfg(newICfg)
         val nickname = newICfg.insulinNickname.ifBlank { rh.gs(template.label) }
         val fullName = uniqueName(
             list = list,
@@ -339,7 +341,7 @@ class InsulinImpl(
                 val jsonObject = jsonElement as? JsonObject ?: return@forEach
                 val newICfg = ICfg.fromJsonObject(jsonObject, aapsLogger)
                 if (newICfg.insulinNickname.isBlank()) {
-                    val template = InsulinType.fromPeak(newICfg.insulinPeakTime)
+                    val template = InsulinType.fromICfg(newICfg)
                     newICfg.insulinNickname = rh.gs(template.label)
                 }
                 // No duplicates. The same nickname with the same curve is the same insulin, even when the

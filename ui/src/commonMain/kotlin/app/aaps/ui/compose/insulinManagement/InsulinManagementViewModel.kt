@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.aaps.core.data.model.EPS
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.model.labelOfInsulin
 import app.aaps.core.data.ue.Sources
 import app.aaps.core.data.ui.ConfirmationLine
@@ -130,10 +131,11 @@ class InsulinManagementViewModel(
             val currentIndex = (if (reload) insulinManager.insulinIndex(activeICfg) else targetIndex ?: uiState.value.currentCardIndex)
                 .coerceIn(0, (insulins.size - 1).coerceAtLeast(0))
             val currentICfg = insulins.getOrNull(currentIndex)
-            val template = currentICfg?.let { cfg -> InsulinType.fromPeak(cfg.insulinPeakTime) }
+            val template = currentICfg?.let { cfg -> InsulinType.fromICfg(cfg) }
             val defaultNickname = template?.let { rh.gs(it.label) } ?: ""
             val editorNickname = currentICfg?.insulinNickname?.takeIf { it.isNotBlank() } ?: defaultNickname
             val autoNameEnabled = editorNickname == defaultNickname || autoName
+            val pd = currentICfg?.insulinModel as? InsulinModel.Pd
 
             _uiState.update {
                 it.copy(
@@ -146,6 +148,12 @@ class InsulinManagementViewModel(
                     editorConcentration = currentICfg?.let { cfg -> ConcentrationType.fromDouble(cfg.concentration) } ?: ConcentrationType.U100,
                     editorPeakMinutes = currentICfg?.peak ?: 75,
                     editorDiaHours = currentICfg?.dia ?: 5.0,
+                    editorIsPd = pd != null,
+                    editorPdA0 = pd?.a0 ?: DEFAULT_PD_A0,
+                    editorPdA1 = pd?.a1 ?: DEFAULT_PD_A1,
+                    editorPdB1 = pd?.b1 ?: DEFAULT_PD_B1,
+                    editorPdConcentrationScalesPeak = pd?.concentrationScalesPeak ?: false,
+                    editorPdDurationMinutes = pd?.durationMinutes ?: PD_FIXED_DURATION_MINUTES,
                     autoNameEnabled = autoNameEnabled,
                     isLoading = false
                 )
@@ -265,10 +273,11 @@ class InsulinManagementViewModel(
     private fun applyCardSwitch(index: Int) {
         val insulins = uiState.value.insulins
         val iCfg = insulins.getOrNull(index) ?: return
-        val editorTemplate = InsulinType.fromPeak(iCfg.insulinPeakTime)
+        val editorTemplate = InsulinType.fromICfg(iCfg)
         val editorNickname = iCfg.insulinNickname.takeIf { it.isNotBlank() } ?: rh.gs(editorTemplate.label)
         val defaultNickname = rh.gs(editorTemplate.label)
         val autoNameEnabled = editorNickname == defaultNickname
+        val pd = iCfg.insulinModel as? InsulinModel.Pd
 
         _uiState.update {
             it.copy(
@@ -279,6 +288,12 @@ class InsulinManagementViewModel(
                 editorConcentration = ConcentrationType.fromDouble(iCfg.concentration),
                 editorPeakMinutes = iCfg.peak,
                 editorDiaHours = iCfg.dia,
+                editorIsPd = pd != null,
+                editorPdA0 = pd?.a0 ?: DEFAULT_PD_A0,
+                editorPdA1 = pd?.a1 ?: DEFAULT_PD_A1,
+                editorPdB1 = pd?.b1 ?: DEFAULT_PD_B1,
+                editorPdConcentrationScalesPeak = pd?.concentrationScalesPeak ?: false,
+                editorPdDurationMinutes = pd?.durationMinutes ?: PD_FIXED_DURATION_MINUTES,
                 autoNameEnabled = autoNameEnabled
             )
         }
@@ -334,7 +349,8 @@ class InsulinManagementViewModel(
             state.editorNickname != s.insulinNickname ||
                 state.editorPeakMinutes != s.peak ||
                 state.editorDiaHours != s.dia ||
-                state.editorConcentration.value != s.concentration
+                state.editorConcentration.value != s.concentration ||
+                state.editorModel != s.insulinModel
         } ?: state.editorNickname.isNotEmpty()
     }
 
@@ -354,7 +370,12 @@ class InsulinManagementViewModel(
     }
 
     fun updateEditorPeak(peakMinutes: Int) {
-        val editorTemplate = InsulinType.fromPeak(peakMinutes.toLong() * 60_000L)
+        val current = uiState.value
+        val editorTemplate = if (current.editorIsPd) {
+            if (current.editorPdConcentrationScalesPeak) InsulinType.LYUMJEV_PD else InsulinType.CUSTOM_PD
+        } else {
+            InsulinType.fromPeak(peakMinutes.toLong() * 60_000L)
+        }
         _uiState.update {
             it.copy(
                 editorTemplate = editorTemplate,
@@ -366,15 +387,76 @@ class InsulinManagementViewModel(
     }
 
     fun updateEditorDia(diaHours: Double) {
+        // PD models use a fixed 8 h curve duration; DIA is locked at 8 h while PD is selected.
+        if (uiState.value.editorIsPd) {
+            _uiState.update { it.copy(editorDiaHours = PD_FIXED_DIA_HOURS) }
+            return
+        }
         _uiState.update { it.copy(editorDiaHours = diaHours) }
     }
 
-    /** Load peak from a preset template (chips UI). Only sets peak, not DIA. */
+    fun updateEditorModel(isPd: Boolean) {
+        _uiState.update { state ->
+            val template = if (isPd) {
+                if (state.editorPdConcentrationScalesPeak) InsulinType.LYUMJEV_PD else InsulinType.CUSTOM_PD
+            } else {
+                InsulinType.fromPeak(state.editorPeakMinutes.toLong() * 60_000L)
+            }
+            state.copy(
+                editorIsPd = isPd,
+                editorTemplate = template,
+                editorDiaHours = if (isPd) PD_FIXED_DIA_HOURS else state.editorDiaHours,
+                editorPdDurationMinutes = PD_FIXED_DURATION_MINUTES
+            )
+        }
+        if (uiState.value.autoNameEnabled) {
+            autoGenerateName()
+        }
+    }
+
+    fun updateEditorPdA0(a0: Double) {
+        _uiState.update { it.copy(editorPdA0 = a0) }
+    }
+
+    fun updateEditorPdA1(a1: Double) {
+        _uiState.update { it.copy(editorPdA1 = a1) }
+    }
+
+    fun updateEditorPdB1(b1: Double) {
+        _uiState.update { it.copy(editorPdB1 = b1) }
+    }
+
+    fun updateEditorPdConcentrationScalesPeak(scales: Boolean) {
+        _uiState.update { state ->
+            val template = if (state.editorIsPd) {
+                if (scales) InsulinType.LYUMJEV_PD else InsulinType.CUSTOM_PD
+            } else {
+                state.editorTemplate
+            }
+            state.copy(
+                editorPdConcentrationScalesPeak = scales,
+                editorTemplate = template
+            )
+        }
+        if (uiState.value.editorIsPd && uiState.value.autoNameEnabled) {
+            autoGenerateName()
+        }
+    }
+
+    /** Load peak (and action model) from a preset template (chips UI). PD presets also lock DIA to 8 h. */
     fun loadPeakFromPreset(preset: InsulinType) {
-        _uiState.update {
-            it.copy(
+        val pd = preset.insulinModel as? InsulinModel.Pd
+        _uiState.update { state ->
+            state.copy(
                 editorTemplate = preset,
                 editorPeakMinutes = preset.iCfg.peak,
+                editorDiaHours = if (pd != null) PD_FIXED_DIA_HOURS else state.editorDiaHours,
+                editorIsPd = pd != null,
+                editorPdA0 = pd?.a0 ?: state.editorPdA0,
+                editorPdA1 = pd?.a1 ?: state.editorPdA1,
+                editorPdB1 = pd?.b1 ?: state.editorPdB1,
+                editorPdConcentrationScalesPeak = pd?.concentrationScalesPeak ?: state.editorPdConcentrationScalesPeak,
+                editorPdDurationMinutes = pd?.durationMinutes ?: PD_FIXED_DURATION_MINUTES,
                 editorNickname = rh.gs(preset.label),
                 autoNameEnabled = true
             )
@@ -382,8 +464,13 @@ class InsulinManagementViewModel(
     }
 
     fun autoGenerateName() {
-        val newDefaultNickname = rh.gs((uiState.value.editorTemplate ?: InsulinType.fromPeak(uiState.value.editorPeakMinutes.toLong() * 60_000L)).label)
-        _uiState.update { it.copy(editorNickname = newDefaultNickname) }
+        val state = uiState.value
+        val template = state.editorTemplate ?: if (state.editorIsPd) {
+            if (state.editorPdConcentrationScalesPeak) InsulinType.LYUMJEV_PD else InsulinType.CUSTOM_PD
+        } else {
+            InsulinType.fromPeak(state.editorPeakMinutes.toLong() * 60_000L)
+        }
+        _uiState.update { it.copy(editorNickname = rh.gs(template.label)) }
     }
 
     // CRUD operations
@@ -397,14 +484,17 @@ class InsulinManagementViewModel(
             return false
         }
 
+        val model = state.editorModel
+        val effectiveDia = if (state.editorIsPd) PD_FIXED_DIA_HOURS else state.editorDiaHours
         val editedICfg = ICfg(
             insulinLabel = "", // the manager builds the label
             insulinEndTime = 0,
             insulinPeakTime = 0,
-            concentration = state.editorConcentration.value
+            concentration = state.editorConcentration.value,
+            insulinModel = model
         )
         editedICfg.insulinNickname = nickname
-        editedICfg.setDia(state.editorDiaHours)
+        editedICfg.setDia(effectiveDia)
         editedICfg.setPeak(state.editorPeakMinutes)
 
         // Validation
@@ -415,6 +505,25 @@ class InsulinManagementViewModel(
         if (editedICfg.peak !in hardLimits.peakRange()) {
             showSnackbar(rh.gs(InterfacesStrings.value_out_of_hard_limits, rh.gs(CoreUiStrings.insulin_peak), editedICfg.peak.toDouble()))
             return false
+        }
+        if (model is InsulinModel.Pd) {
+            if (editedICfg.dia < model.durationMinutes / 60.0) {
+                showSnackbar(rh.gs(UiStrings.insulin_pd_dia_locked))
+                return false
+            }
+            if (!model.a0.isFinite() || model.a0 !in PD_A0_RANGE ||
+                !model.a1.isFinite() || model.a1 !in PD_A1_RANGE ||
+                !model.b1.isFinite() || model.b1 !in PD_B1_RANGE ||
+                model.durationMinutes <= 0 ||
+                !editedICfg.isUsable
+            ) {
+                showSnackbar(rh.gs(UiStrings.insulin_pd_invalid_params))
+                return false
+            }
+            if (!editedICfg.concentration.isFinite() || editedICfg.concentration !in PD_CONCENTRATION_RANGE) {
+                showSnackbar(rh.gs(UiStrings.insulin_pd_invalid_concentration))
+                return false
+            }
         }
 
         // The target is the insulin the editor was bound to, found by its label - never by an index into
@@ -534,14 +643,16 @@ class InsulinManagementViewModel(
     /** Build an ICfg from current editor state */
     fun buildEditorICfg(): ICfg {
         val state = uiState.value
+        val effectiveDia = if (state.editorIsPd) PD_FIXED_DIA_HOURS else state.editorDiaHours
         val iCfg = ICfg(
             insulinLabel = state.editorNickname,
             insulinEndTime = 0,
             insulinPeakTime = 0,
-            concentration = state.editorConcentration.value
+            concentration = state.editorConcentration.value,
+            insulinModel = state.editorModel
         )
         iCfg.insulinNickname = state.editorNickname
-        iCfg.setDia(state.editorDiaHours)
+        iCfg.setDia(effectiveDia)
         iCfg.setPeak(state.editorPeakMinutes)
         return iCfg
     }
@@ -559,4 +670,16 @@ class InsulinManagementViewModel(
     fun diaRange(): ClosedFloatingPointRange<Double> = hardLimits.diaRange()
     /** Peak limits as a Double range, because the sliders work with Double. */
     fun peakRange(): ClosedFloatingPointRange<Double> = hardLimits.peakRange().let { it.first.toDouble()..it.last.toDouble() }
+
+    companion object {
+        const val DEFAULT_PD_A0 = 51.0
+        const val DEFAULT_PD_A1 = 12.27
+        const val DEFAULT_PD_B1 = 0.05185
+        const val PD_FIXED_DURATION_MINUTES = 480
+        const val PD_FIXED_DIA_HOURS = 8.0
+        val PD_A0_RANGE = 10.0..120.0
+        val PD_A1_RANGE = 3.0..20.0
+        val PD_B1_RANGE = 0.02..0.1
+        val PD_CONCENTRATION_RANGE = 0.2..2.0
+    }
 }
