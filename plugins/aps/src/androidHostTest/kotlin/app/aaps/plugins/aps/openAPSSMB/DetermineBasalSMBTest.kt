@@ -330,4 +330,224 @@ class DetermineBasalSMBTest : TestBaseWithProfile() {
         assertThat(enableSmbWithTempTarget(99.0)).isTrue()
         assertThat(enableSmbWithTempTarget(100.0)).isFalse()
     }
+
+    // --- Wave integration & smbFactor ------------------------------------------------------------
+
+    @Test
+    fun `disabled Wave snapshot produces identical output to default determine_basal`() {
+        val baseline = runWithSmb()
+        val withDisabled = sut.determine_basal(
+            glucose_status = glucoseStatus(),
+            currenttemp = CurrentTemp(0, 0.0, null),
+            iob_data_array = Array(48) { i ->
+                val time = currentTime + i * 5 * 60000L
+                IobTotal(
+                    time = time,
+                    iob = 1.3,
+                    activity = 0.0105,
+                    lastBolusTime = currentTime - 3600000L,
+                    iobWithZeroTemp = IobTotal(time = time, iob = 1.3, activity = 0.0105)
+                )
+            },
+            profile = profile().copy(enableSMB_always = true),
+            autosens_data = AutosensResult(ratio = 1.0),
+            meal_data = noMeal(),
+            microBolusAllowed = true,
+            currentTime = currentTime,
+            flatBGsDetected = false,
+            dynIsfMode = false,
+            waveSnapshot = WaveSnapshot.Disabled,
+            smbFactor = 0.5
+        )
+
+        assertThat(withDisabled.units).isEqualTo(baseline.units)
+        assertThat(withDisabled.rate).isEqualTo(baseline.rate)
+        assertThat(withDisabled.duration).isEqualTo(baseline.duration)
+        assertThat(withDisabled.insulinReq).isEqualTo(baseline.insulinReq)
+        assertThat(withDisabled.reason.toString()).isEqualTo(baseline.reason.toString())
+    }
+
+    @Test
+    fun `smbFactor 100 percent doubles microBolus compared to 50 percent`() {
+        val iobs = Array(48) { i ->
+            val time = currentTime + i * 5 * 60000L
+            IobTotal(
+                time = time,
+                iob = 0.5,
+                activity = 0.005,
+                lastBolusTime = currentTime - 3600000L,
+                iobWithZeroTemp = IobTotal(time = time, iob = 0.5, activity = 0.005)
+            )
+        }
+        val baseProfile = profile().copy(
+            enableSMB_always = true,
+            maxSMBBasalMinutes = 120,
+            maxUAMSMBBasalMinutes = 120
+        )
+        val half = sut.determine_basal(
+            glucose_status = glucoseStatus().copy(glucose = 180.0, delta = 2.0, shortAvgDelta = 2.0),
+            currenttemp = CurrentTemp(0, 0.0, null),
+            iob_data_array = iobs,
+            profile = baseProfile,
+            autosens_data = AutosensResult(ratio = 1.0),
+            meal_data = noMeal(),
+            microBolusAllowed = true,
+            currentTime = currentTime,
+            flatBGsDetected = false,
+            dynIsfMode = false,
+            smbFactor = 0.5
+        )
+        val full = sut.determine_basal(
+            glucose_status = glucoseStatus().copy(glucose = 180.0, delta = 2.0, shortAvgDelta = 2.0),
+            currenttemp = CurrentTemp(0, 0.0, null),
+            iob_data_array = iobs,
+            profile = baseProfile,
+            autosens_data = AutosensResult(ratio = 1.0),
+            meal_data = noMeal(),
+            microBolusAllowed = true,
+            currentTime = currentTime,
+            flatBGsDetected = false,
+            dynIsfMode = false,
+            smbFactor = 1.0
+        )
+
+        assertThat(half.units).isGreaterThan(0.0)
+        assertThat(full.units).isGreaterThan(half.units!!)
+        assertThat(full.units!!).isWithin(0.11).of(half.units!! * 2.0)
+    }
+
+    @Test
+    fun `active Wave uses Wave insulinReq, smbCap, TSUNAMI reason, and bypasses eventualBG low-temp`() {
+        val pdICfg = app.aaps.core.data.model.ICfg(
+            insulinLabel = "Custom PD",
+            peak = 51,
+            dia = 8.0,
+            concentration = 1.0,
+            insulinModel = app.aaps.core.data.model.InsulinModel.Pd(51.0, 12.27, 0.05185, false, 480)
+        )
+        val waveSnapshot = WaveSnapshot(
+            settings = WaveSettings(
+                enabled = true,
+                insulinReqPct = 80.0,
+                startHour = 8,
+                endHour = 23,
+                maxMinutesOfBasalToLimitSmb = 180,
+                useSmbCap = false,
+                smbCap = 0.5,
+                useAdjustedSens = true
+            ),
+            currentHour = 14,
+            lastBolusAmount = 0.5,
+            activity = WaveActivitySnapshot(
+                currentActivity = 0.05,
+                futureActivity = 0.01,
+                sensorLagActivity = 0.04,
+                historicActivity = 0.03,
+                dia = 8.0
+            ),
+            dia = 8.0,
+            peak = pdICfg.peak,
+            isPd = true,
+            activityAtPeak = { pdICfg.activityAtPeak(it) }
+        )
+        val iobs = Array(48) { i ->
+            val time = currentTime + i * 5 * 60000L
+            IobTotal(
+                time = time,
+                iob = 1.0,
+                activity = 0.01,
+                lastBolusTime = currentTime - 3600000L,
+                iobWithZeroTemp = IobTotal(time = time, iob = 1.0, activity = 0.01)
+            )
+        }
+
+        val result = sut.determine_basal(
+            glucose_status = glucoseStatus().copy(glucose = 160.0, delta = 6.0, shortAvgDelta = 6.0),
+            currenttemp = CurrentTemp(0, 0.0, null),
+            iob_data_array = iobs,
+            profile = profile().copy(enableSMB_always = true, maxUAMSMBBasalMinutes = 30),
+            autosens_data = AutosensResult(ratio = 1.0),
+            meal_data = noMeal(),
+            microBolusAllowed = true,
+            currentTime = currentTime,
+            flatBGsDetected = false,
+            dynIsfMode = false,
+            waveSnapshot = waveSnapshot,
+            smbFactor = 1.0
+        )
+
+        assertThat(result.reason.toString()).contains("##TSUNAMI STATUS##")
+        assertThat(result.consoleLog.orEmpty()).contains("WAVE STATUS")
+        assertThat(result.units).isGreaterThan(0.5) // exceeds oref 30m UAM cap (0.5 U) via Wave smbCap
+    }
+
+    @Test
+    fun `active Wave preserves 3_4 predictive LGS zero temp when minGuardBG drops below threshold`() {
+        val waveSnapshot = WaveSnapshot(
+            settings = WaveSettings(
+                enabled = true,
+                insulinReqPct = 80.0,
+                startHour = 0,
+                endHour = 23,
+                maxMinutesOfBasalToLimitSmb = 180,
+                useSmbCap = false,
+                smbCap = 0.5,
+                useAdjustedSens = false
+            ),
+            currentHour = 14,
+            lastBolusAmount = 0.5,
+            activity = WaveActivitySnapshot(
+                currentActivity = 0.05,
+                futureActivity = 0.01,
+                sensorLagActivity = 0.04,
+                historicActivity = 0.03,
+                dia = 5.0
+            ),
+            dia = 5.0,
+            peak = 60,
+            isPd = false,
+            activityAtPeak = { 0.01 * it }
+        )
+        // High IOB drives minGuardBG below threshold (70) while current BG (120) is above target (100) and rising.
+        val iobs = Array(48) { i ->
+            val time = currentTime + i * 5 * 60000L
+            IobTotal(
+                time = time,
+                iob = 3.0,
+                activity = 0.04,
+                lastBolusTime = currentTime - 3600000L,
+                iobWithZeroTemp = IobTotal(time = time, iob = 3.0, activity = 0.04)
+            )
+        }
+
+        val result = sut.determine_basal(
+            glucose_status = glucoseStatus().copy(glucose = 120.0, delta = 5.0, shortAvgDelta = 5.0),
+            currenttemp = CurrentTemp(0, 0.0, null),
+            iob_data_array = iobs,
+            profile = profile().copy(enableSMB_always = true),
+            autosens_data = AutosensResult(ratio = 1.0),
+            meal_data = noMeal(),
+            microBolusAllowed = true,
+            currentTime = currentTime,
+            flatBGsDetected = false,
+            dynIsfMode = false,
+            waveSnapshot = waveSnapshot,
+            smbFactor = 1.0
+        )
+
+        assertThat(result.reason.toString()).contains("##TSUNAMI STATUS##")
+        assertThat(result.rate).isEqualTo(0.0)
+        assertThat(result.duration).isAtLeast(30)
+        assertThat(result.units).isNull()
+    }
+
+    @Test
+    fun `corrected smbLowTempReq formula covers durationReq 1, 15, 29, 30, 60`() {
+        val basal = 1.2
+        assertThat(DetermineBasalSMB.computeSmbLowTemp(basal, durationReq = 1)).isEqualTo(1.16 to 30)
+        assertThat(DetermineBasalSMB.computeSmbLowTemp(basal, durationReq = 15)).isEqualTo(0.6 to 30)
+        assertThat(DetermineBasalSMB.computeSmbLowTemp(basal, durationReq = 29)).isEqualTo(0.04 to 30)
+        assertThat(DetermineBasalSMB.computeSmbLowTemp(basal, durationReq = 30)).isEqualTo(0.0 to 30)
+        assertThat(DetermineBasalSMB.computeSmbLowTemp(basal, durationReq = 60)).isEqualTo(0.0 to 60)
+    }
 }
