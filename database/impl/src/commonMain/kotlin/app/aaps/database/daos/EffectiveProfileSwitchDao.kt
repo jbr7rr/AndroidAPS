@@ -57,6 +57,9 @@ internal interface EffectiveProfileSwitchDao : TraceableDao<EffectiveProfileSwit
     @Query("SELECT * FROM $TABLE_EFFECTIVE_PROFILE_SWITCHES WHERE dateCreated > :since AND dateCreated <= :until LIMIT :limit OFFSET :offset")
     suspend fun getNewEntriesSince(since: Long, until: Long, limit: Int, offset: Int): List<EffectiveProfileSwitch>
 
-    @Query("UPDATE $TABLE_EFFECTIVE_PROFILE_SWITCHES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc WHERE insulinEndTime = -1 AND referenceId IS NULL")
-    suspend fun bulkMigrateInsulinConfig(label: String, end: Long, peak: Long, conc: Double): Int
+    @Query("UPDATE $TABLE_EFFECTIVE_PROFILE_SWITCHES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc, insulinModel = :insulinModel WHERE insulinEndTime = -1 AND referenceId IS NULL")
+    suspend fun bulkMigrateInsulinConfig(label: String, end: Long, peak: Long, conc: Double, insulinModel: String = """{"type":"BILINEAR"}"""): Int
+
+    @Query("""UPDATE $TABLE_EFFECTIVE_PROFILE_SWITCHES SET concentration = :conc, insulinModel = :insulinModel WHERE insulinLabel = :legacyLabel AND insulinModel = '{"type":"BILINEAR"}' AND referenceId IS NULL""")
+    suspend fun backfillPdModelByLabel(legacyLabel: String, conc: Double, insulinModel: String): Int
 }

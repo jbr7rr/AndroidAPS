@@ -71,6 +71,12 @@ internal interface BolusDao : TraceableDao<Bolus> {
     @Query("SELECT * FROM $TABLE_BOLUSES WHERE dateCreated > :since AND dateCreated <= :until LIMIT :limit OFFSET :offset")
     suspend fun getNewEntriesSince(since: Long, until: Long, limit: Int, offset: Int): List<Bolus>
 
-    @Query("UPDATE $TABLE_BOLUSES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc WHERE insulinEndTime = -1 AND referenceId IS NULL")
-    suspend fun bulkMigrateInsulinConfig(label: String, end: Long, peak: Long, conc: Double): Int
+    @Query("UPDATE $TABLE_BOLUSES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc, insulinModel = :insulinModel WHERE insulinEndTime = -1 AND referenceId IS NULL")
+    suspend fun bulkMigrateInsulinConfig(label: String, end: Long, peak: Long, conc: Double, insulinModel: String = """{"type":"BILINEAR"}"""): Int
+
+    @Query("UPDATE $TABLE_BOLUSES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc, insulinModel = :insulinModel WHERE insulinEndTime = -1 AND referenceId IS NULL AND timestamp >= :fromTimestamp")
+    suspend fun bulkMigrateInsulinConfigFromTime(label: String, end: Long, peak: Long, conc: Double, insulinModel: String, fromTimestamp: Long): Int
+
+    @Query("UPDATE $TABLE_BOLUSES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc, insulinModel = :insulinModel WHERE insulinEndTime = -1 AND referenceId IS NULL AND timestamp < :beforeTimestamp")
+    suspend fun bulkMigrateInsulinConfigBeforeTime(label: String, end: Long, peak: Long, conc: Double, insulinModel: String, beforeTimestamp: Long): Int
 }

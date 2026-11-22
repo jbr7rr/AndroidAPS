@@ -496,8 +496,16 @@ class AppRepository internal constructor(
     suspend fun getAllProfileSwitches(): List<ProfileSwitch> =
         database.profileSwitchDao.getAllProfileSwitches()
 
-    suspend fun bulkMigrateProfileSwitchInsulinConfig(label: String, end: Long, peak: Long, conc: Double): Int =
-        database.profileSwitchDao.bulkMigrateInsulinConfig(label, end, peak, conc)
+    suspend fun bulkMigrateProfileSwitchInsulinConfig(
+        label: String,
+        end: Long,
+        peak: Long,
+        conc: Double,
+        insulinModel: String = """{"type":"BILINEAR"}"""
+    ): Int = database.profileSwitchDao.bulkMigrateInsulinConfig(label, end, peak, conc, insulinModel)
+
+    suspend fun backfillProfileSwitchPdModelByLabel(legacyLabel: String, conc: Double, insulinModel: String): Int =
+        database.profileSwitchDao.backfillPdModelByLabel(legacyLabel, conc, insulinModel)
 
     suspend fun getProfileSwitchesFromTime(timestamp: Long, ascending: Boolean): List<ProfileSwitch> =
         database.profileSwitchDao.getProfileSwitchDataFromTime(timestamp).reversedIf(!ascending)
@@ -597,8 +605,16 @@ class AppRepository internal constructor(
     suspend fun getAllEffectiveProfileSwitches(): List<EffectiveProfileSwitch> =
         database.effectiveProfileSwitchDao.getAllEffectiveProfileSwitches()
 
-    suspend fun bulkMigrateEffectiveProfileSwitchInsulinConfig(label: String, end: Long, peak: Long, conc: Double): Int =
-        database.effectiveProfileSwitchDao.bulkMigrateInsulinConfig(label, end, peak, conc)
+    suspend fun bulkMigrateEffectiveProfileSwitchInsulinConfig(
+        label: String,
+        end: Long,
+        peak: Long,
+        conc: Double,
+        insulinModel: String = """{"type":"BILINEAR"}"""
+    ): Int = database.effectiveProfileSwitchDao.bulkMigrateInsulinConfig(label, end, peak, conc, insulinModel)
+
+    suspend fun backfillEffectiveProfileSwitchPdModelByLabel(legacyLabel: String, conc: Double, insulinModel: String): Int =
+        database.effectiveProfileSwitchDao.backfillPdModelByLabel(legacyLabel, conc, insulinModel)
 
     // THERAPY EVENT
     /*
@@ -706,8 +722,31 @@ class AppRepository internal constructor(
     suspend fun getBoluses(): List<Bolus> =
         database.bolusDao.getAllBoluses()
 
-    suspend fun bulkMigrateBolusInsulinConfig(label: String, end: Long, peak: Long, conc: Double): Int =
-        database.bolusDao.bulkMigrateInsulinConfig(label, end, peak, conc)
+    suspend fun bulkMigrateBolusInsulinConfig(
+        label: String,
+        end: Long,
+        peak: Long,
+        conc: Double,
+        insulinModel: String = """{"type":"BILINEAR"}"""
+    ): Int = database.bolusDao.bulkMigrateInsulinConfig(label, end, peak, conc, insulinModel)
+
+    suspend fun bulkMigrateBolusInsulinConfigFromTime(
+        label: String,
+        end: Long,
+        peak: Long,
+        conc: Double,
+        insulinModel: String,
+        fromTimestamp: Long
+    ): Int = database.bolusDao.bulkMigrateInsulinConfigFromTime(label, end, peak, conc, insulinModel, fromTimestamp)
+
+    suspend fun bulkMigrateBolusInsulinConfigBeforeTime(
+        label: String,
+        end: Long,
+        peak: Long,
+        conc: Double,
+        insulinModel: String,
+        beforeTimestamp: Long
+    ): Int = database.bolusDao.bulkMigrateInsulinConfigBeforeTime(label, end, peak, conc, insulinModel, beforeTimestamp)
 
     suspend fun getBolusesDataFromTime(timestamp: Long, ascending: Boolean): List<Bolus> =
         database.bolusDao.getBolusesFromTime(timestamp).reversedIf(!ascending)

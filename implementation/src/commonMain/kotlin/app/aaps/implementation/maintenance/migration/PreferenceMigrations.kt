@@ -1,6 +1,8 @@
 package app.aaps.implementation.maintenance.migration
 
 import app.aaps.core.data.configuration.Constants
+import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
 import app.aaps.core.data.model.TTPreset
@@ -23,7 +25,10 @@ import app.aaps.core.keys.ProfileComposedStringKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.UnitDoubleKey
+import app.aaps.core.objects.extensions.toJsonObject
 import dev.zacsweers.metro.Inject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 
 /**
  * The preference migrations, as an ordered list of functions over the store they are given.
@@ -135,14 +140,35 @@ class PreferenceMigrations(
     private fun insulinPlugins(sp: KeyValueStore) {
         val anyPresent = INSULIN_PLUGINS.any { plugin ->
             sp.contains("ConfigBuilder_INSULIN_${plugin}_Enabled") || sp.contains("ConfigBuilder_Enabled_INSULIN_$plugin")
-        }
+        } || LEGACY_PD_PARAM_KEYS.any(sp::contains)
         if (!anyPresent) return
+
+        // On a fresh 4.0 install importing a 3.4 settings backup (no v3 DB), preserve a selected
+        // Wavez PD plugin and its parameters in InsulinConfiguration before removing the dead keys.
+        if (!config.AAPSCLIENT && sp.getString(StringNonKey.InsulinConfiguration.key, "").isBlank()) {
+            InsulinMigration.readLegacyPdSelection(sp)?.let { legacyPd ->
+                val pd = legacyPd.insulinModel as InsulinModel.Pd
+                val migratedICfg = ICfg(
+                    insulinLabel = "",
+                    insulinEndTime = pd.durationMinutes * 60_000L,
+                    insulinPeakTime = legacyPd.peakTime,
+                    concentration = legacyPd.concentration,
+                    insulinModel = pd
+                ).also { it.insulinNickname = legacyPd.nickname }
+                val document = buildJsonObject {
+                    put("insulin", buildJsonArray { add(migratedICfg.toJsonObject()) })
+                }.toString()
+                sp.putString(StringNonKey.InsulinConfiguration.key, document)
+            }
+        }
+
         INSULIN_PLUGINS.forEach { plugin ->
             sp.remove("ConfigBuilder_INSULIN_${plugin}_Enabled")
             sp.remove("ConfigBuilder_INSULIN_${plugin}_Visible")
             sp.remove("ConfigBuilder_Enabled_INSULIN_$plugin")
         }
         sp.remove("insulin_oref_peak")
+        LEGACY_PD_PARAM_KEYS.forEach(sp::remove)
     }
 
     /**
@@ -496,7 +522,16 @@ class PreferenceMigrations(
             "InsulinOrefRapidActingPlugin",
             "InsulinOrefUltraRapidActingPlugin",
             "InsulinOrefFreePeakPlugin",
-            "InsulinLyumjevPlugin"
+            "InsulinLyumjevPlugin",
+            InsulinMigration.PLUGIN_CUSTOM_PD,
+            InsulinMigration.PLUGIN_LYUMJEV_U100_PD,
+            InsulinMigration.PLUGIN_LYUMJEV_U200_PD
+        )
+
+        val LEGACY_PD_PARAM_KEYS = listOf(
+            InsulinMigration.KEY_CUSTOM_PD_A0,
+            InsulinMigration.KEY_CUSTOM_PD_A1,
+            InsulinMigration.KEY_CUSTOM_PD_B1
         )
 
         val PRESETS = listOf(

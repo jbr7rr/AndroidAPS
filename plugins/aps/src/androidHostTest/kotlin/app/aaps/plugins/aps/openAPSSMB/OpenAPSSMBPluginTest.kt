@@ -70,4 +70,28 @@ class OpenAPSSMBPluginTest : TestBaseWithProfile() {
         verify(bus).send(any<EventResetOpenAPSGui>())
         verifyNoInteractions(determineBasalSMB)
     }
+
+    @Test
+    fun `refuses to run when a contributing bolus has an unusable insulin model`() = runBlocking {
+        val bus = mock<RxBus>()
+        val plugin = createPlugin(bus)
+        val now = 1_700_000_000_000L
+        whenever(dateUtil.now()).thenReturn(now)
+        val validProfile = ProfileSealed.EPS(effectiveProfileSwitch.copy(iCfg = someICfg), activePlugin)
+        whenever(profileFunction.getProfile()).thenReturn(validProfile)
+        doReturn("Insulin settings are invalid.").whenever(rh).gs(ApsStrings.openapsma_invalid_insulin)
+        val invalidBolus = app.aaps.core.data.model.BS(
+            timestamp = now - 30L * 60 * 1000,
+            isValid = true,
+            amount = 1.5,
+            type = app.aaps.core.data.model.BS.Type.NORMAL,
+            iCfg = someICfg.copy(insulinModel = InsulinModel.Pd(a0 = 0.0, a1 = 12.27, b1 = 0.05185))
+        )
+        whenever(persistenceLayer.getBolusesFromTime(any(), any())).thenReturn(listOf(invalidBolus))
+
+        plugin.invoke("test", false)
+
+        verify(bus).send(any<EventResetOpenAPSGui>())
+        verifyNoInteractions(determineBasalSMB)
+    }
 }

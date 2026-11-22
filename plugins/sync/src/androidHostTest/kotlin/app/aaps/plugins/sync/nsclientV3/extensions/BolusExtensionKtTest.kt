@@ -3,8 +3,11 @@ package app.aaps.plugins.sync.nsclientV3.extensions
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.ICfg
 import app.aaps.core.data.model.IDs
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.pump.defs.PumpType
 import app.aaps.core.nssdk.localmodel.treatment.NSBolus
+import app.aaps.core.nssdk.localmodel.treatment.NSICfg
+import app.aaps.core.nssdk.localmodel.treatment.NSInsulinModel
 import app.aaps.core.nssdk.mapper.convertToRemoteAndBack
 import app.aaps.plugins.sync.extensions.contentEqualsTo
 import app.aaps.shared.tests.TestBase
@@ -57,5 +60,41 @@ internal class BolusExtensionKtTest : TestBase() {
         bolus2 = (bolus.toNSBolus().convertToRemoteAndBack() as NSBolus).toBolus(iCfg)
         assertThat(bolus.contentEqualsTo(bolus2)).isTrue()
         assertThat(bolus.ids.contentEqualsTo(bolus2.ids)).isTrue()
+    }
+
+    @Test
+    fun pdInsulinModelRoundTripsThroughBolusSyncMapper() {
+        val pd = InsulinModel.Pd(51.0, 12.27, 0.05185, concentrationScalesPeak = false, durationMinutes = 480)
+        val pdICfg = ICfg("Custom PD 51m 8h U100", 8L * 3600 * 1000, 51L * 60 * 1000, 1.0, pd)
+        val bolus = BS(
+            timestamp = 10000,
+            isValid = true,
+            amount = 2.0,
+            type = BS.Type.NORMAL,
+            iCfg = pdICfg
+        )
+
+        val restored = (bolus.toNSBolus().convertToRemoteAndBack() as NSBolus).toBolus(iCfg)
+
+        assertThat(restored.iCfg).isEqualTo(pdICfg)
+        assertThat(bolus.contentEqualsTo(restored)).isTrue()
+    }
+
+    @Test
+    fun invalidPdInSyncedBolusStaysUnusable() {
+        val ns = BS(timestamp = 10000, isValid = true, amount = 1.0, type = BS.Type.NORMAL, iCfg = iCfg).toNSBolus().copy(
+            iCfg = NSICfg(
+                insulinLabel = "Broken PD",
+                insulinEndTime = 8L * 3600 * 1000,
+                insulinPeakTime = 51L * 60 * 1000,
+                concentration = 1.0,
+                insulinModel = NSInsulinModel(type = "PD", a0 = 0.0, a1 = 12.27, b1 = 0.05185)
+            )
+        )
+
+        val restored = ns.toBolus(iCfg)
+
+        assertThat(restored.iCfg.insulinModel).isInstanceOf(InsulinModel.Pd::class.java)
+        assertThat(restored.iCfg.isUsable).isFalse()
     }
 }

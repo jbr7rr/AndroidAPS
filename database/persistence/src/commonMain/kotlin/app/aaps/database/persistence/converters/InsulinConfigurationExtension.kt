@@ -1,6 +1,7 @@
 package app.aaps.database.persistence.converters
 
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModelCodec
 import app.aaps.database.entities.embedments.InsulinConfiguration
 
 fun InsulinConfiguration.fromDb(): ICfg =
@@ -8,7 +9,8 @@ fun InsulinConfiguration.fromDb(): ICfg =
         insulinLabel = this.insulinLabel,
         insulinEndTime = this.insulinEndTime,
         insulinPeakTime = this.insulinPeakTime,
-        concentration = this.concentration
+        concentration = this.concentration,
+        insulinModel = InsulinModelCodec.fromJsonString(this.insulinModel)
     )
 
 fun ICfg.toDb(): InsulinConfiguration =
@@ -16,5 +18,6 @@ fun ICfg.toDb(): InsulinConfiguration =
         insulinLabel = this.insulinLabel,
         insulinEndTime = this.insulinEndTime,
         insulinPeakTime = this.insulinPeakTime,
-        concentration = this.concentration
+        concentration = this.concentration,
+        insulinModel = InsulinModelCodec.encodeToString(this.insulinModel)
     )

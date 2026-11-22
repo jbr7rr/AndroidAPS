@@ -47,7 +47,11 @@ import app.aaps.database.entities.TotalDailyDose
 import app.aaps.database.entities.UserEntry
 import app.aaps.database.entities.VersionChange
 
-const val DATABASE_VERSION = 36
+// Wavez fork bumps 36 -> 37 to add `insulinModel` to the embedded InsulinConfiguration.
+// Rebase procedure: adopt upstream's new head, move the ALTER TABLE statements in
+// WavezDatabaseMigrations.kt into the new head migration, bump DATABASE_VERSION to upstream + 1,
+// and regenerate the exported schema JSON.
+const val DATABASE_VERSION = 37
 
 @Database(
     version = DATABASE_VERSION,

@@ -2,6 +2,8 @@ package app.aaps.implementation.maintenance.migration
 
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
+import app.aaps.core.data.model.InsulinModelCodec
 import app.aaps.core.interfaces.insulin.InsulinType
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -9,6 +11,7 @@ import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.sharedPreferences.KeyValueStore
 import app.aaps.core.interfaces.utils.HardLimits
 import dev.zacsweers.metro.Inject
+import kotlin.math.roundToInt
 
 /**
  * Which insulin the records that predate ICfg were delivered with.
@@ -70,6 +73,9 @@ class InsulinMigration(
         fun selected(plugin: String) =
             sp.getBoolean("ConfigBuilder_Enabled_INSULIN_$plugin", false) || sp.getBoolean("ConfigBuilder_INSULIN_${plugin}_Enabled", false)
 
+        // Check Wavez PD plugins first: they carry an explicit PD model and concentration.
+        readLegacyPdInsulin(sp)?.let { return it }
+
         val explicit = when {
             selected("InsulinOrefRapidActingPlugin")      -> InsulinType.OREF_RAPID_ACTING
             selected("InsulinOrefUltraRapidActingPlugin") -> InsulinType.OREF_ULTRA_RAPID_ACTING
@@ -84,6 +90,16 @@ class InsulinMigration(
             else type.insulinPeakTime
         return LegacyInsulin(nickname = rh.gs(type.label), peakTime = peakTime, fromExplicitKey = explicit != null)
     }
+
+    /**
+     * Reads a legacy Wavez v3 PD plugin selection (`InsulinCustomPDPlugin`, `InsulinLyumjevU100PDPlugin`,
+     * or `InsulinLyumjevU200PDPlugin`) along with any stored Custom PD parameters.
+     *
+     * Absent Custom PD parameter keys default to `51.0 / 12.27 / 0.05185` (matching the 4.0 preset).
+     * Present-but-invalid parameters are preserved as `Double.NaN` or the stored invalid number so the
+     * resulting [InsulinModel.Pd] stays visible and unusable rather than silently becoming Bilinear.
+     */
+    private fun readLegacyPdInsulin(sp: KeyValueStore): LegacyInsulin? = readLegacyPdSelection(sp)
 
     /**
      * The DIA each v3 local profile was using, paired with the profile's name.
@@ -151,19 +167,25 @@ class InsulinMigration(
      * of the harvest.
      */
     fun plan(recordICfg: ICfg?, legacy: LegacyInsulin?, harvest: ProfileDiaHarvest, activeProfileName: String?): InsulinMigrationPlan {
-        if (recordICfg?.isPresent == true) return plan(recordICfg, InsulinMigrationPlan.Source.RECORD)
+        if (recordICfg?.isPresent == true) {
+            return plan(enrichRecordICfg(recordICfg, legacy), InsulinMigrationPlan.Source.RECORD)
+        }
         // Null only if nothing read the store, which the start-up order rules out. Same treatment as an
         // install with no row: v3's own default.
         val insulin = legacy ?: LegacyInsulin(rh.gs(InsulinType.OREF_RAPID_ACTING.label), InsulinType.OREF_RAPID_ACTING.insulinPeakTime, fromExplicitKey = false)
-        val dia = harvest.diaFor(activeProfileName)
-        // Concentration is 1.0 by construction, not a guess: these records predate concentration entirely,
-        // so 1.0 is the identity that leaves historical doses unscaled. The label is left blank on purpose -
-        // the insulin list builds it from the nickname and the curve, so there is one naming rule.
+        val pdModel = insulin.insulinModel as? InsulinModel.Pd
+        // The 3.4 PD plugins always used a fixed 8 h curve regardless of profile DIA, so PD migration
+        // uses the model duration (8 h) rather than guessing the hard-limit maximum.
+        val dia = if (pdModel != null) pdModel.durationMinutes / 60.0 else harvest.diaFor(activeProfileName)
+        // Concentration is 1.0 by construction for bilinear records; Lyumjev U200 PD carries 2.0.
+        // The label is left blank on purpose - the insulin list builds it from the nickname and the curve,
+        // so there is one naming rule.
         val iCfg = ICfg(
             insulinLabel = "",
             insulinEndTime = ((dia ?: hardLimits.diaRange().endInclusive) * 3600 * 1000).toLong(),
             insulinPeakTime = insulin.peakTime,
-            concentration = 1.0
+            concentration = insulin.concentration,
+            insulinModel = insulin.insulinModel
         ).also { it.insulinNickname = insulin.nickname }
         val source = when {
             dia != null               -> InsulinMigrationPlan.Source.LEGACY_KEYS
@@ -173,9 +195,181 @@ class InsulinMigration(
         return plan(iCfg, source)
     }
 
+    /**
+     * Enriches a carried-over v3 profile switch [ICfg] whose `insulinModel` is still [InsulinModel.Bilinear]
+     * (from DB migration 36 -> 37) by matching its exact v3 PD plugin label. Never uses peak time to guess.
+     */
+    fun enrichRecordICfg(recordICfg: ICfg, legacy: LegacyInsulin?): ICfg {
+        if (recordICfg.insulinModel !is InsulinModel.Bilinear) return recordICfg
+        val rule = legacyProfileSwitchPdRules(legacy).firstOrNull { it.legacyLabel == recordICfg.insulinLabel }
+            ?: return recordICfg
+        return recordICfg.deepClone().apply {
+            concentration = rule.concentration
+            insulinModel = rule.model
+        }
+    }
+
+    /**
+     * Exact v3 label -> PD model mapping rules for backfilling historical `profileSwitches` and
+     * `effectiveProfileSwitches`. Peak time is deliberately never consulted because it is ambiguous.
+     */
+    fun legacyProfileSwitchPdRules(legacy: LegacyInsulin?): List<LegacyPdBackfillRule> {
+        val customModel = (legacy?.insulinModel as? InsulinModel.Pd)
+            ?.takeIf { !it.concentrationScalesPeak }
+            ?: defaultCustomPdModel()
+        return listOf(
+            LegacyPdBackfillRule(
+                legacyLabel = LEGACY_LABEL_LYUMJEV_U100_PD,
+                concentration = 1.0,
+                model = lyumjevPdModel()
+            ),
+            LegacyPdBackfillRule(
+                legacyLabel = LEGACY_LABEL_LYUMJEV_U200_PD,
+                concentration = 2.0,
+                model = lyumjevPdModel()
+            ),
+            LegacyPdBackfillRule(
+                legacyLabel = LEGACY_LABEL_CUSTOM_PD,
+                concentration = 1.0,
+                model = customModel
+            )
+        )
+    }
+
+    /**
+     * Decides which [InsulinModel] a legacy bolus at [bolusTimestamp] receives during v3 backfill:
+     * - Only boluses within the last 8 h get the current PD model (for continuous current IOB).
+     * - Older boluses stay [InsulinModel.Bilinear] (never guess Custom PD history).
+     * - An unusable PD model is NEVER stamped onto a bolus.
+     */
+    fun bolusModelForBackfill(runningICfg: ICfg, bolusTimestamp: Long, now: Long): InsulinModel {
+        val pd = runningICfg.insulinModel as? InsulinModel.Pd ?: return InsulinModel.Bilinear
+        if (!runningICfg.isUsable) return InsulinModel.Bilinear
+        val cutoff = now - BOLUS_PD_BACKFILL_WINDOW_MS
+        return if (bolusTimestamp >= cutoff) pd else InsulinModel.Bilinear
+    }
+
+    /**
+     * Precomputes the two encoded models and cutoff timestamp used by bulk bolus migration in `MainApp`.
+     * Never emits an invalid PD model for boluses.
+     */
+    fun bolusBackfillPlan(runningICfg: ICfg, now: Long): BolusBackfillPlan {
+        val cutoff = now - BOLUS_PD_BACKFILL_WINDOW_MS
+        val recentModel = if (runningICfg.insulinModel is InsulinModel.Pd && runningICfg.isUsable) {
+            runningICfg.insulinModel
+        } else {
+            InsulinModel.Bilinear
+        }
+        return BolusBackfillPlan(
+            cutoffTimestamp = cutoff,
+            recentModelJson = InsulinModelCodec.encodeToString(recentModel),
+            olderModelJson = InsulinModelCodec.DEFAULT_BILINEAR_JSON
+        )
+    }
+
     private fun plan(iCfg: ICfg, source: InsulinMigrationPlan.Source): InsulinMigrationPlan {
-        aapsLogger.info(LTag.CORE, "Insulin migration: ${iCfg.peak} min peak, ${iCfg.dia} h DIA, from $source")
+        aapsLogger.info(LTag.CORE, "Insulin migration: ${iCfg.peak} min peak, ${iCfg.dia} h DIA, model=${iCfg.insulinModel}, from $source")
         return InsulinMigrationPlan(iCfg, source)
+    }
+
+    companion object {
+        const val PLUGIN_CUSTOM_PD = "InsulinCustomPDPlugin"
+        const val PLUGIN_LYUMJEV_U100_PD = "InsulinLyumjevU100PDPlugin"
+        const val PLUGIN_LYUMJEV_U200_PD = "InsulinLyumjevU200PDPlugin"
+
+        const val KEY_CUSTOM_PD_A0 = "insulin_pd_free_peak_a0"
+        const val KEY_CUSTOM_PD_A1 = "insulin_pd_free_peak_a1"
+        const val KEY_CUSTOM_PD_B1 = "insulin_pd_free_peak_b1"
+
+        const val LEGACY_LABEL_CUSTOM_PD = "Custom PD"
+        const val LEGACY_LABEL_LYUMJEV_U100_PD = "Lyumjev U100 (Tsunami)"
+        const val LEGACY_LABEL_LYUMJEV_U200_PD = "Lyumjev U200 (Tsunami)"
+
+        const val DEFAULT_CUSTOM_PD_A0 = 51.0
+        const val DEFAULT_CUSTOM_PD_A1 = 12.27
+        const val DEFAULT_CUSTOM_PD_B1 = 0.05185
+        const val DEFAULT_CUSTOM_PD_PEAK_MIN = 51
+
+        const val LYUMJEV_PD_A0 = 61.33
+        const val LYUMJEV_PD_A1 = 12.27
+        const val LYUMJEV_PD_B1 = 0.05185
+        const val LYUMJEV_PD_PEAK_MIN = 65
+
+        const val PD_DURATION_MINUTES = 480
+        const val BOLUS_PD_BACKFILL_WINDOW_MS = 8L * 3600 * 1000
+
+        fun defaultCustomPdModel(): InsulinModel.Pd = InsulinModel.Pd(
+            a0 = DEFAULT_CUSTOM_PD_A0,
+            a1 = DEFAULT_CUSTOM_PD_A1,
+            b1 = DEFAULT_CUSTOM_PD_B1,
+            concentrationScalesPeak = false,
+            durationMinutes = PD_DURATION_MINUTES
+        )
+
+        fun lyumjevPdModel(): InsulinModel.Pd = InsulinModel.Pd(
+            a0 = LYUMJEV_PD_A0,
+            a1 = LYUMJEV_PD_A1,
+            b1 = LYUMJEV_PD_B1,
+            concentrationScalesPeak = true,
+            durationMinutes = PD_DURATION_MINUTES
+        )
+
+        internal fun readLegacyPdSelection(sp: KeyValueStore): LegacyInsulin? {
+            fun selected(plugin: String): Boolean {
+                val all = sp.getAll()
+                return LegacyPreferenceValue.asBoolean(all["ConfigBuilder_Enabled_INSULIN_$plugin"]) == true ||
+                    LegacyPreferenceValue.asBoolean(all["ConfigBuilder_INSULIN_${plugin}_Enabled"]) == true
+            }
+
+            return when {
+                selected(PLUGIN_CUSTOM_PD) -> {
+                    val all = sp.getAll()
+                    val a0 = readPdParam(all, KEY_CUSTOM_PD_A0, DEFAULT_CUSTOM_PD_A0)
+                    val a1 = readPdParam(all, KEY_CUSTOM_PD_A1, DEFAULT_CUSTOM_PD_A1)
+                    val b1 = readPdParam(all, KEY_CUSTOM_PD_B1, DEFAULT_CUSTOM_PD_B1)
+                    val model = InsulinModel.Pd(
+                        a0 = a0,
+                        a1 = a1,
+                        b1 = b1,
+                        concentrationScalesPeak = false,
+                        durationMinutes = PD_DURATION_MINUTES
+                    )
+                    // Keep peak positive even for an invalid a0 so ICfg.isPresent remains true
+                    // while ICfg.isUsable rejects dosing.
+                    val peakMinutes = if (a0.isFinite() && a0 >= 1.0) a0.roundToInt() else DEFAULT_CUSTOM_PD_PEAK_MIN
+                    LegacyInsulin(
+                        nickname = LEGACY_LABEL_CUSTOM_PD,
+                        peakTime = peakMinutes * 60_000L,
+                        fromExplicitKey = true,
+                        concentration = 1.0,
+                        insulinModel = model
+                    )
+                }
+
+                selected(PLUGIN_LYUMJEV_U100_PD) -> LegacyInsulin(
+                    nickname = "Lyumjev PD",
+                    peakTime = LYUMJEV_PD_PEAK_MIN * 60_000L,
+                    fromExplicitKey = true,
+                    concentration = 1.0,
+                    insulinModel = lyumjevPdModel()
+                )
+
+                selected(PLUGIN_LYUMJEV_U200_PD) -> LegacyInsulin(
+                    nickname = "Lyumjev PD",
+                    peakTime = LYUMJEV_PD_PEAK_MIN * 60_000L,
+                    fromExplicitKey = true,
+                    concentration = 2.0,
+                    insulinModel = lyumjevPdModel()
+                )
+
+                else -> null
+            }
+        }
+
+        private fun readPdParam(all: Map<String, Any?>, key: String, default: Double): Double {
+            if (!all.containsKey(key)) return default
+            return LegacyPreferenceValue.asDouble(all[key]) ?: Double.NaN
+        }
     }
 }
 
@@ -185,7 +379,27 @@ class InsulinMigration(
  * [fromExplicitKey] is false when no ConfigBuilder row said so and v3's own default was taken instead. The
  * insulin is still right either way; the flag only says how much is left to guess if the DIA is missing too.
  */
-data class LegacyInsulin(val nickname: String, val peakTime: Long, val fromExplicitKey: Boolean)
+data class LegacyInsulin(
+    val nickname: String,
+    val peakTime: Long,
+    val fromExplicitKey: Boolean,
+    val concentration: Double = 1.0,
+    val insulinModel: InsulinModel = InsulinModel.Bilinear
+)
+
+/** Label-based PD backfill rule for carried-over v3 profile switch tables. */
+data class LegacyPdBackfillRule(
+    val legacyLabel: String,
+    val concentration: Double,
+    val model: InsulinModel.Pd
+)
+
+/** Split backfill plan for legacy sentinel boluses: PD within 8 h when usable, Bilinear older. */
+data class BolusBackfillPlan(
+    val cutoffTimestamp: Long,
+    val recentModelJson: String,
+    val olderModelJson: String
+)
 
 /** The DIA each v3 local profile was using, and the legacy names those values came from. */
 data class ProfileDiaHarvest(val nameToDia: Map<String, Double>, val keysToRemove: List<String>) {

@@ -7,14 +7,10 @@ import app.aaps.core.data.pump.defs.PumpType
 import app.aaps.core.data.time.T
 import app.aaps.core.nssdk.localmodel.treatment.EventType
 import app.aaps.core.nssdk.localmodel.treatment.NSBolus
-import app.aaps.core.nssdk.localmodel.treatment.NSICfg
 
 /** [insulinFallback] stamps records uploaded without one — see `NsIncomingDataProcessor.fallbackICfg`. */
 fun NSBolus.toBolus(insulinFallback: ICfg): BS {
-    val iCfg =
-        iCfg?.let {
-            ICfg(insulinLabel = it.insulinLabel, insulinEndTime = it.insulinEndTime, insulinPeakTime = it.insulinPeakTime, concentration = it.concentration)
-        } ?: insulinFallback
+    val iCfg = iCfg?.toICfg() ?: insulinFallback
     return BS(
         isValid = isValid,
         timestamp = date ?: throw IllegalArgumentException(),
@@ -46,7 +42,7 @@ fun BS.toNSBolus(): NSBolus =
         pumpType = ids.pumpType?.name,
         pumpSerial = ids.pumpSerial,
         endId = ids.endId,
-        iCfg = NSICfg(insulinLabel = iCfg.insulinLabel, insulinEndTime = iCfg.insulinEndTime, insulinPeakTime = iCfg.insulinPeakTime, concentration = iCfg.concentration)
+        iCfg = iCfg.toNSICfg()
     )
 
 fun BS.Type?.toBolusType(): NSBolus.BolusType =
