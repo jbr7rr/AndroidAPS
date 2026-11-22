@@ -143,6 +143,72 @@ class InsulinConfigMigration36Test {
         }
     }
 
+    @Test
+    fun `label-based PD backfill updates insulinEndTime to 8h along with concentration and model`() = runTest {
+        val legacyPsConfig = InsulinConfiguration(
+            insulinLabel = "Custom PD",
+            insulinEndTime = DIA_5H,
+            insulinPeakTime = PEAK_51M,
+            concentration = 1.0,
+            insulinModel = BILINEAR_JSON
+        )
+        val dayMs = 24L * 3600 * 1000
+        val blocks = listOf(Block(dayMs, 1.0))
+        val targets = listOf(TargetBlock(dayMs, 90.0, 90.0))
+
+        val db = JvmAppDatabaseBuilder().provideAppDatabase(dbPath)
+        try {
+            db.profileSwitchDao.insert(
+                ProfileSwitch(
+                    timestamp = 1_700_000_000_000L,
+                    utcOffset = 0L,
+                    basalBlocks = blocks,
+                    isfBlocks = blocks,
+                    icBlocks = blocks,
+                    targetBlocks = targets,
+                    glucoseUnit = GlucoseUnit.MGDL,
+                    profileName = "Default",
+                    timeshift = 0L,
+                    percentage = 100,
+                    duration = 0L,
+                    insulinConfiguration = legacyPsConfig
+                )
+            )
+            db.effectiveProfileSwitchDao.insert(
+                EffectiveProfileSwitch(
+                    timestamp = 1_700_000_000_000L,
+                    utcOffset = 0L,
+                    basalBlocks = blocks,
+                    isfBlocks = blocks,
+                    icBlocks = blocks,
+                    targetBlocks = targets,
+                    glucoseUnit = GlucoseUnit.MGDL,
+                    originalProfileName = "Default",
+                    originalCustomizedName = "Default",
+                    originalTimeshift = 0L,
+                    originalPercentage = 100,
+                    originalDuration = 0L,
+                    originalEnd = 0L,
+                    insulinConfiguration = legacyPsConfig
+                )
+            )
+
+            val updatedPs = db.profileSwitchDao.backfillPdModelByLabel("Custom PD", DIA_8H, 1.0, PD_JSON)
+            val updatedEps = db.effectiveProfileSwitchDao.backfillPdModelByLabel("Custom PD", DIA_8H, 1.0, PD_JSON)
+
+            assertThat(updatedPs).isEqualTo(1)
+            assertThat(updatedEps).isEqualTo(1)
+            val ps = db.profileSwitchDao.getAllProfileSwitches().single()
+            val eps = db.effectiveProfileSwitchDao.getAllEffectiveProfileSwitches().single()
+            assertThat(ps.insulinConfiguration.insulinEndTime).isEqualTo(DIA_8H)
+            assertThat(ps.insulinConfiguration.insulinModel).isEqualTo(PD_JSON)
+            assertThat(eps.insulinConfiguration.insulinEndTime).isEqualTo(DIA_8H)
+            assertThat(eps.insulinConfiguration.insulinModel).isEqualTo(PD_JSON)
+        } finally {
+            db.close()
+        }
+    }
+
     private fun insulinModelOf(conn: SQLiteConnection, table: String): String =
         conn.prepare("SELECT insulinModel FROM `$table`").use { st ->
             check(st.step()) { "no row in $table" }

@@ -292,7 +292,7 @@ class IobCobCalculatorPlugin(
 
     override suspend fun calculateDetectionStart(from: Long, limitDataToOldestAvailable: Boolean): Long {
         val profile = profileFunction.getProfile(from)
-        val dia = profile?.iCfg?.dia ?: Constants.DEFAULT_DIA
+        val dia = profile?.iCfg?.iobDurationHours ?: Constants.DEFAULT_DIA
         val oldestDataAvailable = oldestDataAvailable()
         val getBGDataFrom: Long
         if (limitDataToOldestAvailable) {

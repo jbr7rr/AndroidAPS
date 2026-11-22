@@ -28,22 +28,27 @@ sealed interface InsulinModel {
     /**
      * The "MP" pharmacodynamic model used by the Wavez PD insulins.
      *
-     * For a dose `amount` and an insulin concentration `c`:
+     * For a dose `amount` (in actual insulin units, iU, as AAPS 4.0's concentration layer already
+     * converts pump units `cU` to `amount = cU * c`) and an insulin concentration `c`:
      *
      * ```
-     * peakScale = if (concentrationScalesPeak) c else 1.0
-     * tp        = (a0 + a1 * amount * peakScale) / (1 + b1 * amount)
-     * tpModel   = 2 * tp^2
-     * activity  = (2 * amount / tpModel) * t * exp(-t^2 / tpModel)
-     * iob       = amount * (exp(-t^2 / tpModel) - exp(-duration^2 / tpModel))
+     * denomScale = if (concentrationScalesPeak) c else 1.0
+     * tp         = (a0 + a1 * amount) / (1 + b1 * amount / denomScale)
+     * tpModel    = 2 * tp^2
+     * activity   = (2 * amount / tpModel) * t * exp(-t^2 / tpModel)
+     * iob        = amount * (exp(-t^2 / tpModel) - exp(-duration^2 / tpModel))
      * ```
+     *
+     * For Lyumjev U200 (`c = 2.0`), this matches Wavez 3.4's `(a0 + a1 * cU * 2) / (1 + b1 * cU)`
+     * exactly without double-counting the concentration factor (since `amount = 2 * cU`).
      *
      * @param a0 base time to peak, in minutes
      * @param a1 dose-dependent part of the time to peak
      * @param b1 damping of the dose-dependent time to peak
      * @param concentrationScalesPeak true for Lyumjev PD, where [ICfg.concentration]
-     *   scales the dose in the peak numerator (1.0 for U100, 2.0 for U200).
-     *   Custom PD keeps this false, so its peak does not depend on concentration.
+     *   scales the damping term from actual insulin units (`iU`) back to pump volume (`iU / c`)
+     *   (1.0 for U100, 2.0 for U200). Custom PD keeps this false, so its peak does not depend on
+     *   concentration.
      * @param durationMinutes fixed curve duration. The 3.4 PD plugins always used
      *   480 min (8 h), independent of the profile DIA. 4.0 keeps that. The PD
      *   presets use DIA 8 h so the IOB query window covers the whole curve.
@@ -65,12 +70,14 @@ sealed interface InsulinModel {
         /**
          * Dose-dependent time to peak activity, in minutes.
          *
-         * [concentration] is 1.0 for U100 and 2.0 for U200. It only enters the
-         * formula when [concentrationScalesPeak] is true.
+         * [amount] is in actual insulin units (iU). [concentration] is 1.0 for U100 and 2.0 for
+         * U200, and only enters the denominator (`b1 * amount / concentration`) when
+         * [concentrationScalesPeak] is true.
          */
         fun peakMinutesForDose(amount: Double, concentration: Double = 1.0): Double {
-            val peakScale = if (concentrationScalesPeak) concentration else 1.0
-            return (a0 + a1 * amount * peakScale) / (1 + b1 * amount)
+            val denomScale = if (concentrationScalesPeak) concentration else 1.0
+            if (!denomScale.isFinite() || denomScale <= 0.0) return Double.NaN
+            return (a0 + a1 * amount) / (1 + b1 * amount / denomScale)
         }
 
         /** Activity contribution for [amount] units, [timeMinutes] after the dose. */

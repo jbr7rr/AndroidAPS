@@ -121,7 +121,7 @@ class InsulinMigrationPdTest {
     // ── plan() for v3 PD records and legacy backups ────────────────────────────────────────────────
 
     @Test
-    fun `plan enriches v3 Custom PD profile switch row by label`() {
+    fun `plan enriches v3 Custom PD profile switch row by label and normalizes DIA to 8h`() {
         val v3Row = ICfg("Custom PD", 6L * 3600 * 1000, 51L * 60 * 1000, 1.0, InsulinModel.Bilinear)
         val legacy = sut().readLegacyInsulin(
             storeOf(
@@ -135,6 +135,7 @@ class InsulinMigrationPdTest {
         val plan = sut().plan(v3Row, legacy, ProfileDiaHarvest(emptyMap(), emptyList()), "Adult")
 
         assertThat(plan.source).isEqualTo(InsulinMigrationPlan.Source.RECORD)
+        assertThat(plan.iCfg.dia).isEqualTo(8.0)
         assertThat(plan.iCfg.insulinModel).isEqualTo(
             InsulinModel.Pd(48.0, 11.5, 0.05, concentrationScalesPeak = false, durationMinutes = 480)
         )
@@ -142,18 +143,40 @@ class InsulinMigrationPdTest {
     }
 
     @Test
-    fun `plan enriches v3 Lyumjev U200 Tsunami row with PD model and concentration 2`() {
+    fun `in-place 3_4 Custom PD upgrade with 5h profile DIA matches PreferenceMigrations 8h curve without duplicating`() = runTest {
+        val store = storeOf(
+            "ConfigBuilder_Enabled_INSULIN_InsulinCustomPDPlugin" to true,
+            "insulin_pd_free_peak_a0" to "51.0",
+            "insulin_pd_free_peak_a1" to "12.27",
+            "insulin_pd_free_peak_b1" to "0.05185"
+        )
+        val legacy = sut().readLegacyInsulin(store)
+        preferenceMigrations().migrate(store)
+
+        val rawCfg = store.getString(StringNonKey.InsulinConfiguration.key, "")
+        val seededFromPrefs = ICfg.fromJsonObject(((Json.parseToJsonElement(rawCfg) as JsonObject)["insulin"] as JsonArray).single() as JsonObject)
+
+        val v3Row = ICfg("Custom PD", 5L * 3600 * 1000, 51L * 60 * 1000, 1.0, InsulinModel.Bilinear)
+        val plan = sut().plan(v3Row, legacy, ProfileDiaHarvest(emptyMap(), emptyList()), "Adult")
+
+        assertThat(plan.iCfg.dia).isEqualTo(8.0)
+        assertThat(seededFromPrefs.hasSameCurve(plan.iCfg)).isTrue()
+    }
+
+    @Test
+    fun `plan enriches v3 Lyumjev U200 Tsunami row with PD model, 8h DIA, and concentration 2`() {
         val v3Row = ICfg("Lyumjev U200 (Tsunami)", 6L * 3600 * 1000, 65L * 60 * 1000, 1.0, InsulinModel.Bilinear)
 
         val plan = sut().plan(v3Row, null, ProfileDiaHarvest(emptyMap(), emptyList()), "Adult")
 
         assertThat(plan.source).isEqualTo(InsulinMigrationPlan.Source.RECORD)
+        assertThat(plan.iCfg.dia).isEqualTo(8.0)
         assertThat(plan.iCfg.concentration).isEqualTo(2.0)
         assertThat(plan.iCfg.insulinModel).isEqualTo(
             InsulinModel.Pd(61.33, 12.27, 0.05185, concentrationScalesPeak = true, durationMinutes = 480)
         )
-        // Curve uses U200 concentration in peak numerator.
-        assertThat(plan.iCfg.peakMinutesForDose(2.0)).isWithin(1e-6).of((61.33 + 12.27 * 2.0 * 2.0) / (1.0 + 0.05185 * 2.0))
+        // 4 U actual U200 bolus (2 U pump volume) matches 3.4 cU=2.0 peak without double-scaling.
+        assertThat(plan.iCfg.peakMinutesForDose(4.0)).isWithin(1e-6).of((61.33 + 12.27 * 4.0) / (1.0 + 0.05185 * 4.0 / 2.0))
     }
 
     @Test

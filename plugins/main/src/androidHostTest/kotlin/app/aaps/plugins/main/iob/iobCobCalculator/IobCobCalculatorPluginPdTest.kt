@@ -94,4 +94,24 @@ class IobCobCalculatorPluginPdTest {
         // 8 h curve plus the usual 30 min tail, in 5 min steps.
         assertThat(array.size).isEqualTo(((8.0 * 60 + 30) / 5).toInt())
     }
+
+    @Test
+    fun `PD calculateDetectionStart covers 24h plus model duration when DIA is shorter`() = runBlocking {
+        whenever(profileFunction.getProfile(now)).thenReturn(profile)
+
+        val start = sut.calculateDetectionStart(now, limitDataToOldestAvailable = false)
+
+        assertThat(start).isEqualTo(now - (24 + 8) * hour)
+    }
+
+    @Test
+    fun `bilinear calculateDetectionStart still uses 24h plus DIA`() = runBlocking {
+        val bilinear = ICfg(insulinLabel = "rapid", peak = 75, dia = 5.0, concentration = 1.0)
+        whenever(profile.iCfg).thenReturn(bilinear)
+        whenever(profileFunction.getProfile(now)).thenReturn(profile)
+
+        val start = sut.calculateDetectionStart(now, limitDataToOldestAvailable = false)
+
+        assertThat(start).isEqualTo(now - (24 + 5) * hour)
+    }
 }

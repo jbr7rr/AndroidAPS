@@ -115,7 +115,7 @@ internal class InsulinManagementViewModelPdTest {
     }
 
     @Test
-    fun `loading Lyumjev PD preset and switching to U200 scales peak numerator by 2`() {
+    fun `loading Lyumjev PD preset and switching to U200 scales peak denominator by concentration`() {
         loadSingle(ICfg("Rapid 75m 5h U100", 5L * 3600 * 1000, 75L * 60 * 1000, 1.0))
 
         sut.loadPeakFromPreset(InsulinType.LYUMJEV_PD)
@@ -128,7 +128,8 @@ internal class InsulinManagementViewModelPdTest {
         assertThat(built.insulinModel).isEqualTo(
             InsulinModel.Pd(61.33, 12.27, 0.05185, concentrationScalesPeak = true, durationMinutes = 480)
         )
-        assertThat(built.peakMinutesForDose(2.0)).isWithin(1e-6).of((61.33 + 12.27 * 2.0 * 2.0) / (1.0 + 0.05185 * 2.0))
+        // 4 U actual U200 bolus (2 U pump volume) matches 3.4 cU=2.0 peak (~100.04 min) without double-scaling.
+        assertThat(built.peakMinutesForDose(4.0)).isWithin(1e-6).of((61.33 + 12.27 * 4.0) / (1.0 + 0.05185 * 4.0 / 2.0))
     }
 
     @Test

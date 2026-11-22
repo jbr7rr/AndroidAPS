@@ -59,8 +59,8 @@ internal interface ProfileSwitchDao : ProfileSwitchDaoWorkaround {
     @Query("UPDATE $TABLE_PROFILE_SWITCHES SET insulinLabel = :label, insulinEndTime = :end, insulinPeakTime = :peak, concentration = :conc, insulinModel = :insulinModel WHERE insulinEndTime = -1 AND referenceId IS NULL")
     suspend fun bulkMigrateInsulinConfig(label: String, end: Long, peak: Long, conc: Double, insulinModel: String = """{"type":"BILINEAR"}"""): Int
 
-    @Query("""UPDATE $TABLE_PROFILE_SWITCHES SET concentration = :conc, insulinModel = :insulinModel WHERE insulinLabel = :legacyLabel AND insulinModel = '{"type":"BILINEAR"}' AND referenceId IS NULL""")
-    suspend fun backfillPdModelByLabel(legacyLabel: String, conc: Double, insulinModel: String): Int
+    @Query("""UPDATE $TABLE_PROFILE_SWITCHES SET insulinEndTime = :endTime, concentration = :conc, insulinModel = :insulinModel WHERE insulinLabel = :legacyLabel AND insulinModel = '{"type":"BILINEAR"}' AND referenceId IS NULL""")
+    suspend fun backfillPdModelByLabel(legacyLabel: String, endTime: Long, conc: Double, insulinModel: String): Int
 }
 
 internal suspend fun ProfileSwitchDao.insertNewEntryImpl(entry: ProfileSwitch): Long {

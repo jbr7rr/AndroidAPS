@@ -198,12 +198,17 @@ class InsulinMigration(
     /**
      * Enriches a carried-over v3 profile switch [ICfg] whose `insulinModel` is still [InsulinModel.Bilinear]
      * (from DB migration 36 -> 37) by matching its exact v3 PD plugin label. Never uses peak time to guess.
+     *
+     * Also normalizes `insulinEndTime` to the PD model's fixed 8 h duration so in-place 3.4 -> 4.0 upgrades
+     * match the 8 h entry seeded by [PreferenceMigrations] (preventing duplicate catalogue entries) and match
+     * the locked 8 h PD DIA in the insulin editor.
      */
     fun enrichRecordICfg(recordICfg: ICfg, legacy: LegacyInsulin?): ICfg {
         if (recordICfg.insulinModel !is InsulinModel.Bilinear) return recordICfg
         val rule = legacyProfileSwitchPdRules(legacy).firstOrNull { it.legacyLabel == recordICfg.insulinLabel }
             ?: return recordICfg
         return recordICfg.deepClone().apply {
+            insulinEndTime = rule.model.durationMinutes * 60_000L
             concentration = rule.concentration
             insulinModel = rule.model
         }

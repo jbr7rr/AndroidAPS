@@ -274,7 +274,9 @@ class ICfgTest {
             concentration = 2.0,
             insulinModel = InsulinModel.Pd(a0 = 61.33, a1 = 12.27, b1 = 0.05185, concentrationScalesPeak = true)
         )
-        assertEquals(81.63711555830204, lyumjevU200.peakMinutesForDose(1.0), 1e-12)
+        // 2 U actual U200 bolus (1 U pump volume) matches 3.4 cU=1.0 peak; 4 U actual matches cU=2.0.
+        assertEquals(81.63711555830204, lyumjevU200.peakMinutesForDose(2.0), 1e-12)
+        assertEquals(100.03624173235481, lyumjevU200.peakMinutesForDose(4.0), 1e-12)
     }
 
     @Test

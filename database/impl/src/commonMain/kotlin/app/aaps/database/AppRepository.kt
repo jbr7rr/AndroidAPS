@@ -504,8 +504,8 @@ class AppRepository internal constructor(
         insulinModel: String = """{"type":"BILINEAR"}"""
     ): Int = database.profileSwitchDao.bulkMigrateInsulinConfig(label, end, peak, conc, insulinModel)
 
-    suspend fun backfillProfileSwitchPdModelByLabel(legacyLabel: String, conc: Double, insulinModel: String): Int =
-        database.profileSwitchDao.backfillPdModelByLabel(legacyLabel, conc, insulinModel)
+    suspend fun backfillProfileSwitchPdModelByLabel(legacyLabel: String, endTime: Long, conc: Double, insulinModel: String): Int =
+        database.profileSwitchDao.backfillPdModelByLabel(legacyLabel, endTime, conc, insulinModel)
 
     suspend fun getProfileSwitchesFromTime(timestamp: Long, ascending: Boolean): List<ProfileSwitch> =
         database.profileSwitchDao.getProfileSwitchDataFromTime(timestamp).reversedIf(!ascending)
@@ -613,8 +613,8 @@ class AppRepository internal constructor(
         insulinModel: String = """{"type":"BILINEAR"}"""
     ): Int = database.effectiveProfileSwitchDao.bulkMigrateInsulinConfig(label, end, peak, conc, insulinModel)
 
-    suspend fun backfillEffectiveProfileSwitchPdModelByLabel(legacyLabel: String, conc: Double, insulinModel: String): Int =
-        database.effectiveProfileSwitchDao.backfillPdModelByLabel(legacyLabel, conc, insulinModel)
+    suspend fun backfillEffectiveProfileSwitchPdModelByLabel(legacyLabel: String, endTime: Long, conc: Double, insulinModel: String): Int =
+        database.effectiveProfileSwitchDao.backfillPdModelByLabel(legacyLabel, endTime, conc, insulinModel)
 
     // THERAPY EVENT
     /*

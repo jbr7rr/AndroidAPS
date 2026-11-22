@@ -821,12 +821,13 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
             )
 
         // Backfill carried-over v3 profile switch rows whose insulinModel defaulted to BILINEAR in DB 37,
-        // matching by exact v3 PD label rather than peak time.
+        // matching by exact v3 PD label rather than peak time, and normalizing DIA to the fixed 8 h PD duration.
         var backfilledPdSwitches = 0
         for (rule in insulinMigration.legacyProfileSwitchPdRules(legacyInsulin)) {
             val encodedRuleModel = InsulinModelCodec.encodeToString(rule.model)
-            backfilledPdSwitches += repository.backfillProfileSwitchPdModelByLabel(rule.legacyLabel, rule.concentration, encodedRuleModel)
-            backfilledPdSwitches += repository.backfillEffectiveProfileSwitchPdModelByLabel(rule.legacyLabel, rule.concentration, encodedRuleModel)
+            val endTime = rule.model.durationMinutes * 60_000L
+            backfilledPdSwitches += repository.backfillProfileSwitchPdModelByLabel(rule.legacyLabel, endTime, rule.concentration, encodedRuleModel)
+            backfilledPdSwitches += repository.backfillEffectiveProfileSwitchPdModelByLabel(rule.legacyLabel, endTime, rule.concentration, encodedRuleModel)
         }
         if (backfilledPdSwitches > 0) {
             profileFunction.invalidateCache()

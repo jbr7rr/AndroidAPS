@@ -8,20 +8,22 @@ import kotlin.test.assertTrue
 /**
  * Golden characterization of [InsulinModel.Pd] against the Wavez 3.4 plugin curves.
  *
- * The expected numbers were captured on the 3.4 characterization branch from the
- * pre-port formulas:
+ * The expected numbers below were captured on the 3.4 characterization branch where
+ * U200 users had no native concentration layer (`cU = amount`, actual dose `iU = 2 * cU`):
  *
- *   tp      = (a0 + a1 * amount * concentrationScale) / (1 + b1 * amount)
- *   tpModel = 2 * tp^2
- *   activity(t) = (2 * amount / tpModel) * t * exp(-t^2 / tpModel)
- *   iob(t)      = amount * (exp(-t^2 / tpModel) - exp(-480^2 / tpModel))
+ *   3.4: tp = (a0 + a1 * cU * concentrationScale) / (1 + b1 * cU)
  *
- * with the old 8 h truncation (zero at t >= 480). If 4.0 produces anything
- * else, the curve changed.
+ * In AAPS 4.0, the concentration layer already converts pump units `cU` to actual insulin
+ * units `amount = cU * c`, so 4.0 computes:
  *
- * In 4.0 the old `concentrationScale` is [ICfg.concentration], and the
- * Lyumjev model only puts it in the peak numerator when
- * [InsulinModel.Pd.concentrationScalesPeak] is true.
+ *   4.0: tp = (a0 + a1 * amount) / (1 + b1 * amount / denomScale)
+ *        tpModel     = 2 * tp^2
+ *        activity(t) = (2 * amount / tpModel) * t * exp(-t^2 / tpModel)
+ *        iob(t)      = amount * (exp(-t^2 / tpModel) - exp(-480^2 / tpModel))
+ *
+ * For U200 (`c = 2.0`), a 3.4 golden entry with pump-unit dose `cU` corresponds to an actual
+ * 4.0 dose of `2 * cU`, with the exact same `tp` and `2x` the pump-unit activity/IOB (matching
+ * 4.0's true-unit ISF and basal).
  */
 class InsulinModelTest {
 
@@ -71,15 +73,48 @@ class InsulinModelTest {
     }
 
     @Test
-    fun `Lyumjev U200 matches the old curve with the scaled peak numerator`() {
-        assertGolden(lyumjevU200, u200Concentration, u200Golden)
-        assertPeaks(lyumjevU200, u200Concentration, u200Peaks)
+    fun `Lyumjev U200 matches the 3_4 curve in 4_0 true-unit dose semantics`() {
+        // Each 3.4 U200 golden entry was recorded in pump units (cU); in 4.0 the same physical
+        // bolus is stored as actual insulin units (iU = cU * 2), yielding identical tp and 2x
+        // activity/IOB (matching 4.0's native concentration-adjusted ISF/basal).
+        u200Golden.forEach { golden ->
+            val actualUnits = golden.amount * u200Concentration
+            assertEquals(
+                golden.activity * u200Concentration,
+                lyumjevU200.activityContrib(actualUnits, golden.minutes, u200Concentration),
+                1e-12,
+                "activity for iU=$actualUnits (3.4 cU=${golden.amount}) t=${golden.minutes}"
+            )
+            assertEquals(
+                golden.iob * u200Concentration,
+                lyumjevU200.iobContrib(actualUnits, golden.minutes, u200Concentration),
+                1e-12,
+                "iob for iU=$actualUnits (3.4 cU=${golden.amount}) t=${golden.minutes}"
+            )
+        }
+        u200Peaks.forEach { peak ->
+            val actualUnits = peak.amount * u200Concentration
+            assertEquals(
+                peak.tp,
+                lyumjevU200.peakMinutesForDose(actualUnits, u200Concentration),
+                1e-12,
+                "tp for iU=$actualUnits (3.4 cU=${peak.amount})"
+            )
+            assertEquals(
+                peak.activity * u200Concentration,
+                lyumjevU200.activityAtPeak(actualUnits, u200Concentration),
+                1e-12,
+                "activityAtPeak for iU=$actualUnits (3.4 cU=${peak.amount})"
+            )
+        }
     }
 
     @Test
-    fun `U200 concentration doubles the peak numerator`() {
-        // (a0 + a1 * amount * 2) / (1 + b1 * amount), not (a0 + a1 * amount) / ...
-        assertEquals(81.63711555830204, lyumjevU200.peakMinutesForDose(1.0, u200Concentration), 1e-12)
+    fun `U200 concentration scales denominator without double-counting actual insulin units`() {
+        // In 4.0, a 2 U actual U200 bolus (1 U pump volume) matches 3.4's cU=1.0 U200 peak (81.64 min),
+        // and a 4 U actual U200 bolus (2 U pump volume) matches 3.4's cU=2.0 U200 peak (100.04 min).
+        assertEquals(81.63711555830204, lyumjevU200.peakMinutesForDose(2.0, u200Concentration), 1e-12)
+        assertEquals(100.03624173235481, lyumjevU200.peakMinutesForDose(4.0, u200Concentration), 1e-12)
         assertEquals(69.97195417597565, lyumjevU100.peakMinutesForDose(1.0, u100Concentration), 1e-12)
         assertEquals(60.151162237961685, customPd.peakMinutesForDose(1.0, u100Concentration), 1e-12)
         // Custom PD never scales its peak with the concentration.
