@@ -3,6 +3,7 @@ package app.aaps.plugins.aps.openAPSSMB
 import androidx.collection.LongSparseArray
 import app.aaps.core.data.aps.SMBDefaults
 import app.aaps.core.data.model.GlucoseUnit
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.data.model.getPassedDurationToTimeInMinutes
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
@@ -63,6 +64,10 @@ import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.utils.MidnightUtils
 import app.aaps.plugins.aps.ApsStrings
 import app.aaps.plugins.aps.events.EventOpenAPSUpdateGui
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
+import kotlin.time.TimeSource
 import app.aaps.plugins.aps.events.EventResetOpenAPSGui
 import app.aaps.plugins.aps.keys.ApsIntentKey
 import app.aaps.plugins.aps.openAPS.TddStatus
@@ -458,6 +463,9 @@ open class OpenAPSSMBPlugin(
             return@withContext
         }
 
+        val waveSnapshot = gatherWaveSnapshot(now, profile)
+        val smbFactor = preferences.get(DoubleKey.ApsSmbFactor)
+
         aapsLogger.debug(LTag.APS, ">>> Invoking determine_basal SMB <<<")
         aapsLogger.debug(LTag.APS, "Glucose status:     $glucoseStatus")
         aapsLogger.debug(LTag.APS, "Current temp:       $currentTemp")
@@ -468,6 +476,8 @@ open class OpenAPSSMBPlugin(
         aapsLogger.debug(LTag.APS, "MicroBolusAllowed:  $microBolusAllowed")
         aapsLogger.debug(LTag.APS, "flatBGsDetected:    $flatBGsDetected")
         aapsLogger.debug(LTag.APS, "DynIsfMode:         $dynIsfMode")
+        aapsLogger.debug(LTag.APS, "WaveEnabled:        ${waveSnapshot.settings.enabled}")
+        aapsLogger.debug(LTag.APS, "SmbFactor:          $smbFactor")
 
         determineBasalSMB.determine_basal(
             glucose_status = glucoseStatus,
@@ -479,7 +489,9 @@ open class OpenAPSSMBPlugin(
             microBolusAllowed = microBolusAllowed,
             currentTime = now,
             flatBGsDetected = flatBGsDetected,
-            dynIsfMode = effectiveDynIsfMode
+            dynIsfMode = effectiveDynIsfMode,
+            waveSnapshot = waveSnapshot,
+            smbFactor = smbFactor
         ).also {
             val determineBasalResult = apsResultProvider().with(it)
             // Preserve input data
@@ -497,6 +509,78 @@ open class OpenAPSSMBPlugin(
         }
 
         rxBus.send(EventOpenAPSUpdateGui())
+    }
+
+    /**
+     * Gathers the Wave (Tsunami Activity Engine) snapshot inside the suspend plugin invoke path,
+     * keeping [DetermineBasalSMB.determine_basal] pure and non-suspend.
+     *
+     * Short-circuits immediately when Wave is disabled so no extra persistence or IOB work runs.
+     * The future-activity window deliberately uses `iCfg.peak` (65 min Lyumjev PD, 51 min Custom PD)
+     * while `activityAtPeak` evaluates the model's dose-dependent peak amplitude.
+     */
+    internal suspend fun gatherWaveSnapshot(now: Long, profile: EffectiveProfile): WaveSnapshot {
+        val enabled = preferences.get(BooleanKey.ApsWaveEnable)
+        if (!enabled) return WaveSnapshot.Disabled
+
+        val mark = TimeSource.Monotonic.markNow()
+        val settings = WaveSettings(
+            enabled = true,
+            insulinReqPct = preferences.get(DoubleKey.ApsWaveInsReqPct),
+            startHour = preferences.get(IntKey.ApsWaveStartTime),
+            endHour = preferences.get(IntKey.ApsWaveEndTime),
+            maxMinutesOfBasalToLimitSmb = preferences.get(IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb),
+            useSmbCap = preferences.get(BooleanKey.ApsWaveUseSMBCap),
+            smbCap = preferences.get(DoubleKey.ApsWaveSmbCap),
+            useAdjustedSens = preferences.get(BooleanKey.ApsWaveUseAdjustedSens)
+        )
+        val iCfg = profile.iCfg
+        val currentHour = Instant.fromEpochMilliseconds(now).toLocalDateTime(TimeZone.currentSystemDefault()).hour
+        val lastBolusAmount = persistenceLayer.getNewestBolus()?.amount
+
+        var currentActivity = 0.0
+        for (i in -4..0) {
+            currentActivity += iobCobCalculator.calculateFromTreatmentsAndTemps(now - T.mins(i.toLong()).msecs(), profile).activity
+        }
+
+        var futureActivity = 0.0
+        val activityPredTime = iCfg.peak.toLong()
+        for (i in -4..0) {
+            futureActivity += iobCobCalculator.calculateFromTreatmentsAndTemps(now + T.mins(activityPredTime - i).msecs(), profile).activity
+        }
+
+        var sensorLagActivity = 0.0
+        val sensorLag = -10L
+        for (i in -4..0) {
+            sensorLagActivity += iobCobCalculator.calculateFromTreatmentsAndTemps(now + T.mins(sensorLag - i).msecs(), profile).activity
+        }
+
+        var historicActivity = 0.0
+        val activityHistoric = -20L
+        for (i in -2..2) {
+            historicActivity += iobCobCalculator.calculateFromTreatmentsAndTemps(now + T.mins(activityHistoric - i).msecs(), profile).activity
+        }
+
+        val activity = WaveActivitySnapshot(
+            currentActivity = Round.roundTo(currentActivity, 0.0001),
+            futureActivity = Round.roundTo(futureActivity, 0.0001),
+            sensorLagActivity = Round.roundTo(sensorLagActivity, 0.0001),
+            historicActivity = Round.roundTo(historicActivity, 0.0001),
+            dia = iCfg.dia
+        )
+        val elapsedMs = mark.elapsedNow().inWholeMilliseconds
+        aapsLogger.debug(LTag.APS, "Wave snapshot gathered in ${elapsedMs}ms (peak=${iCfg.peak}m, isPd=${iCfg.insulinModel is InsulinModel.Pd})")
+
+        return WaveSnapshot(
+            settings = settings,
+            currentHour = currentHour,
+            lastBolusAmount = lastBolusAmount,
+            activity = activity,
+            dia = iCfg.dia,
+            peak = iCfg.peak,
+            isPd = iCfg.insulinModel is InsulinModel.Pd,
+            activityAtPeak = { amount -> iCfg.activityAtPeak(amount) }
+        )
     }
 
     override fun getGlucoseStatusData(allowOldData: Boolean): GlucoseStatus? = glucoseStatusCalculatorSMB.getGlucoseStatusData(allowOldData)

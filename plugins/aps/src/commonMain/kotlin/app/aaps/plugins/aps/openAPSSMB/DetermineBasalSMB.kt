@@ -213,7 +213,9 @@ class DetermineBasalSMB(
 
     fun determine_basal(
         glucose_status: GlucoseStatus, currenttemp: CurrentTemp, iob_data_array: Array<IobTotal>, profile: OapsProfile, autosens_data: AutosensResult, meal_data: MealData,
-        microBolusAllowed: Boolean, currentTime: Long, flatBGsDetected: Boolean, dynIsfMode: Boolean
+        microBolusAllowed: Boolean, currentTime: Long, flatBGsDetected: Boolean, dynIsfMode: Boolean,
+        waveSnapshot: WaveSnapshot = WaveSnapshot.Disabled,
+        smbFactor: Double = 0.5
     ): RT {
         consoleError = mutableListOf()
         consoleLog = mutableListOf()
@@ -450,6 +452,37 @@ class DetermineBasalSMB(
             // plainly. The ISF for carbs falls back to the profile ISF on it (IsfForCarbs).
             variable_sens = if (dynIsfMode) profile.variable_sens else null
         )
+
+        // Wave (Tsunami Activity Engine) calculation on the pre-gathered snapshot.
+        val tsunamiResult = if (waveSnapshot.settings.enabled) {
+            WaveEngine.determine(
+                settings = waveSnapshot.settings,
+                currentHour = waveSnapshot.currentHour,
+                glucose = WaveGlucoseStatus(
+                    glucose = glucose_status.glucose,
+                    delta = glucose_status.delta,
+                    shortAvgDelta = glucose_status.shortAvgDelta
+                ),
+                targetBg = target_bg,
+                adjustedSens = sens,
+                profileSens = profile.sens,
+                currentBasal = profile.current_basal,
+                iob = iob_data.iob,
+                lastBolusAmount = waveSnapshot.lastBolusAmount,
+                lastBolusTime = iob_data.lastBolusTime,
+                currentTimeMillis = currentTime,
+                activity = waveSnapshot.activity,
+                dia = waveSnapshot.dia,
+                peak = waveSnapshot.peak,
+                isPd = waveSnapshot.isPd,
+                activityAtPeak = waveSnapshot.activityAtPeak
+            ).also { result ->
+                consoleLog.addAll(result.logs)
+                rT.reason.append(result.reason)
+            }
+        } else {
+            WaveEngine.disabled()
+        }
 
         // generate predicted future BGs based on IOB, COB, and current absorption rate
 
@@ -947,7 +980,9 @@ class DetermineBasalSMB(
             }
         }
 
-        if (enableSMB && minGuardBG < threshold) {
+        // Bypass predicted-BG SMB disable while Wave is active: BG predictions during UAM can
+        // otherwise suppress Wave dosing unnecessarily; predictive LGS below remains active.
+        if (!tsunamiResult.activityControllerActive && enableSMB && minGuardBG < threshold) {
             consoleError.add("minGuardBG ${convert_bg(minGuardBG)} projected below ${convert_bg(threshold)} - disabling SMB")
             //rT.reason += "minGuardBG "+minGuardBG+"<"+threshold+": SMB disabled; ";
             enableSMB = false
@@ -982,7 +1017,10 @@ class DetermineBasalSMB(
         if (bg < threshold && iob_data.iob < -profile.current_basal * 20 / 60 && minDelta > 0 && minDelta > expectedDelta) {
             rT.reason.append("IOB ${iob_data.iob} < ${round(-profile.current_basal * 20 / 60, 2)}")
             rT.reason.append(" and minDelta ${convert_bg(minDelta)} > expectedDelta ${convert_bg(expectedDelta)}; ")
-            // predictive low glucose suspend mode: BG is / is projected to be < threshold
+            // predictive low glucose suspend mode: BG is / is projected to be < threshold.
+            // Deliberately kept active even when Wave is active: 3.4's `!active && bg < threshold || minGuardBG < threshold`
+            // evaluated `&&` tighter than `||`, so 3.4 always enforced predictive LGS when minGuardBG < threshold.
+            // Keeping this preserves exact 3.4 runtime hypo-safety behavior.
         } else if (bg < threshold || minGuardBG < threshold) {
             rT.reason.append("minGuardBG ${convert_bg(minGuardBG)} < ${convert_bg(threshold)}")
             bgUndershoot = target_bg - minGuardBG
@@ -1002,7 +1040,8 @@ class DetermineBasalSMB(
             return setTempBasal(0.0, 0, profile, rT, currenttemp)
         }
 
-        if (eventualBG < min_bg) { // if eventual BG is below target:
+        // Bypass oref1 eventualBG < min_bg low-temp block while Wave is active, matching 3.4.
+        if (!tsunamiResult.activityControllerActive && eventualBG < min_bg) { // if eventual BG is below target:
             rT.reason.append("Eventual BG ${convert_bg(eventualBG)} < ${convert_bg(min_bg)}")
             // if 5m or 30m avg BG is rising faster than expected delta
             if (minDelta > expectedDelta && minDelta > 0 && carbsReq == 0) {
@@ -1136,12 +1175,16 @@ class DetermineBasalSMB(
             // insulinReq is the additional insulin required to get minPredBG down to target_bg
             //console.error(minPredBG,eventualBG);
             var insulinReq =
-                if (dynIsfMode) round((min(minPredBG, eventualBG) - target_bg) / future_sens, 2)
+                if (tsunamiResult.activityControllerActive) tsunamiResult.insReq
+                else if (dynIsfMode) round((min(minPredBG, eventualBG) - target_bg) / future_sens, 2)
                 else round((min(minPredBG, eventualBG) - target_bg) / sens, 2)
             // if that would put us over max_iob, then reduce accordingly
             if (insulinReq > max_iob - iob_data.iob) {
                 rT.reason.append("max_iob $max_iob, ")
                 insulinReq = max_iob - iob_data.iob
+                if (tsunamiResult.activityControllerActive) {
+                    consoleLog.add("InsulinReq adjusted for max_iob!")
+                }
             }
 
             // rate required to deliver insulinReq more insulin over 30m:
@@ -1159,14 +1202,20 @@ class DetermineBasalSMB(
                 if (iob_data.iob > mealInsulinReq && iob_data.iob > 0) {
                     consoleError.add("IOB ${iob_data.iob} > COB ${meal_data.mealCOB}; mealInsulinReq = $mealInsulinReq")
                     consoleError.add("profile.maxUAMSMBBasalMinutes: ${profile.maxUAMSMBBasalMinutes} profile.current_basal: ${profile.current_basal}")
-                    maxBolus = round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1)
+                    maxBolus = if (tsunamiResult.activityControllerActive) {
+                        tsunamiResult.smbCap
+                    } else {
+                        round(profile.current_basal * profile.maxUAMSMBBasalMinutes / 60, 1)
+                    }
                 } else {
                     consoleError.add("profile.maxSMBBasalMinutes: ${profile.maxSMBBasalMinutes} profile.current_basal: ${profile.current_basal}")
                     maxBolus = round(profile.current_basal * profile.maxSMBBasalMinutes / 60, 1)
                 }
-                // bolus 1/2 the insulinReq, up to maxBolus, rounding down to nearest bolus increment
+                // Wavez configurable SMB factor (default 1.0 = 100% from ApsSmbFactor, range 0.5..1.0;
+                // direct determine_basal callers default to 0.5 for upstream oref parity).
                 val roundSMBTo = 1 / profile.bolus_increment
-                val microBolus = floor(min(insulinReq / 2, maxBolus) * roundSMBTo) / roundSMBTo
+                val effectiveSmbFactor = if (smbFactor.isFinite() && smbFactor > 0.0) smbFactor.coerceIn(0.5, 1.0) else 0.5
+                val microBolus = floor(min(insulinReq * effectiveSmbFactor, maxBolus) * roundSMBTo) / roundSMBTo
                 // calculate a long enough zero temp to eventually correct back up to target
                 val smbTarget = target_bg
                 val worstCaseInsulinReq = (smbTarget - (naive_eventualBG + minIOBPredBG) / 2.0) / sens
@@ -1177,28 +1226,10 @@ class DetermineBasalSMB(
                     durationReq = 0
                 }
 
-                var smbLowTempReq = 0.0
-                if (durationReq <= 0) {
-                    durationReq = 0
-                    // don't set an SMB zero temp longer than 60 minutes
-                } else if (durationReq >= 30) {
-                    durationReq = round(durationReq / 30.0) * 30
-                    durationReq = min(60, max(0, durationReq))
-                } else {
-                    // if SMB durationReq is less than 30m, set a nonzero low temp
-                    //
-                    // durationReq is how many minutes of basal we want to hold back. The pump gets a
-                    // 30 minute temp instead of a shorter zero temp, so the rate must deliver what is
-                    // left over: full basal for the other 30 - durationReq minutes, spread across the
-                    // whole 30.
-                    //
-                    // oref has this the other way round (basal * durationReq / 30). That gets it
-                    // backwards: asking to hold back 29 of 30 minutes produced 29/30 of the basal
-                    // rate, so almost nothing was held back, and asking to hold back 1 minute cut the
-                    // rate to 1/30. We deliberately differ from oref here. See issue #5082.
-                    smbLowTempReq = round(basal * (30 - durationReq) / 30.0, 2)
-                    durationReq = 30
-                }
+                // Accepted behavior change vs 3.4: adopts 4.0's corrected smbLowTempReq formula
+                // `basal * (30 - durationReq) / 30` (issue #5082).
+                val (smbLowTempReq, adjustedDurationReq) = computeSmbLowTemp(basal, durationReq)
+                durationReq = adjustedDurationReq
                 rT.reason.append(" insulinReq $insulinReq")
                 if (microBolus >= maxBolus) {
                     rT.reason.append("; maxBolus $maxBolus")
@@ -1265,6 +1296,22 @@ class DetermineBasalSMB(
             // required temp > existing temp basal
             rT.reason.append("temp ${currenttemp.rate.toFixed2()} < ${round(rate, 2).withoutZeros()}U/hr. ")
             return setTempBasal(rate, 30, profile, rT, currenttemp)
+        }
+    }
+
+    companion object {
+        /**
+         * Computes `(smbLowTempReq, durationReq)` for an SMB safety low/zero temp using 4.0's
+         * corrected `basal * (30 - durationReq) / 30` formula (issue #5082).
+         */
+        internal fun computeSmbLowTemp(basal: Double, durationReq: Int): Pair<Double, Int> {
+            if (durationReq <= 0) return 0.0 to 0
+            if (durationReq >= 30) {
+                val rounded = floor(durationReq / 30.0 + 0.5).toInt() * 30
+                return 0.0 to min(60, max(0, rounded))
+            }
+            val rate = floor((basal * (30 - durationReq) / 30.0) * 100.0 + 0.5) / 100.0
+            return rate to 30
         }
     }
 }

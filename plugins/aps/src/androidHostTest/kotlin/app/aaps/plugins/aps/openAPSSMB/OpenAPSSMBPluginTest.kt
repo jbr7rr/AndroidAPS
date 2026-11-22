@@ -94,4 +94,66 @@ class OpenAPSSMBPluginTest : TestBaseWithProfile() {
         verify(bus).send(any<EventResetOpenAPSGui>())
         verifyNoInteractions(determineBasalSMB)
     }
+
+    @Test
+    fun `gatherWaveSnapshot returns Disabled without IOB or bolus queries when Wave is off`() = runBlocking {
+        whenever(preferences.get(app.aaps.core.keys.BooleanKey.ApsWaveEnable)).thenReturn(false)
+        val validProfile = ProfileSealed.EPS(effectiveProfileSwitch.copy(iCfg = someICfg), activePlugin)
+
+        val snapshot = openAPSSMBPlugin.gatherWaveSnapshot(1_700_000_000_000L, validProfile)
+
+        assertThat(snapshot).isEqualTo(WaveSnapshot.Disabled)
+        verifyNoInteractions(persistenceLayer)
+        verifyNoInteractions(iobCobCalculator)
+    }
+
+    @Test
+    fun `gatherWaveSnapshot uses profile iCfg peak, PD model, activityAtPeak, and newest bolus`() = runBlocking {
+        val now = 1_700_000_000_000L
+        val pdICfg = someICfg.copy(
+            insulinLabel = "Lyumjev PD",
+            insulinEndTime = 8L * 3600 * 1000,
+            insulinPeakTime = 65L * 60 * 1000,
+            concentration = 2.0,
+            insulinModel = InsulinModel.Pd(61.33, 12.27, 0.05185, concentrationScalesPeak = true, durationMinutes = 480)
+        )
+        val pdProfile = ProfileSealed.EPS(effectiveProfileSwitch.copy(iCfg = pdICfg), activePlugin)
+        whenever(preferences.get(app.aaps.core.keys.BooleanKey.ApsWaveEnable)).thenReturn(true)
+        whenever(preferences.get(app.aaps.core.keys.DoubleKey.ApsWaveInsReqPct)).thenReturn(80.0)
+        whenever(preferences.get(app.aaps.core.keys.IntKey.ApsWaveStartTime)).thenReturn(8)
+        whenever(preferences.get(app.aaps.core.keys.IntKey.ApsWaveEndTime)).thenReturn(23)
+        whenever(preferences.get(app.aaps.core.keys.IntKey.ApsWaveMaxMinutesOfBasalToLimitSmb)).thenReturn(180)
+        whenever(preferences.get(app.aaps.core.keys.BooleanKey.ApsWaveUseSMBCap)).thenReturn(false)
+        whenever(preferences.get(app.aaps.core.keys.DoubleKey.ApsWaveSmbCap)).thenReturn(0.5)
+        whenever(preferences.get(app.aaps.core.keys.BooleanKey.ApsWaveUseAdjustedSens)).thenReturn(true)
+        whenever(persistenceLayer.getNewestBolus()).thenReturn(
+            app.aaps.core.data.model.BS(
+                timestamp = now - 5 * 60_000L,
+                isValid = true,
+                amount = 1.1,
+                type = app.aaps.core.data.model.BS.Type.SMB,
+                iCfg = pdICfg
+            )
+        )
+        whenever(iobCobCalculator.calculateFromTreatmentsAndTemps(any(), any())).thenReturn(
+            app.aaps.core.interfaces.aps.IobTotal(time = now, activity = 0.01)
+        )
+
+        val start = kotlin.time.TimeSource.Monotonic.markNow()
+        val snapshot = openAPSSMBPlugin.gatherWaveSnapshot(now, pdProfile)
+        val elapsedMs = start.elapsedNow().inWholeMilliseconds
+
+        assertThat(snapshot.settings.enabled).isTrue()
+        assertThat(snapshot.isPd).isTrue()
+        assertThat(snapshot.peak).isEqualTo(65)
+        assertThat(snapshot.lastBolusAmount).isEqualTo(1.1)
+        assertThat(snapshot.activityAtPeak(2.0)).isWithin(1e-9).of(pdICfg.activityAtPeak(2.0))
+        // 5 samples per window * 0.01 = 0.05
+        assertThat(snapshot.activity.currentActivity).isWithin(1e-6).of(0.05)
+        assertThat(snapshot.activity.futureActivity).isWithin(1e-6).of(0.05)
+        assertThat(snapshot.activity.sensorLagActivity).isWithin(1e-6).of(0.05)
+        assertThat(snapshot.activity.historicActivity).isWithin(1e-6).of(0.05)
+        // Performance budget check (< 2000 ms for the 20 Wave activity samples)
+        assertThat(elapsedMs).isLessThan(2000L)
+    }
 }
