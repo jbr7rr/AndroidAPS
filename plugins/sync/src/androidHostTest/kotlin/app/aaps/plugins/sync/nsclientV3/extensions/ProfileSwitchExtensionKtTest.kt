@@ -119,4 +119,31 @@ internal class ProfileSwitchExtensionKtTest : TestBaseWithProfile() {
             .toProfileSwitch(profileRepository, dateUtil, insulinConfiguration)!!
         assertThat(parsed.duration).isEqualTo(nineHours)
     }
+
+    @Test
+    fun pdInsulinModelRoundTripsThroughProfileSwitchSyncMapper() {
+        val pd = app.aaps.core.data.model.InsulinModel.Pd(61.33, 12.27, 0.05185, concentrationScalesPeak = true, durationMinutes = 480)
+        val pdICfg = ICfg("Lyumjev PD 65m 8h U200", 8L * 3600 * 1000, 65L * 60 * 1000, 2.0, pd)
+        val profileSwitch = PS(
+            timestamp = 10000,
+            isValid = true,
+            basalBlocks = effectiveProfile.basalBlocks,
+            isfBlocks = effectiveProfile.isfBlocks,
+            icBlocks = effectiveProfile.icBlocks,
+            targetBlocks = effectiveProfile.targetBlocks,
+            glucoseUnit = effectiveProfile.units,
+            profileName = "SomeProfile",
+            timeshift = 0,
+            percentage = 100,
+            duration = 0,
+            iCfg = pdICfg,
+            ids = IDs(nightscoutId = "nightscoutId", pumpId = 11000, pumpType = PumpType.DANA_I, pumpSerial = "bbbb")
+        )
+
+        val restored = (profileSwitch.toNSProfileSwitch(dateUtil, decimalFormatter).convertToRemoteAndBack() as NSProfileSwitch)
+            .toProfileSwitch(profileRepository, dateUtil, insulinConfiguration)!!
+
+        assertThat(restored.iCfg).isEqualTo(pdICfg)
+        assertThat(profileSwitch.contentEqualsTo(restored)).isTrue()
+    }
 }

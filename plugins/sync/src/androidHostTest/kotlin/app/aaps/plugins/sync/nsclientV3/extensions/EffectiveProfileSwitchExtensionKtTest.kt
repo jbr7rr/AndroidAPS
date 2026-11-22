@@ -51,4 +51,33 @@ internal class EffectiveProfileSwitchExtensionKtTest : TestBaseWithProfile() {
         assertThat(profileSwitch.contentEqualsTo(profileSwitch2)).isTrue()
         assertThat(profileSwitch.ids.contentEqualsTo(profileSwitch2.ids)).isTrue()
     }
+
+    @Test
+    fun pdInsulinModelRoundTripsThroughEffectiveProfileSwitchSyncMapper() {
+        val pd = app.aaps.core.data.model.InsulinModel.Pd(51.0, 12.27, 0.05185, concentrationScalesPeak = false, durationMinutes = 480)
+        val pdICfg = ICfg("Custom PD 51m 8h U100", 8L * 3600 * 1000, 51L * 60 * 1000, 1.0, pd)
+        val eps = EPS(
+            timestamp = 10000,
+            isValid = true,
+            basalBlocks = effectiveProfile.basalBlocks,
+            isfBlocks = effectiveProfile.isfBlocks,
+            icBlocks = effectiveProfile.icBlocks,
+            targetBlocks = effectiveProfile.targetBlocks,
+            glucoseUnit = effectiveProfile.units,
+            originalProfileName = "SomeProfile",
+            originalCustomizedName = "SomeProfile",
+            originalTimeshift = 0,
+            originalPercentage = 100,
+            originalDuration = 0,
+            originalEnd = 0,
+            iCfg = pdICfg,
+            ids = IDs(nightscoutId = "nightscoutId", pumpId = 11000, pumpType = PumpType.DANA_I, pumpSerial = "bbbb")
+        )
+
+        val restored = (eps.toNSEffectiveProfileSwitch(dateUtil).convertToRemoteAndBack() as NSEffectiveProfileSwitch)
+            .toEffectiveProfileSwitch(dateUtil, insulinConfiguration)!!
+
+        assertThat(restored.iCfg).isEqualTo(pdICfg)
+        assertThat(eps.contentEqualsTo(restored)).isTrue()
+    }
 }

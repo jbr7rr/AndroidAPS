@@ -9,7 +9,6 @@ import app.aaps.core.interfaces.profile.ProfileRepository
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.nssdk.localmodel.treatment.EventType
-import app.aaps.core.nssdk.localmodel.treatment.NSICfg
 import app.aaps.core.nssdk.localmodel.treatment.NSProfileSwitch
 import app.aaps.core.objects.extensions.getCustomizedName
 import app.aaps.core.objects.extensions.pureProfileFromJson
@@ -22,10 +21,7 @@ fun NSProfileSwitch.toProfileSwitch(profileRepository: ProfileRepository, dateUt
             ?: profileRepository.profile.value?.getSpecificProfile(profile) ?: return null
 
     val profileSealed = ProfileSealed.Pure(value = pureProfile, activePlugin = null)
-    val iCfg =
-        iCfg?.let {
-            ICfg(insulinLabel = it.insulinLabel, insulinEndTime = it.insulinEndTime, insulinPeakTime = it.insulinPeakTime, concentration = it.concentration)
-        } ?: insulinFallback
+    val iCfg = iCfg?.toICfg() ?: insulinFallback
 
 
     return PS(
@@ -73,6 +69,6 @@ fun PS.toNSProfileSwitch(dateUtil: DateUtil, decimalFormatter: DecimalFormatter)
         pumpType = ids.pumpType?.name,
         pumpSerial = ids.pumpSerial,
         endId = ids.endId,
-        iCfg = NSICfg(insulinLabel = iCfg.insulinLabel, insulinEndTime = iCfg.insulinEndTime, insulinPeakTime = iCfg.insulinPeakTime, concentration = iCfg.concentration)
+        iCfg = iCfg.toNSICfg()
     )
 }

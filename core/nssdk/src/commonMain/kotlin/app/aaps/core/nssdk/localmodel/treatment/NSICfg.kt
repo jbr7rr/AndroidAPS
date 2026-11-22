@@ -7,5 +7,6 @@ data class NSICfg(
     val insulinLabel: String,
     val insulinEndTime: Long,
     val insulinPeakTime: Long,
-    val concentration: Double
+    val concentration: Double,
+    val insulinModel: NSInsulinModel? = null
 )

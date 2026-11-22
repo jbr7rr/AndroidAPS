@@ -15,6 +15,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.GlucoseUnit
+import app.aaps.core.data.model.InsulinModelCodec
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.model.TT
 import app.aaps.core.data.model.TTPreset
@@ -800,15 +801,37 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         val end = runningICfg.insulinEndTime
         val peak = runningICfg.insulinPeakTime
         val conc = runningICfg.concentration
+        val modelJson = InsulinModelCodec.encodeToString(runningICfg.insulinModel)
+        val bolusBackfill = insulinMigration.bolusBackfillPlan(runningICfg, dateUtil.now())
 
         config.updateInitProgress(rh.gs(R.string.migrating_profile_switches))
-        val migratedPs = repository.bulkMigrateProfileSwitchInsulinConfig(label, end, peak, conc)
+        val migratedPs = repository.bulkMigrateProfileSwitchInsulinConfig(label, end, peak, conc, modelJson)
 
         config.updateInitProgress(rh.gs(R.string.migrating_effective_profile_switches))
-        val migratedEps = repository.bulkMigrateEffectiveProfileSwitchInsulinConfig(label, end, peak, conc)
+        val migratedEps = repository.bulkMigrateEffectiveProfileSwitchInsulinConfig(label, end, peak, conc, modelJson)
 
         config.updateInitProgress(rh.gs(R.string.migrating_boluses))
-        val migratedBoluses = repository.bulkMigrateBolusInsulinConfig(label, end, peak, conc)
+        // Wavez PD backfill policy: only sentinel boluses within the last 8 h receive a usable PD model;
+        // older boluses stay bilinear, and an invalid PD model is never stamped onto any bolus.
+        val migratedBoluses =
+            repository.bulkMigrateBolusInsulinConfigFromTime(
+                label, end, peak, conc, bolusBackfill.recentModelJson, bolusBackfill.cutoffTimestamp
+            ) + repository.bulkMigrateBolusInsulinConfigBeforeTime(
+                label, end, peak, conc, bolusBackfill.olderModelJson, bolusBackfill.cutoffTimestamp
+            )
+
+        // Backfill carried-over v3 profile switch rows whose insulinModel defaulted to BILINEAR in DB 37,
+        // matching by exact v3 PD label rather than peak time.
+        var backfilledPdSwitches = 0
+        for (rule in insulinMigration.legacyProfileSwitchPdRules(legacyInsulin)) {
+            val encodedRuleModel = InsulinModelCodec.encodeToString(rule.model)
+            backfilledPdSwitches += repository.backfillProfileSwitchPdModelByLabel(rule.legacyLabel, rule.concentration, encodedRuleModel)
+            backfilledPdSwitches += repository.backfillEffectiveProfileSwitchPdModelByLabel(rule.legacyLabel, rule.concentration, encodedRuleModel)
+        }
+        if (backfilledPdSwitches > 0) {
+            profileFunction.invalidateCache()
+            aapsLogger.info(LTag.CORE, "Wavez PD backfill updated $backfilledPdSwitches historical profile switch records")
+        }
 
         val totalMigrated = migratedPs + migratedEps + migratedBoluses
         if (totalMigrated > 0) {

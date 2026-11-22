@@ -8,7 +8,6 @@ import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.nssdk.localmodel.treatment.EventType
 import app.aaps.core.nssdk.localmodel.treatment.NSEffectiveProfileSwitch
-import app.aaps.core.nssdk.localmodel.treatment.NSICfg
 import app.aaps.core.objects.extensions.pureProfileFromJson
 import app.aaps.core.objects.profile.ProfileSealed
 
@@ -16,10 +15,7 @@ import app.aaps.core.objects.profile.ProfileSealed
 fun NSEffectiveProfileSwitch.toEffectiveProfileSwitch(dateUtil: DateUtil, insulinFallback: ICfg): EPS? {
     val pureProfile = pureProfileFromJson(profileJson, dateUtil) ?: return null
     val profileSealed = ProfileSealed.Pure(value = pureProfile, activePlugin = null)
-    val iCfg =
-        iCfg?.let {
-            ICfg(insulinLabel = it.insulinLabel, insulinEndTime = it.insulinEndTime, insulinPeakTime = it.insulinPeakTime, concentration = it.concentration)
-        } ?: insulinFallback
+    val iCfg = iCfg?.toICfg() ?: insulinFallback
 
     return EPS(
         isValid = isValid,
@@ -62,5 +58,5 @@ fun EPS.toNSEffectiveProfileSwitch(dateUtil: DateUtil): NSEffectiveProfileSwitch
         pumpType = ids.pumpType?.name,
         pumpSerial = ids.pumpSerial,
         endId = ids.endId,
-        iCfg = NSICfg(insulinLabel = iCfg.insulinLabel, insulinEndTime = iCfg.insulinEndTime, insulinPeakTime = iCfg.insulinPeakTime, concentration = iCfg.concentration)
+        iCfg = iCfg.toNSICfg()
     )

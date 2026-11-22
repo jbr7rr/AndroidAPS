@@ -257,7 +257,7 @@ class InsulinImpl(
             (Json.parseToJsonElement(value) as? JsonObject)?.get("insulin") as? JsonArray
         }.getOrNull()
         insulinArray?.forEach { element ->
-            runCatching { (element as? JsonObject)?.let { loaded.add(ICfg.fromJsonObject(it)) } }
+            runCatching { (element as? JsonObject)?.let { loaded.add(ICfg.fromJsonObject(it, aapsLogger)) } }
         }
         insulins = loaded
     }
@@ -337,7 +337,7 @@ class InsulinImpl(
         insulinArray?.forEach { jsonElement ->
             try {
                 val jsonObject = jsonElement as? JsonObject ?: return@forEach
-                val newICfg = ICfg.fromJsonObject(jsonObject)
+                val newICfg = ICfg.fromJsonObject(jsonObject, aapsLogger)
                 if (newICfg.insulinNickname.isBlank()) {
                     val template = InsulinType.fromPeak(newICfg.insulinPeakTime)
                     newICfg.insulinNickname = rh.gs(template.label)

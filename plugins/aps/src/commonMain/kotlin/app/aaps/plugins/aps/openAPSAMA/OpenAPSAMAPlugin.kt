@@ -129,6 +129,16 @@ class OpenAPSAMAPlugin(
             aapsLogger.error(LTag.APS, "Refusing to run: insulin '${profile.iCfg.insulinLabel}' is not usable")
             return@withContext
         }
+        // A contributing bolus with an unusable model (e.g. corrupt PD params) would otherwise
+        // silently contribute zero IOB and risk overdelivery. Refuse APS instead.
+        val nowForBolusCheck = dateUtil.now()
+        val unusableBolus = persistenceLayer.getBolusesFromTime(nowForBolusCheck - profile.iCfg.iobEndTime, true)
+            .firstOrNull { it.isValid && it.timestamp < nowForBolusCheck && it.amount != 0.0 && !it.iCfg.isUsable }
+        if (unusableBolus != null) {
+            rxBus.send(EventResetOpenAPSGui(rh.gs(ApsStrings.openapsma_invalid_insulin)))
+            aapsLogger.error(LTag.APS, "Refusing to run: contributing bolus at ${unusableBolus.timestamp} has unusable insulin '${unusableBolus.iCfg.insulinLabel}'")
+            return@withContext
+        }
         if (!isEnabled()) {
             rxBus.send(EventResetOpenAPSGui(rh.gs(ApsStrings.openapsma_disabled)))
             aapsLogger.debug(LTag.APS, rh.gs(ApsStrings.openapsma_disabled))
