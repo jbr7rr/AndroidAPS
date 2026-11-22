@@ -2,6 +2,7 @@ package app.aaps.ui.compose.insulinManagement
 
 import androidx.compose.runtime.Immutable
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.interfaces.insulin.ConcentrationType
 import app.aaps.core.interfaces.insulin.InsulinType
 import app.aaps.core.ui.compose.ScreenMode
@@ -26,6 +27,12 @@ data class InsulinManagementUiState(
     val editorConcentration: ConcentrationType = ConcentrationType.U100,
     val editorPeakMinutes: Int = 75,
     val editorDiaHours: Double = 5.0,
+    val editorIsPd: Boolean = false,
+    val editorPdA0: Double = 51.0,
+    val editorPdA1: Double = 12.27,
+    val editorPdB1: Double = 0.05185,
+    val editorPdConcentrationScalesPeak: Boolean = false,
+    val editorPdDurationMinutes: Int = 480,
     val autoNameEnabled: Boolean = true,
 
     // Unsaved changes dialog
@@ -39,4 +46,17 @@ data class InsulinManagementUiState(
 
     // Loading/Error
     val isLoading: Boolean = true
-)
+) {
+    val editorModel: InsulinModel
+        get() = if (editorIsPd) {
+            InsulinModel.Pd(
+                a0 = editorPdA0,
+                a1 = editorPdA1,
+                b1 = editorPdB1,
+                concentrationScalesPeak = editorPdConcentrationScalesPeak,
+                durationMinutes = editorPdDurationMinutes
+            )
+        } else {
+            InsulinModel.Bilinear
+        }
+}

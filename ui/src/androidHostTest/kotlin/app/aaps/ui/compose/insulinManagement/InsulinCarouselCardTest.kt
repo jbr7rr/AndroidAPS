@@ -6,6 +6,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
+import app.aaps.core.interfaces.resources.TextRefIdRegistry
+import app.aaps.ui.UiStringIds
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,6 +27,11 @@ class InsulinCarouselCardTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    @Before
+    fun registerUiStrings() {
+        TextRefIdRegistry.register("ui") { name -> UiStringIds.idOf(name) }
+    }
 
     private val iCfg = ICfg(insulinLabel = "Rapid Test Insulin", peak = 75, dia = 5.0, concentration = 1.0)
 
@@ -66,5 +75,34 @@ class InsulinCarouselCardTest {
             .assertIsDisplayed()
         compose.onNodeWithContentDescription(line(context.getString(CoreUiR.string.concentration_label), context.getString(InterfacesR.string.u100)))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun showsPdBadgeOnlyForPdInsulin() {
+        val pdICfg = ICfg(
+            insulinLabel = "Custom 51m 8h U100",
+            peak = 51,
+            dia = 8.0,
+            concentration = 1.0,
+            insulinModel = InsulinModel.Pd(51.0, 12.27, 0.05185)
+        )
+        compose.setContent {
+            MaterialTheme {
+                InsulinCarouselCard(iCfg = pdICfg, isActive = false, isSelected = true)
+            }
+        }
+
+        compose.onNodeWithText("PD").assertIsDisplayed()
+    }
+
+    @Test
+    fun hidesPdBadgeForBilinearInsulin() {
+        compose.setContent {
+            MaterialTheme {
+                InsulinCarouselCard(iCfg = iCfg, isActive = false, isSelected = true)
+            }
+        }
+
+        compose.onNodeWithText("PD").assertDoesNotExist()
     }
 }

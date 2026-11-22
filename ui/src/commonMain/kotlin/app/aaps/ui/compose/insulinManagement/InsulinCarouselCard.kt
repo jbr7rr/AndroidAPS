@@ -23,11 +23,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.aaps.core.data.model.ICfg
+import app.aaps.core.data.model.InsulinModel
 import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.interfaces.insulin.ConcentrationType
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.stringResource
+import app.aaps.ui.UiStrings
 
 /**
  * Carousel card displaying an insulin configuration.
@@ -100,33 +102,52 @@ fun InsulinCarouselCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Concentration badge
+            // Concentration & PD badges
             val concentration = ConcentrationType.fromDouble(iCfg.concentration)
             val concentrationSpoken = stringResource(
                 InterfacesStrings.confirmation_line,
                 stringResource(CoreUiStrings.concentration_label),
                 stringResource(concentration.label)
             )
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (concentration != ConcentrationType.U100)
-                    MaterialTheme.colorScheme.error
-                else
-                    MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 8.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(concentration.label),
-                    style = MaterialTheme.typography.labelMedium,
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
                     color = if (concentration != ConcentrationType.U100)
-                        MaterialTheme.colorScheme.onError
+                        MaterialTheme.colorScheme.error
                     else
-                        MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .semantics { contentDescription = concentrationSpoken }
-                )
+                        MaterialTheme.colorScheme.primary
+                ) {
+                    Text(
+                        text = stringResource(concentration.label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (concentration != ConcentrationType.U100)
+                            MaterialTheme.colorScheme.onError
+                        else
+                            MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .semantics { contentDescription = concentrationSpoken }
+                    )
+                }
+
+                if (iCfg.insulinModel is InsulinModel.Pd) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.tertiary
+                    ) {
+                        Text(
+                            text = stringResource(UiStrings.insulin_pd_badge),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
             }
 
             // Active indicator
