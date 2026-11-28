@@ -135,12 +135,15 @@ object OnePlusAdvCandidate {
         rssi: Int,
         session: OnePlusStoredSession?,
         phoneSlotHeld: Boolean? = null,
+        serialCrc16: Int? = null,
     ): Int {
         var score = rssi
+        val serialCrcMatch = OnePlusAdvSlot.matchesSerialCrc(serialCrc16, session?.identity?.serial)
         val nameSticky = !session?.lastDeviceName.isNullOrBlank() &&
             name.equals(session?.lastDeviceName, ignoreCase = true)
         val macSticky = !session?.lastMac.isNullOrBlank() &&
             address.equals(session?.lastMac, ignoreCase = true)
+        if (serialCrcMatch) score += SERIAL_CRC_MATCH_BOOST
         if (nameSticky) score += 10_000
         if (macSticky) score += 5_000
         val serial = session?.identity?.serial
@@ -148,9 +151,12 @@ object OnePlusAdvCandidate {
             score += 1_000
         }
         if (isG7FamilyName(name)) score += 100
-        if (phoneSlotHeld == true && !nameSticky && !macSticky) score -= SLOT_HELD_PENALTY
+        if (phoneSlotHeld == true && !serialCrcMatch && !nameSticky && !macSticky) score -= SLOT_HELD_PENALTY
         return score
     }
+
+    /** Boost for an exact `CRC16(serial)` advertisement match — outranks every other signal. */
+    const val SERIAL_CRC_MATCH_BOOST = 20_000
 
     /** What a held phone slot costs in [rankScore]. More than any RSSI gap, less than the serial hint. */
     const val SLOT_HELD_PENALTY = 500

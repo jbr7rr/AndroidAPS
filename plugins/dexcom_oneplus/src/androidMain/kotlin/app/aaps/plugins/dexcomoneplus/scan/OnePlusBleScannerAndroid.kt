@@ -409,19 +409,25 @@ class OnePlusBleScannerAndroid(
         if (sticky && !candidate && febcOk && !nameMatches(name)) return
 
         // Android hands the manufacturer data over without the company id in front.
-        val slotHeld = OnePlusAdvSlot.phoneSlotHeld(
-            result.scanRecord?.getManufacturerSpecificData(OnePlusAdvSlot.DEXCOM_COMPANY_ID),
-        )
-        val hit = OnePlusScanResult(address = address, name = name, rssi = result.rssi, phoneSlotHeld = slotHeld)
-            .apply { seenElapsedMs = SystemClock.elapsedRealtime() }
+        val manufacturerData = result.scanRecord?.getManufacturerSpecificData(OnePlusAdvSlot.DEXCOM_COMPANY_ID)
+        val slotHeld = OnePlusAdvSlot.phoneSlotHeld(manufacturerData)
+        val serialCrc16 = OnePlusAdvSlot.serialCrc16(manufacturerData)
+        val hit = OnePlusScanResult(
+            address = address,
+            name = name,
+            rssi = result.rssi,
+            phoneSlotHeld = slotHeld,
+            serialCrc16 = serialCrc16,
+        ).apply { seenElapsedMs = SystemClock.elapsedRealtime() }
         val previous = seen.put(address, hit)
         if (previous == null || previous.rssi != hit.rssi || previous.name != hit.name ||
-            previous.phoneSlotHeld != hit.phoneSlotHeld
+            previous.phoneSlotHeld != hit.phoneSlotHeld || previous.serialCrc16 != hit.serialCrc16
         ) {
-            val score = OnePlusAdvCandidate.rankScore(name, address, hit.rssi, hint, slotHeld)
+            val score = OnePlusAdvCandidate.rankScore(name, address, hit.rssi, hint, slotHeld, serialCrc16)
+            val crcHex = serialCrc16?.let { it.toString(16).padStart(4, '0') } ?: "?"
             OnePlusLog.d(
                 "${OnePlusLogMarkers.SCAN}: [$slot] device name=${name ?: "?"} rssi=${hit.rssi} " +
-                    "slotHeld=${slotHeld ?: "?"} score=$score addr=***${address.takeLast(5)}",
+                    "slotHeld=${slotHeld ?: "?"} crc=$crcHex score=$score addr=***${address.takeLast(5)}",
             )
             listener?.onDevice(hit)
         }

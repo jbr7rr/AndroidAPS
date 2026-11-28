@@ -35,6 +35,30 @@ class OnePlusAdvSlotTest {
     }
 
     @Test
+    fun `serialCrc16 reads the first two bytes little endian`() {
+        assertEquals(0x1234, OnePlusAdvSlot.serialCrc16(byteArrayOf(0x34, 0x12, 0x02, 0x04)))
+        assertEquals(0xC392, OnePlusAdvSlot.serialCrc16(byteArrayOf(0x92.toByte(), 0xC3.toByte())))
+        assertNull(OnePlusAdvSlot.serialCrc16(null))
+        assertNull(OnePlusAdvSlot.serialCrc16(byteArrayOf(0x34)))
+    }
+
+    @Test
+    fun `expectedSerialCrc16 matches Dexcom CRC16 over ASCII serial bytes`() {
+        // CRC-16/XMODEM("123456789") is the standard check value 0x31C3 (LE bytes: C3 31).
+        assertEquals(0x31C3, OnePlusAdvSlot.expectedSerialCrc16("123456789"))
+        assertEquals(0x31C3, OnePlusAdvSlot.expectedSerialCrc16("  123456789  "))
+        assertNull(OnePlusAdvSlot.expectedSerialCrc16(null))
+        assertNull(OnePlusAdvSlot.expectedSerialCrc16("   "))
+
+        val advBytes = byteArrayOf(0xC3.toByte(), 0x31, 0x02, 0x04)
+        val advCrc = OnePlusAdvSlot.serialCrc16(advBytes)
+        assertTrue(OnePlusAdvSlot.matchesSerialCrc(advCrc, "123456789"))
+        assertFalse(OnePlusAdvSlot.matchesSerialCrc(advCrc, "987654321"))
+        assertFalse(OnePlusAdvSlot.matchesSerialCrc(null, "123456789"))
+        assertFalse(OnePlusAdvSlot.matchesSerialCrc(advCrc, null))
+    }
+
+    @Test
     fun `a free sensor ranks above a held one even with a weaker signal`() {
         val free = OnePlusAdvCandidate.rankScore("DX02aa", "11:11:11:11:11:11", -95, null, phoneSlotHeld = false)
         val held = OnePlusAdvCandidate.rankScore("DX02bb", "22:22:22:22:22:22", -35, null, phoneSlotHeld = true)

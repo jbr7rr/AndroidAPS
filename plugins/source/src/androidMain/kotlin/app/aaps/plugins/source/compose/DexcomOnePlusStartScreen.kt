@@ -46,6 +46,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.semantics.contentDescription
@@ -61,6 +62,7 @@ import app.aaps.plugins.dexcomoneplus.OnePlusCgmDrivers
 import app.aaps.plugins.dexcomoneplus.OnePlusCompetingApp
 import app.aaps.plugins.dexcomoneplus.OnePlusCompetingApps
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusAdvCandidate
+import app.aaps.plugins.dexcomoneplus.identity.OnePlusAdvSlot
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusGs1ApplicatorParser
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusSensorIdentity
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusStoredSession
@@ -149,6 +151,8 @@ fun DexcomOnePlusStartScreen(
     var selected by remember { mutableStateOf<OnePlusScanResult?>(null) }
     /** The user tapped a sensor in the scan list — auto-select must not overrule that choice. */
     var deviceChosenByUser by remember { mutableStateOf(false) }
+    /** Armed after scanning a barcode with a serial; connects once its unique CRC-16 advert arrives. */
+    var autoConnectOnBarcodeMatch by remember { mutableStateOf(false) }
     val devices = remember { mutableStateListOf<OnePlusScanResult>() }
     // The applicator field is pre-filled with the *stored* sensor's code. Picking a different MAC
     // while leaving that code untouched pairs a NEW transmitter with the OLD sensor's PIN: auth
@@ -169,6 +173,7 @@ fun DexcomOnePlusStartScreen(
         scannedIdentity = storedSession?.identity?.takeIf { it.rawGs1 != null }
         selected = null
         deviceChosenByUser = false
+        autoConnectOnBarcodeMatch = false
         devices.clear()
         errorText = null
         newSensorConfirmPending = false
@@ -219,41 +224,42 @@ fun DexcomOnePlusStartScreen(
     // non-scrolling Column it was pushed off-screen as soon as the scan list filled up, leaving the
     // user with a selected device and no way to validate it — and the slot store still holding the
     // PREVIOUS sensor's MAC.
-    // Typed, pasted or scanned text for the code field. See DexcomOnePlusStartRules.codeEntry.
+    // Typed or pasted text for the code field. See DexcomOnePlusStartRules.codeEntry.
     val onApplicatorChange: (String) -> Unit = { text ->
         val entry = DexcomOnePlusStartRules.codeEntry(text, scannedIdentity)
         applicatorInput = entry.shown
         parsedIdentity = entry.identity
         if (entry.identity?.rawGs1 != null) scannedIdentity = entry.identity
+        autoConnectOnBarcodeMatch = false
         errorText = null
         newSensorConfirmPending = false
     }
 
-    val onConnectClick: () -> Unit = onConnectClick@{
+    val connectTo: (OnePlusScanResult?) -> Unit = connectTo@{ target ->
         if (isPluginStopped()) {
             errorText = pluginStopped
-            return@onConnectClick
+            return@connectTo
         }
         val identity = parsedIdentity
             ?: OnePlusGs1ApplicatorParser.parse(applicatorInput)
         if (identity == null) {
             errorText = codeRequired
-            return@onConnectClick
+            return@connectTo
         }
         val code = OnePlusSessionStart.normalizePairingCode(identity.pin)
         if (!OnePlusSessionStart.isValidPairingCode(code)) {
             errorText = codeInvalid
-            return@onConnectClick
+            return@connectTo
         }
         if (!permissions.granted()) {
             errorText = permissionsNeeded
             permissions.request()
-            return@onConnectClick
+            return@connectTo
         }
-        val address = selected?.address
+        val address = target?.address
         if (address.isNullOrBlank()) {
             errorText = deviceRequired
-            return@onConnectClick
+            return@connectTo
         }
         scanner.stopScan()
         scanning = false
@@ -266,7 +272,7 @@ fun DexcomOnePlusStartScreen(
         // misses the driver's fast path anyway and talks it out of requiring an ADV. null is the
         // honest answer, and the driver then scans for the sensor itself.
         val sighting = devices.firstOrNull { it.address == address }
-            ?: selected?.takeIf { it.seenElapsedMs > 0L }
+            ?: target.takeIf { it.seenElapsedMs > 0L }
         if (slot == SensorSlot.STAGING) {
             // Staging: collect-only. Never write the production store, never activate the
             // plugin, never switch the AAPS active BG source — just drive scan/connect on
@@ -276,7 +282,7 @@ fun DexcomOnePlusStartScreen(
             // link and break both. The plugin refuses it too; this is the message the user reads.
             if (!onBeginStaging(address)) {
                 errorText = stagingIsProduction
-                return@onConnectClick
+                return@connectTo
             }
             // Not null here: the STAGING slot can only be chosen when the chooser is drawn, and the
             // chooser is drawn only when this phone has a pre-soak driver.
@@ -290,29 +296,31 @@ fun DexcomOnePlusStartScreen(
                 sighting = sighting,
             )
             onStarted(SensorSlot.STAGING)
-            return@onConnectClick
+            return@connectTo
         }
         // Production start on the sensor that is soaking in the other slot: the same collision, from
         // the other side. Ask rather than act — cancelling the pre-soak silently would throw away a
         // soak clock that is often many hours old, and promoting is usually what the user wants.
         if (onIsStagingSensor(address)) {
             slotConflictAddress = address
-            return@onConnectClick
+            return@connectTo
         }
         // Production: adopting a different transmitter with the pre-filled code of the previous one
-        // cannot work (the PIN is per-sensor). Ask for confirmation once before overwriting the slot.
+        // cannot work (the PIN is per-sensor). Ask for confirmation once before overwriting the slot,
+        // unless the scanned barcode's CRC-16 already matched this transmitter.
         val storedMac = storedSession?.lastMac
         val adoptingAnotherSensor = DexcomOnePlusStartRules.adoptsAnotherSensor(storedMac, address)
+        val confirmedByBarcode = OnePlusAdvSlot.matchesSerialCrc(sighting?.serialCrc16, identity.serial)
         // The safe call is only for the compiler: a non-null storedMac means a non-null session,
         // and adoptingAnotherSensor is false without one.
-        if (adoptingAnotherSensor && storedSession?.identity?.pin == code && !newSensorConfirmPending) {
+        if (adoptingAnotherSensor && storedSession?.identity?.pin == code && !confirmedByBarcode && !newSensorConfirmPending) {
             newSensorConfirmPending = true
             errorText = newSensorCodeWarning
-            return@onConnectClick
+            return@connectTo
         }
         sensorStore.saveIdentity(identity.copy(pin = code))
         sensorStore.saveLastMac(address)
-        selected?.name?.let { sensorStore.saveLastDeviceName(it) }
+        target.name?.let { sensorStore.saveLastDeviceName(it) }
         // Anchor the sensor age on this explicit start (overview sensor age / SENSOR_CHANGE). After
         // saveIdentity, which drops the stored start when the serial shows another sensor. storedMac
         // is the MAC read at screen entry, so it still describes the sensor that was running.
@@ -333,16 +341,18 @@ fun DexcomOnePlusStartScreen(
         onStarted(SensorSlot.PRODUCTION)
     }
 
-    val onStartScan: () -> Unit = onStartScan@{
+    val onConnectClick: () -> Unit = { connectTo(selected) }
+
+    val startScanWithHint: (OnePlusStoredSession?) -> Unit = startScanWithHint@{ hint ->
         if (!permissions.granted()) {
             errorText = permissionsNeeded
             permissions.request()
-            return@onStartScan
+            return@startScanWithHint
         }
         devices.clear()
         deviceChosenByUser = false
-        scanner.updateSessionHint(scanHint)
-        selected = OnePlusScanSelection.autoSelect(devices, scanHint)
+        scanner.updateSessionHint(hint)
+        selected = OnePlusScanSelection.autoSelect(devices, hint)
         scanner.startScan { hit ->
             // The scanner answers on its own thread (a binder thread). This scope belongs to the
             // composition, so the list below is only ever
@@ -352,9 +362,8 @@ fun DexcomOnePlusStartScreen(
                 val idx = devices.indexOfFirst { it.address == hit.address }
                 if (idx >= 0) devices[idx] = hit else devices.add(hit)
                 // The live hint, not the one captured when this lambda was built: the user may type
-                // another code while the scan runs. One sensor in range may be selected for them,
-                // two or more may not. This is an assignment on purpose — when a second sensor turns
-                // up, the single-hit suggestion has to go, and Connect goes with it.
+                // another code while the scan runs. One sensor in range (or a unique CRC-16 barcode
+                // match) may be selected for them; ambiguous hits may not.
                 if (!deviceChosenByUser) {
                     selected = OnePlusScanSelection.autoSelect(devices, liveScanHint.value)
                 }
@@ -364,16 +373,57 @@ fun DexcomOnePlusStartScreen(
         errorText = null
     }
 
+    val onStartScan: () -> Unit = { startScanWithHint(scanHint) }
+
     val onStopScan: () -> Unit = {
         scanner.stopScan()
         scanning = false
+        autoConnectOnBarcodeMatch = false
+    }
+
+    val onApplicatorScanned: (String) -> Unit = { code ->
+        val entry = DexcomOnePlusStartRules.codeEntry(code, scannedIdentity)
+        applicatorInput = entry.shown
+        parsedIdentity = entry.identity
+        if (entry.identity?.rawGs1 != null) scannedIdentity = entry.identity
+        errorText = null
+        newSensorConfirmPending = false
+        if (!entry.identity?.serial.isNullOrBlank()) {
+            deviceChosenByUser = false
+            autoConnectOnBarcodeMatch = true
+            val nextHint = OnePlusAdvCandidate.scanHintFor(storedSession, entry.identity)
+            if (!scanning) {
+                startScanWithHint(nextHint)
+            } else {
+                scanner.updateSessionHint(nextHint)
+            }
+        } else {
+            autoConnectOnBarcodeMatch = false
+        }
     }
 
     val onDeviceClick: (OnePlusScanResult) -> Unit = { device ->
         selected = device
         deviceChosenByUser = true
+        autoConnectOnBarcodeMatch = false
         errorText = null
         newSensorConfirmPending = false
+    }
+
+    // After a barcode scan carrying a serial, connect automatically as soon as the unique sensor
+    // whose advertisement CRC-16 matches that serial is heard.
+    val deviceSnapshot = devices.toList()
+    LaunchedEffect(deviceSnapshot, parsedIdentity, autoConnectOnBarcodeMatch, deviceChosenByUser) {
+        val match = DexcomOnePlusStartRules.autoConnectTarget(
+            devices = deviceSnapshot,
+            identity = parsedIdentity,
+            armed = autoConnectOnBarcodeMatch,
+            deviceChosenByUser = deviceChosenByUser,
+            isPluginStopped = isPluginStopped(),
+        ) ?: return@LaunchedEffect
+        autoConnectOnBarcodeMatch = false
+        selected = match
+        connectTo(match)
     }
 
     val rankedDevices = DexcomOnePlusStartRules.rank(devices, scanHint)
@@ -437,6 +487,7 @@ fun DexcomOnePlusStartScreen(
                         serialNone = serialNone,
                         applicatorScanner = applicatorScanner,
                         onApplicatorChange = onApplicatorChange,
+                        onApplicatorScanned = onApplicatorScanned,
                     )
                     connectAction()
                 }
@@ -454,6 +505,7 @@ fun DexcomOnePlusStartScreen(
                     ScanHeader(
                         scanning = scanning,
                         deviceCount = devices.size,
+                        autoConnectWaiting = autoConnectOnBarcodeMatch,
                         onStartScan = onStartScan,
                         onStopScan = onStopScan,
                     )
@@ -466,6 +518,7 @@ fun DexcomOnePlusStartScreen(
                             devices = rankedDevices,
                             selectedAddress = selected?.address,
                             storedMac = storedSession?.lastMac,
+                            parsedIdentity = parsedIdentity,
                             onDeviceClick = onDeviceClick,
                         )
                     }
@@ -490,6 +543,7 @@ fun DexcomOnePlusStartScreen(
                             serialNone = serialNone,
                             applicatorScanner = applicatorScanner,
                             onApplicatorChange = onApplicatorChange,
+                            onApplicatorScanned = onApplicatorScanned,
                         )
                     }
                 }
@@ -497,6 +551,7 @@ fun DexcomOnePlusStartScreen(
                     ScanHeader(
                         scanning = scanning,
                         deviceCount = devices.size,
+                        autoConnectWaiting = autoConnectOnBarcodeMatch,
                         onStartScan = onStartScan,
                         onStopScan = onStopScan,
                     )
@@ -507,6 +562,7 @@ fun DexcomOnePlusStartScreen(
                     devices = rankedDevices,
                     selectedAddress = selected?.address,
                     storedMac = storedSession?.lastMac,
+                    parsedIdentity = parsedIdentity,
                     onDeviceClick = onDeviceClick,
                 )
                 item(key = "help") {
@@ -590,6 +646,7 @@ private fun ColumnScope.FormPane(
     serialNone: String,
     applicatorScanner: OnePlusApplicatorScanner?,
     onApplicatorChange: (String) -> Unit,
+    onApplicatorScanned: (String) -> Unit,
 ) {
     var scanning by remember { mutableStateOf(false) }
     // A real single-choice control: the selected side carries the selection state, so TalkBack
@@ -664,7 +721,7 @@ private fun ColumnScope.FormPane(
                     scanner = scanner,
                     onCode = { code ->
                         scanning = false
-                        onApplicatorChange(code)
+                        onApplicatorScanned(code)
                     },
                     onDismiss = { scanning = false },
                 )
@@ -763,6 +820,7 @@ private fun ColumnScope.HelpSection(
 private fun ScanHeader(
     scanning: Boolean,
     deviceCount: Int,
+    autoConnectWaiting: Boolean,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
 ) {
@@ -804,11 +862,22 @@ private fun ScanHeader(
                 Text(stringResource(SourceStrings.dexcom_oneplus_scan_stop))
             }
         }
-        // Why every nearby sensor is listed, and why the app cannot choose for the user.
+        // When a barcode serial is armed for auto-connect, tell the user they can just wait;
+        // otherwise explain why every nearby sensor is listed and must be picked by hand.
         Text(
-            text = stringResource(SourceStrings.dexcom_oneplus_scan_pick_hint),
+            text = stringResource(
+                if (autoConnectWaiting) {
+                    SourceStrings.dexcom_oneplus_scan_barcode_waiting_hint
+                } else {
+                    SourceStrings.dexcom_oneplus_scan_pick_hint
+                },
+            ),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (autoConnectWaiting) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
         )
     }
 }
@@ -818,6 +887,7 @@ private fun LazyListScope.deviceItems(
     devices: List<OnePlusScanResult>,
     selectedAddress: String?,
     storedMac: String?,
+    parsedIdentity: OnePlusSensorIdentity?,
     onDeviceClick: (OnePlusScanResult) -> Unit,
 ) {
     if (devices.isEmpty()) {
@@ -835,6 +905,7 @@ private fun LazyListScope.deviceItems(
                 selected = selectedAddress == device.address,
                 lastUsed = storedMac?.equals(device.address, ignoreCase = true) == true,
                 slotHeld = DexcomOnePlusStartRules.showsSlotHeld(device, storedMac),
+                barcodeMismatch = DexcomOnePlusStartRules.isBarcodeMismatch(device, parsedIdentity),
                 onClick = { onDeviceClick(device) },
             )
         }
@@ -847,6 +918,7 @@ private fun DeviceRow(
     selected: Boolean,
     lastUsed: Boolean,
     slotHeld: Boolean,
+    barcodeMismatch: Boolean,
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(AapsSpacing.large)
@@ -854,6 +926,7 @@ private fun DeviceRow(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = CgmSpacing.listRowMinHeight)
+            .alpha(if (barcodeMismatch) 0.45f else 1f)
             .background(
                 color = if (selected) {
                     MaterialTheme.colorScheme.secondaryContainer
@@ -871,7 +944,7 @@ private fun DeviceRow(
                 },
                 shape = shape,
             )
-            .clickable(onClick = onClick)
+            .clickable(enabled = !barcodeMismatch, onClick = onClick)
             .padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.large),
         horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
@@ -900,6 +973,13 @@ private fun DeviceRow(
                     text = stringResource(SourceStrings.dexcom_oneplus_scan_slot_held),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (barcodeMismatch) {
+                Text(
+                    text = stringResource(SourceStrings.dexcom_oneplus_scan_barcode_mismatch),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

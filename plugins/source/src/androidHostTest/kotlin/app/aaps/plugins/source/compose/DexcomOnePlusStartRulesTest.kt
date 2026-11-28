@@ -1,11 +1,13 @@
 package app.aaps.plugins.source.compose
 
+import app.aaps.plugins.dexcomoneplus.identity.OnePlusAdvSlot
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusSensorIdentity
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusStoredSession
 import app.aaps.plugins.dexcomoneplus.scan.OnePlusScanResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -156,6 +158,63 @@ class DexcomOnePlusStartRulesTest {
             DexcomOnePlusStartRules.adoptsAnotherSensor(
                 storedMac = "AA:BB:CC:DD:EE:FF",
                 address = "11:22:33:44:55:66",
+            ),
+        )
+    }
+
+    // ------------ barcode CRC matching & autoConnectTarget() ------------
+
+    @Test
+    fun `barcode CRC match ranks first and triggers autoConnectTarget only when armed`() {
+        val identity = OnePlusSensorIdentity(pin = "8408", serial = "123456789")
+        val targetCrc = OnePlusAdvSlot.expectedSerialCrc16("123456789")!!
+        val other = OnePlusScanResult("AA:AA:AA:AA:AA:AA", "DX02AA", rssi = -35, phoneSlotHeld = false, serialCrc16 = targetCrc xor 0x01)
+        val mine = OnePlusScanResult("BB:BB:BB:BB:BB:BB", "DX02BB", rssi = -90, phoneSlotHeld = true, serialCrc16 = targetCrc)
+
+        val ranked = DexcomOnePlusStartRules.rank(listOf(other, mine), OnePlusStoredSession(identity = identity))
+        assertEquals(mine.address, ranked.first().address)
+        assertTrue(DexcomOnePlusStartRules.isBarcodeMatch(mine, identity))
+        assertFalse(DexcomOnePlusStartRules.isBarcodeMatch(other, identity))
+        assertTrue(DexcomOnePlusStartRules.isBarcodeMismatch(other, identity))
+        assertFalse(DexcomOnePlusStartRules.isBarcodeMismatch(mine, identity))
+        assertFalse(DexcomOnePlusStartRules.isBarcodeMismatch(other.copy(serialCrc16 = null), identity))
+        assertFalse(DexcomOnePlusStartRules.isBarcodeMismatch(other, OnePlusSensorIdentity(pin = "8408")))
+
+        assertEquals(
+            mine,
+            DexcomOnePlusStartRules.autoConnectTarget(
+                devices = listOf(other, mine),
+                identity = identity,
+                armed = true,
+                deviceChosenByUser = false,
+                isPluginStopped = false,
+            ),
+        )
+        assertNull(
+            DexcomOnePlusStartRules.autoConnectTarget(
+                devices = listOf(other, mine),
+                identity = identity,
+                armed = false,
+                deviceChosenByUser = false,
+                isPluginStopped = false,
+            ),
+        )
+        assertNull(
+            DexcomOnePlusStartRules.autoConnectTarget(
+                devices = listOf(other, mine),
+                identity = identity,
+                armed = true,
+                deviceChosenByUser = true,
+                isPluginStopped = false,
+            ),
+        )
+        assertNull(
+            DexcomOnePlusStartRules.autoConnectTarget(
+                devices = listOf(other, mine),
+                identity = identity,
+                armed = true,
+                deviceChosenByUser = false,
+                isPluginStopped = true,
             ),
         )
     }

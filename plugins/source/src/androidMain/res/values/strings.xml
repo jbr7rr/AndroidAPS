@@ -117,6 +117,7 @@
     <string name="dexcom_oneplus_warmup_title">Sensor warm-up</string>
     <string name="dexcom_oneplus_permissions_hint">Before pairing: allow nearby Bluetooth devices (and notifications if asked). Keep the phone near the sensor during start and warm-up.</string>
     <string name="dexcom_oneplus_scan_pick_hint">Every G7 / ONE+ sensor in range is listed. The 4-digit code is not sent in the Bluetooth signal, so the app cannot use it to find your sensor. Pick the one you have just applied. The code is checked when you press Connect.</string>
+    <string name="dexcom_oneplus_scan_barcode_waiting_hint">Waiting for your scanned sensor to advertise (up to 5 minutes). It will be selected and connected automatically — you do not need to pick one from the list.</string>
     <string name="dexcom_oneplus_scan_start">Scan</string>
     <string name="dexcom_oneplus_scan_stop">Stop</string>
     <string name="dexcom_oneplus_scan_scanning">Scanning…</string>
@@ -264,6 +265,7 @@
     <string name="dexcom_oneplus_scan_rescan">Rescan</string>
     <string name="dexcom_oneplus_scan_last_used">last used</string>
     <string name="dexcom_oneplus_scan_slot_held" comment="Short label under a sensor in the scan list. Another phone or app is connected to this sensor now.">in use by another phone</string>
+    <string name="dexcom_oneplus_scan_barcode_mismatch" comment="Short label under a sensor in the scan list whose Bluetooth serial checksum does not match the scanned applicator barcode.">different sensor</string>
     <string name="dexcom_oneplus_competing_apps_title">Other sensor apps on this phone</string>
     <string name="dexcom_oneplus_competing_apps_message">These apps are installed and can connect to the sensor themselves. A sensor talks to one app at a time, so the sensor may refuse AAPS while one of them uses it. Close it or turn off its sensor connection before you start. AAPS joins a running sensor and does not end it. It is not certain that the Dexcom app can use the sensor again afterwards.</string>
     <string name="dexcom_oneplus_scan_signal" comment="%1$d=signal strength in dBm, always negative. Example: Signal −67 dBm">Signal %1$d dBm</string>

@@ -1,5 +1,8 @@
 package app.aaps.plugins.source.compose
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -18,15 +21,21 @@ import app.aaps.plugins.dexcomoneplus.OnePlusCgmDriverStub
 import app.aaps.plugins.dexcomoneplus.OnePlusGlucoseWatcher
 import app.aaps.plugins.dexcomoneplus.OnePlusInstalledApps
 import app.aaps.plugins.dexcomoneplus.OnePlusWarmupState
+import app.aaps.plugins.dexcomoneplus.identity.OnePlusAdvSlot
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusSensorPrefs
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusSensorStore
 import app.aaps.plugins.dexcomoneplus.scan.OnePlusBleScanner
 import app.aaps.plugins.dexcomoneplus.scan.OnePlusBleScannerStub
+import app.aaps.plugins.dexcomoneplus.scan.OnePlusScanListener
+import app.aaps.plugins.dexcomoneplus.scan.OnePlusScanResult
 import app.aaps.plugins.source.DexcomOnePlusHost
 import app.aaps.plugins.source.DexcomOnePlusPlugin
 import app.aaps.plugins.source.SourceStringIds
 import app.aaps.plugins.source.SourceStrings
 import app.aaps.plugins.source.SourceStringsValues
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,7 +61,15 @@ class DexcomOnePlusStartScreenTest {
     private fun text(name: String): String =
         requireNotNull(SourceStringsValues.textOf(name, null)) { "no English text for $name" }
 
-    private fun render(twoSlots: Boolean, host: DexcomOnePlusHost = FakeHost(), initialSlot: SensorSlot = SensorSlot.PRODUCTION) {
+    private fun render(
+        twoSlots: Boolean,
+        host: DexcomOnePlusHost = FakeHost(),
+        initialSlot: SensorSlot = SensorSlot.PRODUCTION,
+        driver: OnePlusCgmDriver = OnePlusCgmDriverStub.instance,
+        applicatorScanner: OnePlusApplicatorScanner? = null,
+        onStarted: (SensorSlot) -> Unit = {},
+        onIsStagingSensor: (String) -> Boolean = { false },
+    ) {
         // MainApp does this in production. Without it every TextRef.Named draws as its raw name and
         // the assertions below read "the node is not displayed" without saying why.
         TextRefIdRegistry.register("source") { name -> SourceStringIds.idOf(name) }
@@ -62,17 +79,17 @@ class DexcomOnePlusStartScreenTest {
                 initialSlot = initialSlot,
                 permissions = GrantedPermissions,
                 onBack = {},
-                onEnsureDriver = { OnePlusCgmDriverStub.instance },
+                onEnsureDriver = { driver },
                 onActivatePlugin = {},
                 isPluginStopped = { false },
-                onStarted = {},
+                onStarted = onStarted,
                 onBeginStaging = { true },
-                onIsStagingSensor = { false },
+                onIsStagingSensor = onIsStagingSensor,
                 onCancelStaging = {},
                 onOpenPromote = {},
                 onStagingDriver = if (twoSlots) ({ error("not reached in this test") }) else null,
                 onSensorSessionStarted = { _, _ -> },
-                applicatorScanner = null,
+                applicatorScanner = applicatorScanner,
             )
         }
     }
@@ -173,14 +190,203 @@ class DexcomOnePlusStartScreenTest {
         compose.onNodeWithText(text("dexcom_oneplus_competing_apps_title")).assertDoesNotExist()
     }
 
+    @Test
+    fun `scanning a barcode starts BLE scan and connects automatically on CRC match`() {
+        val serial = "123456789012"
+        val gs1 = "\u001d010038627000488821$serial\u001d2408408"
+        val expectedCrc = OnePlusAdvSlot.expectedSerialCrc16(serial)!!
+        val scanner = RecordingBleScanner()
+        val driver = RecordingDriver()
+        var startedSlot: SensorSlot? = null
+
+        render(
+            twoSlots = false,
+            host = FakeHost(scanner = scanner),
+            driver = driver,
+            applicatorScanner = ImmediateApplicatorScanner(gs1),
+            onStarted = { startedSlot = it },
+        )
+
+        compose.onNodeWithText(text("dexcom_oneplus_applicator_scan")).performClick()
+        compose.waitForIdle()
+
+        // Barcode scan automatically started BLE scanning.
+        assertEquals(1, scanner.startCount)
+        assertTrue(scanner.isScanning())
+
+        // A nearby sensor with a different CRC does not trigger connect.
+        scanner.emit(OnePlusScanResult("AA:AA:AA:AA:AA:AA", "DX02AA", rssi = -40, serialCrc16 = expectedCrc xor 0xFF))
+        compose.waitForIdle()
+        assertNull(driver.connectedAddress)
+        assertNull(startedSlot)
+
+        // The sensor matching the scanned serial's CRC-16 auto-selects and connects.
+        scanner.emit(OnePlusScanResult("BB:BB:BB:BB:BB:BB", "DX02BB", rssi = -80, serialCrc16 = expectedCrc))
+        compose.waitForIdle()
+        assertEquals("BB:BB:BB:BB:BB:BB", driver.connectedAddress)
+        assertEquals("8408", driver.connectedCode)
+        assertEquals(SensorSlot.PRODUCTION, startedSlot)
+    }
+
+    @Test
+    fun `scanning a barcode while BLE scan is already active connects immediately without restarting scan`() {
+        val serial = "123456789012"
+        val gs1 = "\u001d010038627000488821$serial\u001d2408408"
+        val expectedCrc = OnePlusAdvSlot.expectedSerialCrc16(serial)!!
+        val scanner = RecordingBleScanner()
+        val driver = RecordingDriver()
+
+        render(
+            twoSlots = false,
+            host = FakeHost(scanner = scanner),
+            driver = driver,
+            applicatorScanner = ImmediateApplicatorScanner(gs1),
+        )
+
+        // Start scanning first and hear both a neighbour and the target sensor.
+        compose.onNode(hasScrollToKeyAction()).performScrollToKey("scanHeader")
+        compose.onNodeWithText(text("dexcom_oneplus_scan_start")).performClick()
+        compose.waitForIdle()
+        assertEquals(1, scanner.startCount)
+        scanner.emit(OnePlusScanResult("AA:AA:AA:AA:AA:AA", "DX02AA", rssi = -40, serialCrc16 = expectedCrc xor 0xFF))
+        scanner.emit(OnePlusScanResult("BB:BB:BB:BB:BB:BB", "DX02BB", rssi = -75, serialCrc16 = expectedCrc))
+        compose.waitForIdle()
+        assertNull(driver.connectedAddress)
+
+        // Now scan the barcode — scan must NOT be restarted and target connects at once.
+        compose.onNode(hasScrollToKeyAction()).performScrollToKey("form")
+        compose.onNodeWithText(text("dexcom_oneplus_applicator_scan")).performClick()
+        compose.waitForIdle()
+        assertEquals(1, scanner.startCount)
+        assertEquals("BB:BB:BB:BB:BB:BB", driver.connectedAddress)
+        assertEquals("8408", driver.connectedCode)
+    }
+
+    @Test
+    fun `stopping BLE scan disarms barcode auto-connect`() {
+        val serial = "123456789012"
+        val gs1 = "\u001d010038627000488821$serial\u001d2408408"
+        val expectedCrc = OnePlusAdvSlot.expectedSerialCrc16(serial)!!
+        val scanner = RecordingBleScanner()
+        val driver = RecordingDriver()
+
+        render(
+            twoSlots = false,
+            host = FakeHost(scanner = scanner),
+            driver = driver,
+            applicatorScanner = ImmediateApplicatorScanner(gs1),
+        )
+
+        compose.onNodeWithText(text("dexcom_oneplus_applicator_scan")).performClick()
+        compose.waitForIdle()
+        assertTrue(scanner.isScanning())
+
+        // While waiting for the scanned sensor, the waiting hint replaces the manual pick hint.
+        compose.onNode(hasScrollToKeyAction()).performScrollToKey("scanHeader")
+        compose.onNodeWithText(text("dexcom_oneplus_scan_barcode_waiting_hint")).assertExists()
+        compose.onNodeWithText(text("dexcom_oneplus_scan_pick_hint")).assertDoesNotExist()
+
+        // A nearby sensor with a different CRC is marked as a different sensor and cannot be picked.
+        scanner.emit(OnePlusScanResult("AA:AA:AA:AA:AA:AA", "DX02AA", rssi = -40, serialCrc16 = expectedCrc xor 0xFF))
+        compose.waitForIdle()
+        compose.onNode(hasScrollToKeyAction()).performScrollToKey("AA:AA:AA:AA:AA:AA")
+        compose.onNodeWithText(text("dexcom_oneplus_scan_barcode_mismatch")).assertExists()
+        compose.onNodeWithText("DX02AA").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(text("dexcom_oneplus_connect_follow")).assertIsNotEnabled()
+
+        compose.onNode(hasScrollToKeyAction()).performScrollToKey("scanHeader")
+        compose.onNodeWithText(text("dexcom_oneplus_scan_stop")).performClick()
+        compose.waitForIdle()
+
+        // Stopping scan disarms auto-connect and restores the manual pick hint.
+        compose.onNodeWithText(text("dexcom_oneplus_scan_pick_hint")).assertExists()
+        compose.onNodeWithText(text("dexcom_oneplus_scan_barcode_waiting_hint")).assertDoesNotExist()
+
+        // A late callback after Stop Scan must not auto-connect.
+        scanner.emit(OnePlusScanResult("BB:BB:BB:BB:BB:BB", "DX02BB", rssi = -60, serialCrc16 = expectedCrc))
+        compose.waitForIdle()
+        assertNull(driver.connectedAddress)
+    }
+
+    @Test
+    fun `barcode auto-connect still asks before overwriting a pre-soaking sensor`() {
+        val serial = "123456789012"
+        val gs1 = "\u001d010038627000488821$serial\u001d2408408"
+        val expectedCrc = OnePlusAdvSlot.expectedSerialCrc16(serial)!!
+        val scanner = RecordingBleScanner()
+        val driver = RecordingDriver()
+
+        render(
+            twoSlots = true,
+            host = FakeHost(scanner = scanner),
+            driver = driver,
+            applicatorScanner = ImmediateApplicatorScanner(gs1),
+            onIsStagingSensor = { it == "BB:BB:BB:BB:BB:BB" },
+        )
+
+        compose.onNodeWithText(text("dexcom_oneplus_applicator_scan")).performClick()
+        compose.waitForIdle()
+        scanner.emit(OnePlusScanResult("BB:BB:BB:BB:BB:BB", "DX02BB", rssi = -60, serialCrc16 = expectedCrc))
+        compose.waitForIdle()
+
+        assertNull(driver.connectedAddress)
+        compose.onNodeWithText(text("dexcom_oneplus_slot_conflict_title")).assertIsDisplayed()
+    }
+
     /** A phone where the Bluetooth permission is already granted. */
     private object GrantedPermissions : OnePlusBlePermissionGate {
         override fun granted(): Boolean = true
         override fun request() = Unit
     }
 
+    /** Emits [code] as soon as the camera dialog opens. */
+    private class ImmediateApplicatorScanner(private val code: String) : OnePlusApplicatorScanner {
+        @Composable
+        override fun CameraView(onScanned: (String) -> Boolean, modifier: Modifier) {
+            LaunchedEffect(code) { onScanned(code) }
+        }
+    }
+
+    /** Captures scan lifecycle and lets tests deliver synthetic BLE hits. */
+    private class RecordingBleScanner : OnePlusBleScanner {
+        var startCount = 0
+        private var scanning = false
+        private var listener: OnePlusScanListener? = null
+
+        override fun startScan(listener: OnePlusScanListener) {
+            startCount++
+            scanning = true
+            this.listener = listener
+        }
+
+        override fun stopScan() {
+            scanning = false
+        }
+
+        override fun isScanning(): Boolean = scanning
+
+        fun emit(result: OnePlusScanResult) {
+            listener?.onDevice(result)
+        }
+    }
+
+    /** Records the address and code passed to [connect]. */
+    private class RecordingDriver : OnePlusCgmDriver by OnePlusCgmDriverStub.instance {
+        var connectedAddress: String? = null
+        var connectedCode: String? = null
+
+        override fun connect(deviceAddress: String, pairingCode: String) {
+            connectedAddress = deviceAddress
+            connectedCode = pairingCode
+        }
+    }
+
     /** Everything the screen asks of the phone, answered without Bluetooth or a file. */
-    private class FakeHost(override val installedApps: OnePlusInstalledApps? = null) : DexcomOnePlusHost {
+    private class FakeHost(
+        override val installedApps: OnePlusInstalledApps? = null,
+        private val scanner: OnePlusBleScanner = OnePlusBleScannerStub(),
+    ) : DexcomOnePlusHost {
 
         override fun attachPlatform(driver: OnePlusCgmDriver) = Unit
         override fun slotStore(namespace: String?): OnePlusSensorStore = OnePlusSensorStore(MemoryPrefs())
@@ -197,7 +403,7 @@ class DexcomOnePlusStartScreenTest {
         override fun showWarmup(state: OnePlusWarmupState) = Unit
         override fun cancelWarmupNotification() = Unit
         override fun alert(message: String) = Unit
-        override fun screenScanner(): OnePlusBleScanner = OnePlusBleScannerStub()
+        override fun screenScanner(): OnePlusBleScanner = scanner
         override fun openScreen(screen: DexcomOnePlusHost.Screen) = Unit
         override suspend fun driverLog(): DexcomOnePlusHost.DriverLog =
             DexcomOnePlusHost.DriverLog(emptyList(), SourceStrings.dexcom_oneplus_log_note_file)

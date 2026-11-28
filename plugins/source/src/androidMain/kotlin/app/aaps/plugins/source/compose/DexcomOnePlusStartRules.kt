@@ -1,10 +1,12 @@
 package app.aaps.plugins.source.compose
 
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusAdvCandidate
+import app.aaps.plugins.dexcomoneplus.identity.OnePlusAdvSlot
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusGs1ApplicatorParser
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusSensorIdentity
 import app.aaps.plugins.dexcomoneplus.identity.OnePlusStoredSession
 import app.aaps.plugins.dexcomoneplus.scan.OnePlusScanResult
+import app.aaps.plugins.dexcomoneplus.scan.OnePlusScanSelection
 
 /**
  * The decisions the sensor start screen makes, written as plain functions.
@@ -39,14 +41,45 @@ object DexcomOnePlusStartRules {
     }
 
     /**
-     * The scan list in the order the screen draws it: the sensor the code on screen points at
-     * first, then by how well each hit matches, then free sensors before the ones another phone
-     * holds, then by signal.
+     * The scan list in the order the screen draws it: an exact barcode CRC match first, then the
+     * sensor the code on screen points at, then by how well each hit matches, then free sensors
+     * before the ones another phone holds, then by signal.
      */
     fun rank(devices: List<OnePlusScanResult>, hint: OnePlusStoredSession?): List<OnePlusScanResult> =
         devices.sortedByDescending {
-            OnePlusAdvCandidate.rankScore(it.name, it.address, it.rssi, hint, it.phoneSlotHeld)
+            OnePlusAdvCandidate.rankScore(it.name, it.address, it.rssi, hint, it.phoneSlotHeld, it.serialCrc16)
         }
+
+    /** Whether this live advertisement's `CRC16(serial)` matches the scanned applicator [identity]. */
+    fun isBarcodeMatch(device: OnePlusScanResult, identity: OnePlusSensorIdentity?): Boolean =
+        OnePlusAdvSlot.matchesSerialCrc(device.serialCrc16, identity?.serial)
+
+    /**
+     * Whether this advertisement's `CRC16(serial)` proves it belongs to a different transmitter than
+     * the scanned applicator [identity]. False when no barcode serial is present or the advert did
+     * not carry a CRC-16.
+     */
+    fun isBarcodeMismatch(device: OnePlusScanResult, identity: OnePlusSensorIdentity?): Boolean {
+        val expected = OnePlusAdvSlot.expectedSerialCrc16(identity?.serial) ?: return false
+        val actual = device.serialCrc16 ?: return false
+        return actual != expected
+    }
+
+    /**
+     * The unique sensor to connect to automatically after a barcode scan, or null when auto-connect
+     * is not armed, was superseded by a manual choice, the plugin is stopped, or no unique match
+     * has been heard yet.
+     */
+    fun autoConnectTarget(
+        devices: List<OnePlusScanResult>,
+        identity: OnePlusSensorIdentity?,
+        armed: Boolean,
+        deviceChosenByUser: Boolean,
+        isPluginStopped: Boolean,
+    ): OnePlusScanResult? {
+        if (!armed || deviceChosenByUser || isPluginStopped) return null
+        return OnePlusScanSelection.findSerialMatch(devices, identity?.serial)
+    }
 
     /**
      * Whether the row says "in use by another phone".

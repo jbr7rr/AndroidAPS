@@ -147,4 +147,29 @@ class OnePlusAdvCandidateTest {
         assertThat(OnePlusAdvCandidate.isCandidate("DX01ab", "AA:BB:CC:DD:EE:FF", stored)).isFalse()
         assertThat(OnePlusAdvCandidate.isCandidate("DX01ab", null, null)).isFalse()
     }
+
+    @Test
+    fun `serial CRC match outranks closer free sensors even when its phone slot is held`() {
+        val serial = "123456789"
+        val expectedCrc = OnePlusAdvSlot.expectedSerialCrc16(serial)!!
+        val hint = OnePlusStoredSession(identity = OnePlusSensorIdentity(pin = "8408", serial = serial))
+
+        val matchedHeld = OnePlusAdvCandidate.rankScore(
+            name = "DX02AA",
+            address = "11:11:11:11:11:11",
+            rssi = -95,
+            session = hint,
+            phoneSlotHeld = true,
+            serialCrc16 = expectedCrc,
+        )
+        val otherFree = OnePlusAdvCandidate.rankScore(
+            name = "DX02BB",
+            address = "22:22:22:22:22:22",
+            rssi = -35,
+            session = hint,
+            phoneSlotHeld = false,
+            serialCrc16 = expectedCrc xor 0x00FF,
+        )
+        assertThat(matchedHeld).isGreaterThan(otherFree)
+    }
 }
